@@ -13,6 +13,7 @@ type Upload = {
   status?: string;
   category?: string;
   views?: number;
+  duration_seconds?: number;
   created_at?: string;
 };
 
@@ -32,6 +33,7 @@ function isNewVideo(createdAt?: string) {
 
   return now - created < sevenDays;
 }
+
 function formatDuration(seconds?: number) {
   if (!seconds) return "0:00";
 
@@ -40,6 +42,7 @@ function formatDuration(seconds?: number) {
 
   return `${mins}:${secs.toString().padStart(2, "0")}`;
 }
+
 export default function CategoryPage() {
   const params = useParams();
   const type = String(params?.type || "").toLowerCase();
@@ -81,13 +84,9 @@ export default function CategoryPage() {
           {type}
         </h1>
 
-        <p className="mt-2 text-gray-600">
-          Videos in the {type} category
-        </p>
+        <p className="mt-2 text-gray-600">Videos in the {type} category</p>
 
-        {loading && (
-          <p className="mt-8 text-gray-500">Loading videos...</p>
-        )}
+        {loading && <p className="mt-8 text-gray-500">Loading videos...</p>}
 
         {!loading && videos.length === 0 && (
           <div className="mt-8 rounded-2xl bg-white p-8 shadow-sm">
@@ -100,86 +99,78 @@ export default function CategoryPage() {
 
         {!loading && videos.length > 0 && (
           <div className="mt-8 grid grid-cols-1 gap-6 sm:grid-cols-2 lg:grid-cols-3">
-        {videos.map((video) => (
-  <Link
-    key={video.id}
-    href={`/watch/${video.id}`}
-    className="group block"
-  >
-    <div className="overflow-hidden rounded-2xl bg-white shadow-sm transition duration-300 hover:shadow-lg">
+            {videos.map((video) => (
+              <Link
+                key={video.id}
+                href={`/watch/${video.id}`}
+                className="group block"
+              >
+                <div className="overflow-hidden rounded-2xl bg-white shadow-sm transition duration-300 hover:shadow-lg">
+                  <div className="relative h-48 w-full overflow-hidden bg-gray-200">
+                    <img
+                      src={
+                        video.thumbnail_url?.trim()
+                          ? video.thumbnail_url
+                          : "/default-thumbnail.jpg"
+                      }
+                      alt={video.title}
+                      className="absolute inset-0 h-full w-full object-cover transition-opacity duration-300 group-hover:opacity-0"
+                      onError={(e) => {
+                        e.currentTarget.src = "/default-thumbnail.jpg";
+                      }}
+                    />
 
-      {/* Thumbnail + Hover Preview */}
-      <div className="relative h-48 w-full overflow-hidden bg-gray-200">
+                    {video.video_url && (
+                      <video
+                        src={video.video_url}
+                        muted
+                        loop
+                        playsInline
+                        className="absolute inset-0 h-full w-full object-cover opacity-0 transition-opacity duration-300 group-hover:opacity-100"
+                        onMouseEnter={(e) => e.currentTarget.play()}
+                        onMouseLeave={(e) => e.currentTarget.pause()}
+                      />
+                    )}
 
-        {video.thumbnail_url && (
-          <img
-            src={
-            video.thumbnail_url?.trim()
-            ? video.thumbnail_url
-            : "/default-thumbnail.jpg"
-            }
-            alt={video.title}
-            className="absolute inset-0 h-full w-full object-cover transition-opacity duration-300 group-hover:opacity-0"
-          onError={(e) => {
-           e.currentTarget.src = "/default-thumbnail.jpg";
-          }}
-          />
-        
+                    <div className="absolute bottom-2 right-2 rounded bg-black/80 px-2 py-1 text-xs text-white">
+                      {formatDuration(video.duration_seconds)}
+                    </div>
 
-        {video.video_url && (
-          <video
-            src={video.video_url}
-            muted
-            loop
-            playsInline
-            className="absolute inset-0 h-full w-full object-cover opacity-0 transition-opacity duration-300 group-hover:opacity-100"
-            onMouseEnter={(e) => e.currentTarget.play()}
-            onMouseLeave={(e) => e.currentTarget.pause()}
-          />
-        )}
+                    {isNewVideo(video.created_at) && (
+                      <div className="absolute left-2 top-2 rounded bg-yellow-500 px-2 py-1 text-xs font-semibold text-black">
+                        NEW
+                      </div>
+                    )}
+                  </div>
 
-        {/* Duration */}
-        <div className="absolute bottom-2 right-2 rounded bg-black/80 px-2 py-1 text-xs text-white">
-          {formatDuration(video.duration_seconds)}
-        </div>
+                  <div className="p-4">
+                    <h2 className="line-clamp-2 text-lg font-semibold text-gray-900 group-hover:text-yellow-600">
+                      {video.title}
+                    </h2>
 
-        {/* New badge */}
-        {isNewVideo(video.created_at) && (
-          <div className="absolute left-2 top-2 rounded bg-yellow-500 px-2 py-1 text-xs font-semibold text-black">
-            NEW
-          </div>
-        )}
-      </div>
+                    <div className="mt-2 flex items-center gap-2">
+                      <div className="flex h-8 w-8 items-center justify-center rounded-full bg-gray-300 text-xs font-bold text-white">
+                        {video.creator?.charAt(0).toUpperCase()}
+                      </div>
 
-      {/* Content */}
-      <div className="p-4">
-        <h2 className="line-clamp-2 text-lg font-semibold text-gray-900 group-hover:text-yellow-600">
-          {video.title}
-        </h2>
+                      <div className="flex items-center gap-1">
+                        <p className="text-sm text-gray-600">
+                          {video.creator}
+                        </p>
 
-        <div className="mt-2 flex items-center gap-2">
-          <div className="flex h-8 w-8 items-center justify-center rounded-full bg-gray-300 text-xs font-bold text-white">
-            {video.creator?.charAt(0).toUpperCase()}
-          </div>
+                        <span className="inline-flex h-4 w-4 items-center justify-center rounded-full bg-blue-600 text-[10px] font-bold text-white">
+                          ✓
+                        </span>
+                      </div>
+                    </div>
 
-          <div className="flex items-center gap-1">
-            <p className="text-sm text-gray-600">
-              {video.creator}
-            </p>
-
-            <span className="inline-flex h-4 w-4 items-center justify-center rounded-full bg-blue-600 text-[10px] font-bold text-white">
-              ✓
-            </span>
-          </div>
-        </div>
-
-        <p className="mt-1 text-xs text-gray-500">
-          {formatViews(video.views)}
-        </p>
-      </div>
-    </div>
-  </Link>
-))}
+                    <p className="mt-1 text-xs text-gray-500">
+                      {formatViews(video.views)}
+                    </p>
+                  </div>
+                </div>
+              </Link>
+            ))}
           </div>
         )}
       </div>
