@@ -1,10 +1,24 @@
-import { supabaseAdmin } from "@/lib/supabase-server";
+import { createClient } from "@supabase/supabase-js";
 import { NextResponse } from "next/server";
+
+export const dynamic = "force-dynamic";
+export const runtime = "nodejs";
 
 export async function POST(req: Request) {
   try {
-    const body = await req.json();
+    const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
+    const serviceRoleKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
 
+    if (!supabaseUrl || !serviceRoleKey) {
+      return NextResponse.json(
+        { error: "Supabase environment variables are missing." },
+        { status: 500 }
+      );
+    }
+
+    const supabaseAdmin = createClient(supabaseUrl, serviceRoleKey);
+
+    const body = await req.json();
     const { creator_name, video_id, amount } = body;
 
     if (!creator_name || !amount) {
@@ -30,7 +44,7 @@ export async function POST(req: Request) {
     }
 
     return NextResponse.json(data);
-  } catch (error) {
+  } catch {
     return NextResponse.json(
       { error: "Failed to create tip" },
       { status: 500 }
