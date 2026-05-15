@@ -396,7 +396,7 @@ if (recommendedData) {
       <Navbar />
 
       <main className="min-h-screen bg-[#f6f6f6]">
-        <section className="mx-auto grid max-w-7xl grid-cols-1 gap-6 px-6 py-5 lg:grid-cols-[220px_1fr_390px]">
+        <section className="mx-auto grid max-w-[1300px] grid-cols-1 gap-6 px-6 py-5 lg:grid-cols-[220px_1fr_390px]">
           <aside className="space-y-4">
             <div className="rounded-2xl bg-white p-4 shadow-sm">
               <h2 className="text-lg font-bold text-gray-900">
@@ -477,19 +477,28 @@ if (recommendedData) {
           </aside>
 
           <section>
-            <div className="overflow-hidden rounded-2xl bg-black">
-              {video.video_url ? (
-                <video
-                  src={video.video_url}
-                  controls
-                  className="aspect-video w-full bg-black"
-                />
-              ) : (
-                <div className="flex aspect-video w-full items-center justify-center bg-black text-white">
-                  NiaTube Live Preview
-                </div>
-              )}
-            </div>
+  {video.video_url ? (
+  video.video_url.includes("iframe.mediadelivery.net") ? (
+    <div className="aspect-video w-full overflow-hidden rounded-2xl bg-black">
+      <iframe
+        src={video.video_url.replace("/play/", "/embed/")}
+        allow="accelerometer; gyroscope; autoplay; encrypted-media; picture-in-picture"
+        allowFullScreen
+        className="h-full w-full border-0"
+      />
+    </div>
+  ) : (
+    <video
+      src={video.video_url}
+      controls
+      className="aspect-video w-full rounded-2xl bg-black object-contain"
+    />
+  )
+) : (
+  <div className="flex aspect-video w-full items-center justify-center rounded-2xl bg-black text-white">
+    NiaTube Live Preview
+  </div>
+)}
 
             <div className="mt-4 rounded-2xl bg-white p-5 shadow-sm">
               <h1 className="text-2xl font-bold text-gray-900">
