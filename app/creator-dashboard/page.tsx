@@ -207,6 +207,59 @@ export default function CreatorDashboardPage() {
                     <p className="text-sm text-gray-600">
                       Views: {upload.views || 0}
                     </p>
+                    <div className="mt-4 flex flex-wrap items-center gap-3">
+  {upload.is_live ? (
+    <>
+      <span className="rounded-full bg-red-600 px-3 py-1 text-xs font-bold text-white">
+        🔴 LIVE NOW
+      </span>
+
+      <button
+        onClick={async () => {
+          const { error } = await supabase
+            .from("uploads")
+            .update({ is_live: false })
+            .eq("id", upload.id);
+
+          if (!error) {
+            setUploads((prev) =>
+              prev.map((item) =>
+                item.id === upload.id
+                  ? { ...item, is_live: false }
+                  : item
+              )
+            );
+          }
+        }}
+        className="rounded-lg bg-black px-4 py-2 text-sm font-bold text-white hover:bg-gray-800"
+      >
+        End Live
+      </button>
+    </>
+  ) : (
+    <button
+      onClick={async () => {
+        const { error } = await supabase
+          .from("uploads")
+          .update({ is_live: true })
+          .eq("id", upload.id);
+
+        if (!error) {
+          setUploads((prev) =>
+            prev.map((item) =>
+              item.id === upload.id
+                ? { ...item, is_live: true }
+                : item
+            )
+          );
+        }
+      }}
+      className="rounded-lg bg-red-600 px-4 py-2 text-sm font-bold text-white hover:bg-red-700"
+    >
+      Go Live
+    </button>
+  )}
+</div>
 
                     <p className="text-sm text-gray-600">
                       Watch Hours: {videoWatchHours.toFixed(1)}

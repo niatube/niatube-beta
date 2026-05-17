@@ -4,6 +4,10 @@ import { useEffect, useState } from "react";
 import { supabase } from "@/lib/supabase-browser";
 import Navbar from "@/components/Navbar";
 
+const MAX_VIDEO_SIZE = 500 * 1024 * 1024; // 500MB
+const ALLOWED_VIDEO_TYPES = ["video/mp4"];
+const ALLOWED_THUMBNAIL_TYPES = ["image/jpeg", "image/png", "image/webp"];
+
 export default function UploadPage() {
   const [title, setTitle] = useState("");
   const [description, setDescription] = useState("");
@@ -43,6 +47,11 @@ export default function UploadPage() {
     loadCreatorName();
   }, []);
 
+  function clearErrorAndSuccess() {
+    setError("");
+    setSubmitted(false);
+  }
+
   function handleVideoMetadata(file: File) {
     const video = document.createElement("video");
     video.preload = "metadata";
@@ -52,29 +61,99 @@ export default function UploadPage() {
       setDuration(Math.floor(video.duration));
     };
 
+    video.onerror = () => {
+      setDuration(null);
+      setError("Could not read video duration. Please try another MP4 file.");
+    };
+
     video.src = URL.createObjectURL(file);
+  }
+
+  function handleVideoSelect(file: File | null) {
+    clearErrorAndSuccess();
+
+    setVideoFile(null);
+    setVideoPreview("");
+    setDuration(null);
+
+    if (!file) return;
+
+    if (!ALLOWED_VIDEO_TYPES.includes(file.type)) {
+      setError("Only MP4 videos are supported for beta.");
+      return;
+    }
+
+    if (file.size > MAX_VIDEO_SIZE) {
+      setError("Video exceeds the 500MB beta upload limit.");
+      return;
+    }
+
+    setVideoFile(file);
+    setVideoPreview(URL.createObjectURL(file));
+    handleVideoMetadata(file);
+  }
+
+  function handleThumbnailSelect(file: File | null) {
+    clearErrorAndSuccess();
+
+    setThumbnailFile(null);
+    setThumbnailPreview("");
+
+    if (!file) return;
+
+    if (!ALLOWED_THUMBNAIL_TYPES.includes(file.type)) {
+      setError("Thumbnail must be JPG, PNG, or WebP.");
+      return;
+    }
+
+    setThumbnailFile(file);
+    setThumbnailPreview(URL.createObjectURL(file));
   }
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
 
+    if (uploading) return;
+
     setError("");
     setSubmitted(false);
 
-    if (!title || !creator || !videoFile || !thumbnailFile) {
-      setError("Please fill all fields and upload a thumbnail.");
+    const cleanTitle = title.trim();
+    const cleanCreator = creator.trim();
+    const cleanDescription = description.trim();
+
+    if (!cleanTitle) {
+      setError("Please enter a video title.");
       return;
     }
 
-    if (videoFile.type !== "video/mp4") {
+    if (!cleanCreator) {
+      setError("Please enter a creator name.");
+      return;
+    }
+
+    if (!videoFile) {
+      setError("Please choose an MP4 video file.");
+      return;
+    }
+
+    if (!thumbnailFile) {
+      setError("Please upload a thumbnail image.");
+      return;
+    }
+
+    if (!ALLOWED_VIDEO_TYPES.includes(videoFile.type)) {
       setError("Only MP4 videos are supported for beta.");
       return;
     }
 
-    const maxSize = 500 * 1024 * 1024;
+    if (videoFile.size > MAX_VIDEO_SIZE) {
+      setError("Video exceeds the 500MB beta upload limit.");
+      return;
+    }
 
-    if (videoFile.size > maxSize) {
-      setError("Video exceeds 500MB beta upload limit.");
+    if (!ALLOWED_THUMBNAIL_TYPES.includes(thumbnailFile.type)) {
+      setError("Thumbnail must be JPG, PNG, or WebP.");
       return;
     }
 
@@ -82,7 +161,7 @@ export default function UploadPage() {
       setUploading(true);
 
       const bunnyFormData = new FormData();
-      bunnyFormData.append("title", title);
+      bunnyFormData.append("title", cleanTitle);
       bunnyFormData.append("file", videoFile);
 
       const bunnyRes = await fetch("/api/bunny/upload", {
@@ -90,35 +169,54 @@ export default function UploadPage() {
         body: bunnyFormData,
       });
 
-      const bunnyData = await bunnyRes.json();
+      let bunnyData: any = null;
+
+      try {
+        bunnyData = await bunnyRes.json();
+      } catch {
+        bunnyData = null;
+      }
 
       if (!bunnyRes.ok) {
         console.error("Bunny upload failed:", bunnyData);
-       setError(
-  typeof bunnyData === "string"
-    ? bunnyData
-    : bunnyData.error
-    ? `${bunnyData.error} ${bunnyData.details || ""}`
-    : JSON.stringify(bunnyData)
-);
+
+        setError(
+          bunnyData?.error
+            ? `${bunnyData.error} ${bunnyData.details || ""}`
+            : "Video upload failed. Please try again."
+        );
+
         return;
       }
 
-      const thumbExt = thumbnailFile.name.split(".").pop();
+      if (!bunnyData?.embed_url) {
+        setError("Video uploaded, but Bunny did not return a playable URL.");
+        return;
+      }
+
+      const thumbExt = thumbnailFile.name.split(".").pop() || "jpg";
       const thumbFileName = `${Date.now()}-thumbnail.${thumbExt}`;
       const thumbnailPath = `thumbnails/${thumbFileName}`;
 
       const { error: thumbnailUploadError } = await supabase.storage
         .from("videos")
-        .upload(thumbnailPath, thumbnailFile);
+        .upload(thumbnailPath, thumbnailFile, {
+          cacheControl: "3600",
+          upsert: false,
+        });
 
-      if (thumbnailUploadError) throw thumbnailUploadError;
+      if (thumbnailUploadError) {
+        console.error("Thumbnail upload failed:", thumbnailUploadError);
+        setError("Thumbnail upload failed. Please try another image.");
+        return;
+      }
 
       const { data: thumbnailPublicData } = supabase.storage
         .from("videos")
         .getPublicUrl(thumbnailPath);
 
-      const thumbnailUrl = thumbnailPublicData.publicUrl;
+      const thumbnailUrl =
+        thumbnailPublicData?.publicUrl || "/default-thumbnail.jpg";
 
       const metadataRes = await fetch("/api/uploads", {
         method: "POST",
@@ -126,29 +224,40 @@ export default function UploadPage() {
           "Content-Type": "application/json",
         },
         body: JSON.stringify({
-          title,
-          creator,
-          description: description.trim(),
+          title: cleanTitle,
+          creator: cleanCreator,
+          description: cleanDescription,
           thumbnail_url: thumbnailUrl,
           video_url: bunnyData.embed_url,
           category,
           duration_seconds: duration,
           status: "published",
+          is_live: false,
         }),
       });
 
-      const metadataData = await metadataRes.json();
+      let metadataData: any = null;
+
+      try {
+        metadataData = await metadataRes.json();
+      } catch {
+        metadataData = null;
+      }
 
       if (!metadataRes.ok) {
         console.error("Metadata save failed:", metadataData);
+
         setError(
-          metadataData.error || "Video uploaded, but metadata save failed."
+          metadataData?.error ||
+            "Video uploaded, but metadata save failed. Please check the uploads API."
         );
+
         return;
       }
 
-      setUploadedTitle(title);
+      setUploadedTitle(cleanTitle);
       setSubmitted(true);
+
       setTitle("");
       setDescription("");
       setVideoFile(null);
@@ -156,9 +265,10 @@ export default function UploadPage() {
       setVideoPreview("");
       setThumbnailPreview("");
       setDuration(null);
+      setCategory("culture");
     } catch (err: any) {
       console.error("Upload failed:", err);
-      setError(err.message || "Upload failed. Check console.");
+      setError(err?.message || "Upload failed. Please try again.");
     } finally {
       setUploading(false);
     }
@@ -168,30 +278,45 @@ export default function UploadPage() {
     <>
       <Navbar />
 
-      <main className="min-h-screen bg-[#f7f7f2] px-6 py-10">
-        <div className="mx-auto max-w-2xl rounded-2xl bg-white p-8 shadow">
-          <h1 className="mb-4 text-2xl font-bold">Upload Video</h1>
+      <main className="min-h-screen bg-[#f7f7f2] px-4 py-8 sm:px-6 sm:py-10">
+        <div className="mx-auto max-w-2xl rounded-2xl bg-white p-5 shadow sm:p-8">
+          <h1 className="mb-2 text-2xl font-bold">Upload Video</h1>
 
-          <div className="mb-6 rounded border bg-yellow-50 p-4">
-            <p className="font-semibold">Recommended Format</p>
-            <p className="text-sm text-gray-600">
-              .mp4 · H.264 · AAC · 720p/1080p · 24–30fps
+          <p className="mb-6 text-sm text-gray-600">
+            Upload your video for NiaTube beta. Videos appear after the upload
+            completes successfully.
+          </p>
+
+          <div className="mb-6 rounded-xl border border-yellow-200 bg-yellow-50 p-4">
+            <p className="font-semibold text-gray-900">Recommended Format</p>
+            <p className="mt-1 text-sm text-gray-700">
+              .mp4 · H.264 · AAC · 720p/1080p · 24–30fps · Max 500MB
             </p>
           </div>
+
+         
 
           <form onSubmit={handleSubmit} className="space-y-4">
             <input
               type="text"
               placeholder="Video Title"
               value={title}
-              onChange={(e) => setTitle(e.target.value)}
-              className="w-full rounded border p-3"
+              disabled={uploading}
+              onChange={(e) => {
+                clearErrorAndSuccess();
+                setTitle(e.target.value);
+              }}
+              className="w-full rounded-xl border border-gray-300 p-3 disabled:bg-gray-100"
             />
 
             <textarea
               value={description}
-              onChange={(e) => setDescription(e.target.value)}
-              className="min-h-[90px] w-full rounded-lg border px-3 py-2 text-sm"
+              disabled={uploading}
+              onChange={(e) => {
+                clearErrorAndSuccess();
+                setDescription(e.target.value);
+              }}
+              className="min-h-[90px] w-full rounded-xl border border-gray-300 px-3 py-2 text-sm disabled:bg-gray-100"
               placeholder="Briefly describe your video..."
             />
 
@@ -199,8 +324,12 @@ export default function UploadPage() {
               type="text"
               placeholder="Creator Name"
               value={creator}
-              onChange={(e) => setCreator(e.target.value)}
-              className="w-full rounded border p-3"
+              disabled={uploading}
+              onChange={(e) => {
+                clearErrorAndSuccess();
+                setCreator(e.target.value);
+              }}
+              className="w-full rounded-xl border border-gray-300 p-3 disabled:bg-gray-100"
             />
 
             <label className="block">
@@ -210,8 +339,12 @@ export default function UploadPage() {
 
               <select
                 value={category}
-                onChange={(e) => setCategory(e.target.value)}
-                className="mt-2 w-full rounded-xl border border-gray-300 px-4 py-3"
+                disabled={uploading}
+                onChange={(e) => {
+                  clearErrorAndSuccess();
+                  setCategory(e.target.value);
+                }}
+                className="mt-2 w-full rounded-xl border border-gray-300 px-4 py-3 disabled:bg-gray-100"
               >
                 <option value="culture">Culture</option>
                 <option value="history">History</option>
@@ -230,17 +363,16 @@ export default function UploadPage() {
               <input
                 type="file"
                 accept="video/mp4"
-                onChange={(e) => {
-                  const file = e.target.files?.[0] || null;
-                  setVideoFile(file);
-
-                  if (file) {
-                    setVideoPreview(URL.createObjectURL(file));
-                    handleVideoMetadata(file);
-                  }
-                }}
-                className="w-full rounded border p-3"
+                disabled={uploading}
+                onChange={(e) =>
+                  handleVideoSelect(e.target.files?.[0] || null)
+                }
+                className="w-full rounded-xl border border-gray-300 p-3 disabled:bg-gray-100"
               />
+
+              <p className="mt-1 text-xs text-gray-500">
+                MP4 only for beta. Maximum file size: 500MB.
+              </p>
             </div>
 
             <div>
@@ -249,23 +381,29 @@ export default function UploadPage() {
               </label>
               <input
                 type="file"
-                accept="image/*"
-                onChange={(e) => {
-                  const file = e.target.files?.[0] || null;
-                  setThumbnailFile(file);
-
-                  if (file) {
-                    setThumbnailPreview(URL.createObjectURL(file));
-                  }
-                }}
-                className="w-full rounded border p-3"
+                accept="image/jpeg,image/png,image/webp"
+                disabled={uploading}
+                onChange={(e) =>
+                  handleThumbnailSelect(e.target.files?.[0] || null)
+                }
+                className="w-full rounded-xl border border-gray-300 p-3 disabled:bg-gray-100"
               />
+
+              <p className="mt-1 text-xs text-gray-500">
+                JPG, PNG, or WebP recommended.
+              </p>
             </div>
 
             <div className="mt-6 rounded-2xl bg-gray-50 p-4">
               <h2 className="text-lg font-bold text-gray-900">
                 Upload Preview
               </h2>
+
+              {!thumbnailPreview && !videoPreview && (
+                <div className="mt-4 flex h-40 items-center justify-center rounded-xl border border-dashed border-gray-300 text-sm text-gray-500">
+                  Preview will appear here after you choose files.
+                </div>
+              )}
 
               {thumbnailPreview && (
                 <img
@@ -288,6 +426,11 @@ export default function UploadPage() {
                   {title || "Video title preview"}
                 </h3>
 
+                <p className="mt-1 text-sm text-gray-500">
+                  {creator || "Creator name preview"}
+                  {duration ? ` • ${Math.floor(duration / 60)}m ${duration % 60}s` : ""}
+                </p>
+
                 {description && (
                   <p className="mt-2 text-sm text-gray-700">
                     {description}
@@ -299,23 +442,23 @@ export default function UploadPage() {
             <button
               type="submit"
               disabled={uploading}
-              className="w-full rounded bg-black p-3 font-bold text-white disabled:opacity-60"
+              className="w-full rounded-xl bg-black p-3 font-bold text-white disabled:cursor-not-allowed disabled:bg-gray-400"
             >
-              {uploading ? "Uploading to Bunny..." : "Upload"}
+              {uploading ? "Uploading... Please do not refresh" : "Upload"}
             </button>
-          </form>
-
-          {submitted && (
-            <div className="mt-4 rounded border bg-green-100 p-4">
-              Uploaded to Bunny: <strong>{uploadedTitle}</strong>
+            
+             {submitted && (
+            <div className="mb-5 rounded-xl border border-green-200 bg-green-50 p-4 text-green-800">
+              Upload successful: <strong>{uploadedTitle}</strong>
             </div>
           )}
 
           {error && (
-            <div className="mt-4 rounded border bg-red-100 p-4 text-red-700">
+            <div className="mb-5 rounded-xl border border-red-200 bg-red-50 p-4 text-red-700">
               {error}
             </div>
           )}
+          </form>
         </div>
       </main>
     </>

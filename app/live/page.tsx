@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import Link from "next/link";
 import Navbar from "@/components/Navbar";
 import { supabase } from "@/lib/supabase-browser";
@@ -11,38 +11,175 @@ type Video = {
   creator: string;
   views?: number;
   thumbnail_url?: string;
+  is_live?: boolean;
+};
+
+type ChatMessage = {
+  id: string;
+  username: string;
+  message: string;
+  created_at?: string;
+};
+
+type LiveSettings = {
+  is_live: boolean;
+  chat_paused: boolean;
+  chat_locked: boolean;
+  slow_mode: boolean;
+  subscriber_only: boolean;
+  monetization_enabled: boolean;
 };
 
 export default function LivePage() {
   const [liveStreams, setLiveStreams] = useState<Video[]>([]);
+  const [messages, setMessages] = useState<ChatMessage[]>([]);
+  const [input, setInput] = useState("");
+  const [username] = useState("Viewer");
   const [ads, setAds] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
+  const [statusMessage, setStatusMessage] = useState("");
+
+  const [settings, setSettings] = useState<LiveSettings>({
+    is_live: false,
+    chat_paused: false,
+    chat_locked: false,
+    slow_mode: false,
+    subscriber_only: false,
+    monetization_enabled: false,
+  });
+
+  const chatEndRef = useRef<HTMLDivElement | null>(null);
+
+  const chatDisabled =
+    settings.chat_paused || settings.chat_locked || settings.subscriber_only;
 
   useEffect(() => {
-    async function loadData() {
-      setLoading(true);
+    loadData();
+    loadMessages();
+    loadLiveSettings();
 
-      const { data } = await supabase
-        .from("uploads")
-        .select("*")
-        .eq("is_live", true)
-        .order("created_at", { ascending: false });
+    const chatChannel = supabase
+      .channel("viewer-live-chat-room")
+      .on(
+        "postgres_changes",
+        { event: "INSERT", schema: "public", table: "live_chat" },
+        (payload) => {
+          setMessages((prev) => [...prev, payload.new as ChatMessage]);
+        }
+      )
+      .subscribe();
 
-      if (data) setLiveStreams(data);
+    const settingsChannel = supabase
+      .channel("viewer-live-settings")
+      .on(
+        "postgres_changes",
+        { event: "*", schema: "public", table: "live_stream_settings" },
+        () => {
+          loadLiveSettings();
+        }
+      )
+      .subscribe();
 
-      const { data: adsData } = await supabase
-        .from("ads")
-        .select("*")
-        .eq("is_active", true)
-        .limit(1);
+    return () => {
+      supabase.removeChannel(chatChannel);
+      supabase.removeChannel(settingsChannel);
+    };
+  }, []);
 
-      if (adsData) setAds(adsData);
+  useEffect(() => {
+    chatEndRef.current?.scrollIntoView({ behavior: "smooth" });
+  }, [messages]);
 
-      setLoading(false);
+  async function loadData() {
+    setLoading(true);
+
+    const { data } = await supabase
+      .from("uploads")
+      .select("*")
+      .eq("status", "published")
+      .eq("is_live", true)
+      .order("created_at", { ascending: false });
+
+    if (data) setLiveStreams(data as Video[]);
+
+    const { data: adsData } = await supabase
+      .from("ads")
+      .select("*")
+      .eq("is_active", true)
+      .limit(1);
+
+    if (adsData) setAds(adsData);
+
+    setLoading(false);
+  }
+
+  async function loadMessages() {
+    const { data, error } = await supabase
+      .from("live_chat")
+      .select("*")
+      .order("created_at", { ascending: true })
+      .limit(100);
+
+    if (error) {
+      console.error("Live chat load error:", error);
+      return;
     }
 
-    loadData();
-  }, []);
+    setMessages((data || []) as ChatMessage[]);
+  }
+
+  async function loadLiveSettings() {
+    const { data, error } = await supabase
+      .from("live_stream_settings")
+      .select(
+        "is_live, chat_paused, chat_locked, slow_mode, subscriber_only, monetization_enabled"
+      )
+      .limit(1)
+      .single();
+
+    if (error) {
+      console.error("Live settings load error:", error);
+      return;
+    }
+
+    setSettings(data as LiveSettings);
+  }
+
+  async function sendMessage() {
+    const finalMessage = input.trim();
+
+    if (chatDisabled) {
+      setStatusMessage("Chat is currently restricted.");
+      return;
+    }
+
+    if (!finalMessage) return;
+
+    const { data, error } = await supabase
+      .from("live_chat")
+      .insert([
+        {
+          username,
+          message: finalMessage,
+          type: "viewer",
+        },
+      ])
+      .select()
+      .single();
+
+    if (error) {
+      console.error("Live chat send error:", error);
+      setStatusMessage("Could not send message.");
+      return;
+    }
+
+    if (data) {
+      setMessages((prev) => [...prev, data as ChatMessage]);
+    }
+
+    setInput("");
+    setStatusMessage("");
+  }
 
   return (
     <main className="min-h-screen bg-gray-50">
@@ -51,26 +188,106 @@ export default function LivePage() {
       <section className="mx-auto max-w-7xl px-6 py-6">
         <div className="mb-6 flex items-center justify-between">
           <div>
-            <h1 className="text-3xl font-black text-gray-900">🔴 Live Now</h1>
+            <h1 className="text-3xl font-black text-gray-900">
+              {settings.is_live ? "🔴 Live Now" : "⚫ Live Offline"}
+            </h1>
+
             <p className="mt-1 text-sm text-gray-600">
               Watch live events across Africa and the diaspora.
             </p>
           </div>
 
-          <div className="hidden rounded-xl bg-yellow-100 px-4 py-3 text-sm font-bold text-yellow-800 md:block">
-            Sponsored Live Events
+          <div className="flex items-center gap-3">
+            <Link
+              href="/live/setup"
+              className="rounded-xl bg-red-600 px-4 py-3 text-sm font-bold text-white hover:bg-red-700"
+            >
+              Start Live Event
+            </Link>
+
+            <div
+              className={`hidden rounded-xl px-4 py-3 text-sm font-bold md:block ${
+                settings.is_live
+                  ? "bg-red-100 text-red-700"
+                  : "bg-gray-200 text-gray-700"
+              }`}
+            >
+              {settings.is_live
+                ? "Live Broadcast Active"
+                : "No Active Broadcast"}
+            </div>
           </div>
         </div>
 
-        {/* MAIN GRID (ALWAYS SHOWS) */}
-        <div className="grid grid-cols-1 gap-6 lg:grid-cols-[1fr_280px]">
-          {/* LEFT: STREAMS */}
+        <div className="mb-6 grid gap-4 md:grid-cols-4">
+          <div className="rounded-2xl bg-white p-4 shadow-sm">
+            <p className="text-xs font-bold uppercase text-gray-500">
+              Stream Status
+            </p>
+
+            <p
+              className={`mt-2 text-2xl font-black ${
+                settings.is_live ? "text-red-600" : "text-gray-700"
+              }`}
+            >
+              {settings.is_live ? "LIVE" : "OFFLINE"}
+            </p>
+          </div>
+
+          <div className="rounded-2xl bg-white p-4 shadow-sm">
+            <p className="text-xs font-bold uppercase text-gray-500">
+              Chat Status
+            </p>
+
+            <p
+              className={`mt-2 text-2xl font-black ${
+                chatDisabled ? "text-red-600" : "text-green-700"
+              }`}
+            >
+              {chatDisabled ? "Restricted" : "Open"}
+            </p>
+          </div>
+
+          <div className="rounded-2xl bg-white p-4 shadow-sm">
+            <p className="text-xs font-bold uppercase text-gray-500">
+              Slow Mode
+            </p>
+
+            <p className="mt-2 text-2xl font-black text-gray-900">
+              {settings.slow_mode ? "On" : "Off"}
+            </p>
+          </div>
+
+          <div className="rounded-2xl bg-white p-4 shadow-sm">
+            <p className="text-xs font-bold uppercase text-gray-500">
+              Monetization
+            </p>
+
+            <p className="mt-2 text-2xl font-black text-gray-900">
+              {settings.monetization_enabled ? "On" : "Off"}
+            </p>
+          </div>
+        </div>
+
+        {(settings.chat_paused ||
+          settings.chat_locked ||
+          settings.subscriber_only) && (
+          <div className="mb-6 rounded-2xl bg-red-50 p-5 font-bold text-red-700">
+            {settings.chat_locked
+              ? "Chat is locked by moderation."
+              : settings.chat_paused
+              ? "Chat is paused by the broadcaster."
+              : "Subscriber-only chat is currently active."}
+          </div>
+        )}
+
+        <div className="grid grid-cols-1 gap-6 lg:grid-cols-[1fr_320px]">
           <div>
             {loading ? (
               <p className="text-gray-600">Loading live streams...</p>
             ) : liveStreams.length === 0 ? (
-              <p className="text-gray-600">
-                No live streams right now. Start a live stream to appear here.
+              <p className="rounded-2xl bg-white p-6 font-bold text-gray-700 shadow-sm">
+                No livestream is active right now.
               </p>
             ) : (
               <div className="grid grid-cols-1 gap-6 sm:grid-cols-2">
@@ -119,7 +336,6 @@ export default function LivePage() {
             )}
           </div>
 
-          {/* RIGHT: ADS (ALWAYS VISIBLE) */}
           <aside className="space-y-4">
             {ads.length > 0 && (
               <div className="rounded-2xl border border-yellow-200 bg-yellow-50 p-5 shadow-sm">
@@ -145,12 +361,65 @@ export default function LivePage() {
             )}
 
             <div className="rounded-2xl bg-white p-5 shadow-sm">
+              <h2 className="text-lg font-bold text-gray-900">Live Chat</h2>
+
+              <div className="mt-4 h-[320px] overflow-y-auto rounded-xl border bg-gray-50 p-3">
+                {messages.length === 0 ? (
+                  <p className="text-sm text-gray-500">No messages yet.</p>
+                ) : (
+                  messages.map((msg) => (
+                    <div key={msg.id} className="mb-3 text-sm">
+                      <span className="font-bold text-blue-700">
+                        {msg.username}:{" "}
+                      </span>
+
+                      <span className="text-gray-700">{msg.message}</span>
+                    </div>
+                  ))
+                )}
+
+                <div ref={chatEndRef} />
+              </div>
+
+              {statusMessage && (
+                <p className="mt-3 text-sm font-bold text-red-600">
+                  {statusMessage}
+                </p>
+              )}
+
+              <div className="mt-3 flex gap-2">
+                <input
+                  type="text"
+                  value={input}
+                  disabled={chatDisabled}
+                  onChange={(e) => setInput(e.target.value)}
+                  placeholder={
+                    chatDisabled
+                      ? "Chat is currently restricted."
+                      : "Type message..."
+                  }
+                  className="flex-1 rounded-xl border px-3 py-2 text-sm outline-none focus:border-black disabled:bg-gray-100"
+                />
+
+                <button
+                  onClick={sendMessage}
+                  disabled={chatDisabled}
+                  className="rounded-xl bg-black px-4 py-2 text-sm font-bold text-white disabled:cursor-not-allowed disabled:bg-gray-400"
+                >
+                  Send
+                </button>
+              </div>
+            </div>
+
+            <div className="rounded-2xl bg-white p-5 shadow-sm">
               <h2 className="text-lg font-bold text-gray-900">
                 Live Monetization
               </h2>
 
               <p className="mt-2 text-sm text-gray-600">
-                Sponsor live events and reach engaged audiences in real time.
+                {settings.monetization_enabled
+                  ? "Live monetization is enabled for this stream."
+                  : "Live monetization is not enabled yet."}
               </p>
             </div>
           </aside>

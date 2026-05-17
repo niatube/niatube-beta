@@ -13,16 +13,46 @@ type UploadItem = {
   video_url: string | null;
   status: string;
   created_at: string;
-  language?: string;
+  language?: string | null;
   likes?: number | null;
   views?: number | null;
   is_live?: boolean | null;
 };
 
-export default function Home() {
-  const [liveUploads, setLiveUploads] = useState<UploadItem[]>([]);
-  const [selectedLanguage, setSelectedLanguage] = useState<string | null>(null);
+function formatUploadTime(dateString?: string | null) {
+  if (!dateString) return "Recently uploaded";
 
+  const uploadedTime = new Date(dateString).getTime();
+
+  if (Number.isNaN(uploadedTime)) return "Recently uploaded";
+
+  const now = Date.now();
+  const seconds = Math.floor((now - uploadedTime) / 1000);
+
+  if (seconds < 60) return "Just now";
+
+  const minutes = Math.floor(seconds / 60);
+  if (minutes < 60) return `${minutes} minute${minutes === 1 ? "" : "s"} ago`;
+
+  const hours = Math.floor(minutes / 60);
+  if (hours < 24) return `${hours} hour${hours === 1 ? "" : "s"} ago`;
+
+  const days = Math.floor(hours / 24);
+  if (days < 7) return `${days} day${days === 1 ? "" : "s"} ago`;
+
+  const weeks = Math.floor(days / 7);
+  if (weeks < 5) return `${weeks} week${weeks === 1 ? "" : "s"} ago`;
+
+  const months = Math.floor(days / 30);
+  if (months < 12) return `${months} month${months === 1 ? "" : "s"} ago`;
+
+  const years = Math.floor(days / 365);
+  return `${years} year${years === 1 ? "" : "s"} ago`;
+}
+
+export default function Home() {
+  const [uploads, setUploads] = useState<UploadItem[]>([]);
+  const [selectedLanguage, setSelectedLanguage] = useState<string | null>(null);
   useEffect(() => {
     const savedLanguage = localStorage.getItem("niatube_language");
     setSelectedLanguage(savedLanguage);
@@ -34,17 +64,17 @@ export default function Home() {
         });
 
         const data = await res.json();
-        setLiveUploads(Array.isArray(data.uploads) ? data.uploads : []);
+        setUploads(Array.isArray(data.uploads) ? data.uploads : []);
       } catch (error) {
         console.error("Failed to fetch uploads", error);
-        setLiveUploads([]);
+        setUploads([]);
       }
     }
 
     fetchUploads();
   }, []);
 
-  const uploadedVideos = liveUploads
+  const uploadedVideos = uploads
     .filter((item) => item.status === "published")
     .map((item) => ({
       id: item.id,
@@ -52,11 +82,11 @@ export default function Home() {
       creator: item.creator,
       views: item.views || 0,
       likes: item.likes || 0,
-      language: item.language,
+      language: item.language || null,
       image: item.thumbnail_url || "/default-thumbnail.jpg",
       created_at: item.created_at,
-      is_live: item.is_live || false,
-      isLiveUpload: true,
+      is_live: Boolean(item.is_live),
+      isUploadedVideo: true,
     }));
 
   const uniqueFallbackVideos = fallbackVideos.filter(
@@ -80,14 +110,19 @@ export default function Home() {
       views: item.views || 0,
       likes: item.likes || 0,
       image: item.image || item.thumbnail_url || "/default-thumbnail.jpg",
-      is_live: item.is_live || false,
-      isLiveUpload: false,
+      language: item.language || null,
+      is_live: Boolean(item.is_live),
+      isUploadedVideo: false,
     })
   );
 
   const filteredVideos = [...uploadedVideos, ...fallbackWithStats].filter(
     (video) => {
       if (!selectedLanguage) return true;
+
+      // Do not hide real uploaded videos just because language is missing.
+      if (video.isUploadedVideo && !video.language) return true;
+
       return video.language === selectedLanguage;
     }
   );
@@ -96,8 +131,8 @@ export default function Home() {
     if (a.is_live && !b.is_live) return -1;
     if (!a.is_live && b.is_live) return 1;
 
-    if (a.isLiveUpload && !b.isLiveUpload) return -1;
-    if (!a.isLiveUpload && b.isLiveUpload) return 1;
+    if (a.isUploadedVideo && !b.isUploadedVideo) return -1;
+    if (!a.isUploadedVideo && b.isUploadedVideo) return 1;
 
     const aTime = a.created_at ? new Date(a.created_at).getTime() : 0;
     const bTime = b.created_at ? new Date(b.created_at).getTime() : 0;
@@ -105,7 +140,9 @@ export default function Home() {
     return bTime - aTime;
   });
 
-  const videos = sortedVideos.slice(0, 6);
+  const videos = uploadedVideos.length > 0
+  ? uploadedVideos.slice(0, 6)
+  : fallbackWithStats.slice(0, 6);
 
   return (
     <main className="min-h-screen bg-[#f6f6f6] text-black">
@@ -146,13 +183,14 @@ export default function Home() {
 
                 <div className="mt-8 flex flex-wrap gap-4">
                   <Link
-  href="/login"
-  className="inline-flex items-center justify-center rounded-full bg-yellow-400 px-7 py-3 text-sm font-extrabold text-black shadow-lg hover:bg-yellow-300"
->
-  Join as Creator
-</Link>
+                    href="/login"
+                    className="inline-flex items-center justify-center rounded-full bg-yellow-400 px-7 py-3 text-sm font-extrabold text-black shadow-lg hover:bg-yellow-300"
+                  >
+                    Join as Creator
+                  </Link>
+
                   <Link
-  href="/discover"
+                    href="/discover"
                     className="inline-flex items-center justify-center rounded-full bg-white px-7 py-3 text-sm font-extrabold text-black shadow-lg hover:bg-gray-100"
                   >
                     Explore Videos
@@ -163,7 +201,7 @@ export default function Home() {
 
             <div className="mx-auto mt-4 max-w-[980px] px-4">
               <div className="flex items-center gap-3 rounded-lg bg-black px-4 py-2 text-white">
-                <div className="h-2 w-2 animate-pulse rounded-full bg-red-500"></div>
+                <div className="h-2 w-2 animate-pulse rounded-full bg-red-500" />
 
                 <div className="text-sm">
                   <span className="font-semibold">Now uploading:</span>{" "}
@@ -175,124 +213,167 @@ export default function Home() {
                 </div>
               </div>
             </div>
+<section id="videos" className="mt-10">
+  <div className="mb-6 flex flex-col gap-4 md:flex-row md:items-start md:justify-between">
+    <div>
+      <h2 className="text-4xl font-extrabold text-black">
+        Discover on NiaTube
+      </h2>
 
-            <section id="videos" className="mt-10">
-              <div className="mb-6 flex flex-col gap-4 md:flex-row md:items-start md:justify-between">
-                <div>
-                  <h2 className="text-4xl font-extrabold text-black">
-                    Discover on NiaTube
-                  </h2>
-                  <p className="mt-2 text-xl text-gray-700">
-                    Content that informs, inspires, and connects Africa & the
-                    Diaspora.
-                  </p>
+      <p className="mt-2 text-xl text-gray-700">
+        Content that informs, inspires, and connects Africa & the Diaspora.
+      </p>
+    </div>
+
+    <Link
+      href="/discover"
+      className="inline-flex h-10 items-center justify-center rounded-md bg-yellow-400 px-4 text-sm font-semibold text-black hover:bg-yellow-300"
+    >
+      View All
+    </Link>
+  </div>
+
+  <div className="grid grid-cols-1 gap-5 sm:gap-6 md:grid-cols-2 xl:grid-cols-3">
+    {videos
+      .filter((video: any) => !video.is_live)
+      .map((video: any, i: number) => {
+        const watchHref = video.id ? `/watch/${video.id}` : "/discover";
+
+        return (
+          <div
+            key={`${video.id}-${i}`}
+            className={`group overflow-hidden rounded-2xl bg-white shadow-sm transition-all duration-300 hover:-translate-y-1 hover:shadow-xl ${
+              i === 0 ? "ring-2 ring-yellow-400" : ""
+            }`}
+          >
+            <Link
+              href={watchHref}
+              className="relative block h-[210px] overflow-hidden bg-gray-100 sm:h-[190px]"
+            >
+              {i === 0 && (
+                <div className="absolute left-3 top-3 z-20 rounded-full bg-yellow-400 px-3 py-1 text-xs font-bold text-black shadow">
+                  NEW
+                </div>
+              )}
+
+              <img
+                src={video.image || "/default-thumbnail.jpg"}
+                alt={video.title}
+                onError={(e) => {
+                  e.currentTarget.src = "/default-thumbnail.jpg";
+                }}
+                className="h-full w-full object-cover transition-transform duration-500 group-hover:scale-105"
+              />
+
+              <div className="absolute inset-0 bg-black/20" />
+            </Link>
+
+            <div className="p-5">
+              <div className="text-xs font-semibold text-green-600">
+                ● Available now
+              </div>
+
+              <h3 className="mt-2 line-clamp-2 text-base font-bold leading-snug text-gray-900">
+                {video.title}
+              </h3>
+
+              <Link
+                href={`/channel/${encodeURIComponent(video.creator)}`}
+                className="mt-1 block text-sm font-semibold text-gray-600 hover:text-yellow-600"
+              >
+                {video.creator}
+              </Link>
+
+             <div className="mt-3 flex flex-wrap items-center gap-4 text-sm font-semibold text-gray-600">
+  <span>👁️ {video.views || 0} views</span>
+
+  <span>👍 {video.likes || 0} likes</span>
+  <span>📅 {formatUploadTime(video.created_at)}</span>
+
+ 
+</div>
+
+              <Link
+                href={watchHref}
+                className="mt-4 inline-block rounded-lg bg-black px-4 py-2 text-sm font-bold text-white hover:bg-gray-800"
+              >
+                Watch
+              </Link>
+            </div>
+          </div>
+        );
+      })}
+  </div>
+
+  {uploadedVideos.some((video: any) => video.is_live) && (
+    <div className="mt-10 rounded-3xl border border-red-100 bg-red-50 p-5">
+      <div className="mb-5 flex items-center justify-between">
+        <div>
+          <h2 className="text-3xl font-extrabold text-red-700">
+            🔴 Live Now
+          </h2>
+
+          <p className="mt-1 text-sm text-red-700/80">
+            Join active livestreams happening now on NiaTube.
+          </p>
+        </div>
+
+        <Link
+          href="/live"
+          className="rounded-lg bg-red-600 px-4 py-2 text-sm font-bold text-white hover:bg-red-700"
+        >
+          View Live
+        </Link>
+      </div>
+
+      <div className="grid grid-cols-1 gap-5 md:grid-cols-2 xl:grid-cols-3">
+        {uploadedVideos
+          .filter((video: any) => video.is_live)
+          .slice(0, 3)
+          .map((video: any, i: number) => (
+            <Link
+              key={`live-${video.id}-${i}`}
+              href={`/watch/${video.id}`}
+              className="group overflow-hidden rounded-2xl bg-white shadow-sm transition-all duration-300 hover:-translate-y-1 hover:shadow-xl"
+            >
+              <div className="relative h-[190px] overflow-hidden bg-black">
+                <div className="absolute left-3 top-3 z-20 rounded-full bg-red-600 px-3 py-1 text-xs font-bold text-white shadow-md">
+                  🔴 LIVE
                 </div>
 
-                <a
-                  href="/discover"
-                  className="inline-flex h-10 items-center justify-center rounded-md bg-yellow-400 px-4 text-sm font-semibold text-black hover:bg-yellow-300"
-                >
-                  View All
-                </a>
+                <img
+                  src={video.image || "/default-thumbnail.jpg"}
+                  alt={video.title}
+                  onError={(e) => {
+                    e.currentTarget.src = "/default-thumbnail.jpg";
+                  }}
+                  className="h-full w-full object-cover transition-transform duration-500 group-hover:scale-105"
+                />
+
+                <div className="absolute inset-0 bg-black/25" />
               </div>
 
-              <div className="grid grid-cols-1 gap-5 sm:gap-6 md:grid-cols-2 xl:grid-cols-3">
-                {videos.map((video, i) => {
-                  const watchHref = video.id ? `/watch/${video.id}` : "/discover";
+              <div className="p-5">
+                <p className="text-xs font-bold text-red-600">● Live now</p>
 
-                  return (
-                    <div
-                      key={`${video.title}-${i}`}
-                      className={`group overflow-hidden rounded-2xl bg-white shadow-sm transition-all duration-300 hover:-translate-y-1 hover:shadow-xl ${
-                        i === 0 ? "ring-2 ring-yellow-400" : ""
-                      }`}
-                    >
-                      <Link
-                        href={watchHref}
-                        className="relative block h-[210px] overflow-hidden bg-gray-100 sm:h-[190px]"
-                      >
-                        {video.is_live && (
-                          <div className="absolute left-3 top-3 z-10 rounded-full bg-red-600 px-3 py-1 text-xs font-bold text-white shadow-md">
-                            LIVE
-                          </div>
-                        )}
+                <h3 className="mt-2 line-clamp-2 text-base font-bold text-gray-900">
+                  {video.title}
+                </h3>
 
-                        <img
-                          src={video.image || "/default-thumbnail.jpg"}
-                          alt={video.title}
-                          onError={(e) => {
-                            e.currentTarget.src = "/default-thumbnail.jpg";
-                          }}
-                          className="h-full w-full object-cover transition-transform duration-500 group-hover:scale-105"
-                        />
+                <p className="mt-1 text-sm font-semibold text-gray-600">
+                  {video.creator}
+                </p>
 
-                        <div className="absolute inset-0 bg-black/20"></div>
-
-                        <div className="absolute inset-0 flex items-center justify-center">
-                          <div className="relative h-5 w-9 drop-shadow-md">
-                            <div
-                              className="absolute inset-0 bg-red-600"
-                              style={{
-                                clipPath:
-                                  "polygon(10% 0%, 78% 0%, 100% 50%, 78% 100%, 10% 100%, 0% 50%)",
-                                borderRadius: "10px",
-                              }}
-                            />
-
-                            <div className="absolute inset-0 flex items-center justify-center">
-                              <span className="text-sm font-extrabold text-white">
-                                N
-                              </span>
-                            </div>
-                          </div>
-                        </div>
-
-                        {i === 0 && (
-                          <div className="absolute left-3 top-3 rounded-full bg-yellow-400 px-3 py-1 text-xs font-bold text-black shadow">
-                            NEW
-                          </div>
-                        )}
-                      </Link>
-
-                      <div className="p-5">
-                        <div className="text-xs font-semibold text-green-600">
-                          ● Active now
-                        </div>
-
-                        <h3 className="mt-2 line-clamp-2 text-base font-bold leading-snug text-gray-900">
-                          {video.title}
-                        </h3>
-
-                        <a
-                          href={`/channel/${encodeURIComponent(video.creator)}`}
-                          className="mt-1 block text-sm font-semibold text-gray-600 hover:text-yellow-600"
-                        >
-                          {video.creator}
-                        </a>
-
-                        <div className="mt-3 flex flex-wrap items-center gap-4 text-sm font-semibold text-gray-600">
-                          <span>👁️ {video.views || 0} views</span>
-                          <span>👍 {video.likes || 0} likes</span>
-                          <span>
-                            📅{" "}
-                            {video.created_at
-                              ? new Date(video.created_at).toLocaleDateString()
-                              : "Recently uploaded"}
-                          </span>
-                        </div>
-
-                        <Link
-                          href={watchHref}
-                          className="mt-4 inline-block rounded-lg bg-black px-4 py-2 text-sm font-bold text-white hover:bg-gray-800"
-                        >
-                          Watch
-                        </Link>
-                      </div>
-                    </div>
-                  );
-                })}
+                <button className="mt-4 w-full rounded-lg bg-red-600 px-4 py-2 text-sm font-bold text-white">
+                  Watch Live
+                </button>
               </div>
-            </section>
+            </Link>
+          ))}
+      </div>
+    </div>
+  )}
+</section>
           </div>
 
           <aside className="hidden xl:block">
@@ -301,22 +382,26 @@ export default function Home() {
                 <p className="text-xs font-bold uppercase text-yellow-400">
                   Sponsored
                 </p>
+
                 <h3 className="mt-2 text-xl font-extrabold">
                   Advertise on NiaTube
                 </h3>
+
                 <p className="mt-2 text-sm text-gray-300">
                   Reach Pan-African creators, viewers, and diaspora audiences.
                 </p>
-                <a
+
+                <Link
                   href="/advertise"
                   className="mt-4 inline-block rounded-md bg-yellow-400 px-4 py-2 text-sm font-bold text-black"
                 >
                   Book Ad Space
-                </a>
+                </Link>
               </div>
 
               <div className="rounded-2xl bg-white p-5 shadow-sm">
                 <h3 className="text-lg font-extrabold">Rising Creators</h3>
+
                 <div className="mt-4 space-y-3 text-sm">
                   <p>1. Kigali Stories — 1.2K subscribers</p>
                   <p>2. Lagos Vibes — 980 subscribers</p>
@@ -325,7 +410,10 @@ export default function Home() {
               </div>
 
               <div className="rounded-2xl bg-white p-5 shadow-sm">
-                <h3 className="text-lg font-extrabold">Creator Leaderboard</h3>
+                <h3 className="text-lg font-extrabold">
+                  Creator Leaderboard
+                </h3>
+
                 <div className="mt-4 space-y-3 text-sm">
                   <p>🔥 Most viewed this week</p>
                   <p>⭐ Most liked creators</p>
@@ -342,10 +430,10 @@ export default function Home() {
           <p className="font-bold">Become a Creator on NiaTube</p>
 
           <div className="flex gap-6 text-sm text-gray-600">
-            <a href="/about">About</a>
-            <a href="/creator/apply">Creator</a>
-            <a href="/press">Press</a>
-            <a href="/privacy">Privacy</a>
+            <Link href="/about">About</Link>
+            <Link href="/creator/apply">Creator</Link>
+            <Link href="/press">Press</Link>
+            <Link href="/privacy">Privacy</Link>
           </div>
         </div>
       </footer>

@@ -91,11 +91,14 @@ export default function WatchPage() {
   const [tipStatus, setTipStatus] = useState("");
 
   const [viewerId, setViewerId] = useState("");
+  const [liveViewerId, setLiveViewerId] = useState("");
   const chatEndRef = useRef<HTMLDivElement | null>(null);
 
   const visibleMessages = messages.filter(
     (msg) => msg.type !== "system" && msg.username !== "NiaTube System"
   );
+
+  const chatRestricted = !isLive;
 
   useEffect(() => {
     async function loadViewer() {
@@ -103,7 +106,15 @@ export default function WatchPage() {
         data: { user },
       } = await supabase.auth.getUser();
 
-      setViewerId(user?.id || "guest-viewer");
+      let stableViewerId = user?.id || localStorage.getItem("niatube_viewer_id");
+
+      if (!stableViewerId) {
+        stableViewerId = crypto.randomUUID();
+        localStorage.setItem("niatube_viewer_id", stableViewerId);
+      }
+
+      setViewerId(stableViewerId);
+      setLiveViewerId(`live-${crypto.randomUUID()}`);
     }
 
     loadViewer();
@@ -180,17 +191,18 @@ export default function WatchPage() {
         if (creatorVideos && creatorVideos.length > 0) {
           setCreatorVideo(creatorVideos[0] as Video);
         }
-        const { data: recommendedData } = await supabase
-  .from("uploads")
-  .select("*")
-  .neq("id", id)
-  .eq("status", "published")
-  .order("created_at", { ascending: false })
-  .limit(4);
 
-if (recommendedData) {
-  setRecommendedVideos(recommendedData as Video[]);
-}
+        const { data: recommendedData } = await supabase
+          .from("uploads")
+          .select("*")
+          .neq("id", id)
+          .eq("status", "published")
+          .order("created_at", { ascending: false })
+          .limit(4);
+
+        if (recommendedData) {
+          setRecommendedVideos(recommendedData as Video[]);
+        }
       } else {
         const fallback = fallbackVideos.find((item) => item.id === id);
         setVideo((fallback as Video) || null);
@@ -231,21 +243,73 @@ if (recommendedData) {
   }, []);
 
   useEffect(() => {
-    if (!isLive) {
+    if (!id || !isLive || !liveViewerId) {
       setViewerCount(0);
       return;
     }
 
-    setViewerCount(Math.floor(Math.random() * 18) + 3);
+    let isMounted = true;
 
-    const interval = setInterval(() => {
-      setViewerCount((prev) =>
-        Math.max(1, prev + Math.floor(Math.random() * 5) - 2)
-      );
-    }, 5000);
+    async function loadViewerCount() {
+      const { count, error } = await supabase
+        .from("live_viewers")
+        .select("*", { count: "exact", head: true })
+        .eq("video_id", id);
 
-    return () => clearInterval(interval);
-  }, [isLive]);
+      if (!error && isMounted) {
+        setViewerCount(count || 0);
+      }
+    }
+
+    async function joinLiveStream() {
+      await supabase.from("live_viewers").insert([
+        {
+          video_id: id,
+          viewer_id: liveViewerId,
+        },
+      ]);
+
+      await loadViewerCount();
+    }
+
+    async function leaveLiveStream() {
+      await supabase
+        .from("live_viewers")
+        .delete()
+        .eq("video_id", id)
+        .eq("viewer_id", liveViewerId);
+    }
+
+    joinLiveStream();
+
+    const viewerChannel = supabase
+      .channel(`live-viewers-${id}`)
+      .on(
+        "postgres_changes",
+        { event: "*", schema: "public", table: "live_viewers" },
+        () => {
+          loadViewerCount();
+        }
+      )
+      .subscribe();
+
+    const handleBeforeUnload = () => {
+      supabase
+        .from("live_viewers")
+        .delete()
+        .eq("video_id", id)
+        .eq("viewer_id", liveViewerId);
+    };
+
+    window.addEventListener("beforeunload", handleBeforeUnload);
+
+    return () => {
+      isMounted = false;
+      window.removeEventListener("beforeunload", handleBeforeUnload);
+      leaveLiveStream();
+      supabase.removeChannel(viewerChannel);
+    };
+  }, [id, isLive, liveViewerId]);
 
   useEffect(() => {
     chatEndRef.current?.scrollIntoView({ behavior: "smooth" });
@@ -358,6 +422,8 @@ if (recommendedData) {
   }
 
   async function sendMessage() {
+    if (chatRestricted) return;
+
     const finalMessage = input.trim();
     if (!finalMessage) return;
 
@@ -477,28 +543,28 @@ if (recommendedData) {
           </aside>
 
           <section>
-  {video.video_url ? (
-  video.video_url.includes("iframe.mediadelivery.net") ? (
-    <div className="aspect-video w-full overflow-hidden rounded-2xl bg-black">
-      <iframe
-        src={video.video_url.replace("/play/", "/embed/")}
-        allow="accelerometer; gyroscope; autoplay; encrypted-media; picture-in-picture"
-        allowFullScreen
-        className="h-full w-full border-0"
-      />
-    </div>
-  ) : (
-    <video
-      src={video.video_url}
-      controls
-      className="aspect-video w-full rounded-2xl bg-black object-contain"
-    />
-  )
-) : (
-  <div className="flex aspect-video w-full items-center justify-center rounded-2xl bg-black text-white">
-    NiaTube Live Preview
-  </div>
-)}
+            {video.video_url ? (
+              video.video_url.includes("iframe.mediadelivery.net") ? (
+                <div className="aspect-video w-full overflow-hidden rounded-2xl bg-black">
+                  <iframe
+                    src={video.video_url.replace("/play/", "/embed/")}
+                    allow="accelerometer; gyroscope; autoplay; encrypted-media; picture-in-picture"
+                    allowFullScreen
+                    className="h-full w-full border-0"
+                  />
+                </div>
+              ) : (
+                <video
+                  src={video.video_url}
+                  controls
+                  className="aspect-video w-full rounded-2xl bg-black object-contain"
+                />
+              )
+            ) : (
+              <div className="flex aspect-video w-full items-center justify-center rounded-2xl bg-black text-white">
+                NiaTube Live Preview
+              </div>
+            )}
 
             <div className="mt-4 rounded-2xl bg-white p-5 shadow-sm">
               <h1 className="text-2xl font-bold text-gray-900">
@@ -509,22 +575,25 @@ if (recommendedData) {
                 {video.creator} • {video.views || 0} views • {subscriberCount}{" "}
                 subscribers
               </p>
-              {video.description && (
-  <div className="mt-4 rounded-xl bg-gray-50 p-4 text-sm leading-6 text-gray-700">
-    <p className={showFullDescription ? "" : "line-clamp-3"}>
-      {video.description}
-    </p>
 
-    {video.description.length > 160 && (
-      <button
-        onClick={() => setShowFullDescription((prev) => !prev)}
-        className="mt-2 text-sm font-bold text-black hover:underline"
-      >
-        {showFullDescription ? "Show less" : "Show more"}
-      </button>
-    )}
-  </div>
-)}
+              {video.description && (
+                <div className="mt-4 rounded-xl bg-gray-50 p-4 text-sm leading-6 text-gray-700">
+                  <p className={showFullDescription ? "" : "line-clamp-3"}>
+                    {video.description}
+                  </p>
+
+                  {video.description.length > 160 && (
+                    <button
+                      onClick={() =>
+                        setShowFullDescription((prev) => !prev)
+                      }
+                      className="mt-2 text-sm font-bold text-black hover:underline"
+                    >
+                      {showFullDescription ? "Show less" : "Show more"}
+                    </button>
+                  )}
+                </div>
+              )}
 
               <div className="mt-4 flex flex-wrap items-center gap-3">
                 <button
@@ -611,80 +680,6 @@ if (recommendedData) {
                   {tipStatus}
                 </p>
               )}
-
-              <div className="mt-5">
-                <h3 className="text-sm font-bold text-gray-900">
-                  Recent Tips
-                </h3>
-
-                {tips.length === 0 ? (
-                  <p className="mt-2 text-sm text-gray-500">No tips yet.</p>
-                ) : (
-                  <div className="mt-3 space-y-2">
-                    {tips.map((tip) => (
-                      <div
-                        key={tip.id}
-                        className="rounded-xl border bg-gray-50 p-3 text-sm"
-                      >
-                        <p className="font-bold text-gray-900">
-                          {currencySymbol(tip.currency_code)}
-                          {tip.amount} {tip.currency_code || "NGN"}
-                        </p>
-                        {tip.message && (
-                          <p className="mt-1 text-gray-700">{tip.message}</p>
-                        )}
-                      </div>
-                    ))}
-                  </div>
-                )}
-              </div>
-            </div>
-
-            <div className="mt-4 rounded-2xl bg-white p-5 shadow-sm">
-              <h2 className="text-lg font-bold text-gray-900">Comments</h2>
-
-              <div className="mt-4 space-y-3">
-                <input
-                  value={commentName}
-                  onChange={(e) => setCommentName(e.target.value)}
-                  className="w-full rounded-lg border px-3 py-2 text-sm"
-                  placeholder="Your name"
-                />
-
-                <textarea
-                  value={commentText}
-                  onChange={(e) => setCommentText(e.target.value)}
-                  className="min-h-[90px] w-full rounded-lg border px-3 py-2 text-sm"
-                  placeholder="Write a comment..."
-                />
-
-                <button
-                  onClick={sendComment}
-                  className="rounded-lg bg-yellow-400 px-5 py-2 text-sm font-bold text-black"
-                >
-                  Post Comment
-                </button>
-              </div>
-
-              <div className="mt-6 space-y-4">
-                {comments.length === 0 ? (
-                  <p className="text-sm text-gray-500">No comments yet.</p>
-                ) : (
-                  comments.map((item) => (
-                    <div
-                      key={item.id}
-                      className="rounded-xl border bg-gray-50 p-4"
-                    >
-                      <p className="font-bold text-gray-900">
-                        {item.username}
-                      </p>
-                      <p className="mt-1 text-sm text-gray-700">
-                        {item.comment}
-                      </p>
-                    </div>
-                  ))
-                )}
-              </div>
             </div>
           </section>
 
@@ -724,54 +719,23 @@ if (recommendedData) {
                     if (e.key === "Enter") sendMessage();
                   }}
                   className="w-full rounded-lg border px-3 py-2 text-sm"
-                  placeholder="Write a message..."
+                  placeholder={
+                    chatRestricted
+                      ? "Chat is currently restricted."
+                      : "Write a message..."
+                  }
+                  disabled={chatRestricted}
                 />
 
                 <button
                   onClick={sendMessage}
-                  className="w-full rounded-lg bg-yellow-400 px-4 py-2 text-sm font-bold text-black"
+                  disabled={chatRestricted}
+                  className="w-full rounded-lg bg-yellow-400 px-4 py-2 text-sm font-bold text-black disabled:cursor-not-allowed disabled:bg-gray-300 disabled:text-gray-500"
                 >
                   Send
                 </button>
               </div>
             </div>
-            <div className="mt-4 rounded-2xl bg-white p-4 shadow-sm">
-  <h2 className="text-lg font-bold text-gray-900">Up Next</h2>
-
-  {recommendedVideos.length === 0 ? (
-    <p className="mt-3 text-sm text-gray-500">
-      More videos coming soon.
-    </p>
-  ) : (
-    <div className="mt-3 space-y-3">
-      {recommendedVideos.map((item) => (
-        <a
-          key={item.id}
-          href={`/watch/${item.id}`}
-          className="flex gap-3 rounded-xl p-2 hover:bg-gray-50"
-        >
-          <img
-            src={item.thumbnail_url || item.image || "/default-thumbnail.jpg"}
-            onError={(e) => {
-              e.currentTarget.src = "/default-thumbnail.jpg";
-            }}
-            alt={item.title}
-            className="h-16 w-24 rounded-lg object-cover"
-          />
-
-          <div>
-            <p className="line-clamp-2 text-sm font-bold text-gray-900">
-              {item.title}
-            </p>
-            <p className="mt-1 text-xs text-gray-500">
-              {item.creator}
-            </p>
-          </div>
-        </a>
-      ))}
-    </div>
-  )}
-</div>
           </aside>
         </section>
       </main>

@@ -4,14 +4,15 @@ import Navbar from "@/components/Navbar";
 
 export default function LanguagePage() {
   const languages = [
-    "English",
-    "French",
-    "Spanish",
-    "Swahili",
-    "Arabic",
-    "Yoruba",
-    "Zulu",
-  ];
+  "English",
+  "French",
+  "Spanish",
+  "Swahili",
+  "Arabic",
+  "Portuguese",
+  "Yoruba",
+  "Zulu",
+];
 
   return (
     <main className="min-h-screen bg-[#f6f6f6] p-6">
