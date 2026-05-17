@@ -14,6 +14,7 @@ type Upload = {
   likes?: number;
   duration_seconds?: number;
   created_at?: string;
+  is_live?: boolean;
 };
 
 type Tip = {
