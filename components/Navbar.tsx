@@ -55,29 +55,82 @@ export default function Navbar({ simple = false }: { simple?: boolean }) {
             )}
           </div>
 
-          {menuOpen && (
-            <div className="absolute left-4 top-20 z-50 w-56 rounded-xl border border-gray-100 bg-white p-3 shadow-xl">
-              <Link className="block rounded-lg px-4 py-2 text-sm font-medium hover:bg-yellow-50 hover:text-yellow-700" href="/">
-                Home
-              </Link>
-              <Link className="block rounded-lg px-4 py-2 text-sm font-medium hover:bg-yellow-50 hover:text-yellow-700" href="/about">
-                About
-              </Link>
-              <Link className="block rounded-lg px-4 py-2 text-sm font-medium hover:bg-yellow-50 hover:text-yellow-700" href="/history">
-                History
-              </Link>
-              <Link className="block rounded-lg px-4 py-2 text-sm font-medium hover:bg-yellow-50 hover:text-yellow-700" href="/shorts">
-                Shorts
-              </Link>
-              <Link className="block rounded-lg px-4 py-2 text-sm font-medium hover:bg-yellow-50 hover:text-yellow-700" href="/niacircle">
-                NiaCircle
-              </Link>
-              <Link className="block rounded-lg px-4 py-2 text-sm font-medium hover:bg-yellow-50 hover:text-yellow-700" href="/vlogs">
-                Vlogs
-              </Link>
-            </div>
-          )}
+{menuOpen && (
+  <div className="absolute left-3 right-3 top-20 z-50 rounded-2xl border border-gray-100 bg-white p-4 shadow-2xl md:left-4 md:right-auto md:w-64">
+    {!simple && (
+      <input
+        type="text"
+        placeholder="Search videos or creators"
+        value={searchQuery}
+        onChange={(e) => setSearchQuery(e.target.value)}
+        onKeyDown={(e) => {
+          if (e.key === "Enter" && searchQuery.trim()) {
+            router.push(`/discover?q=${encodeURIComponent(searchQuery.trim())}`);
+            setSearchQuery("");
+            setMenuOpen(false);
+          }
+        }}
+        className="mb-3 w-full rounded-full border px-4 py-2 text-sm"
+      />
+    )}
 
+    <Link className="block rounded-lg px-4 py-2 text-sm font-bold hover:bg-yellow-50 hover:text-yellow-700" href="/">
+      Home
+    </Link>
+
+    <Link className="block rounded-lg px-4 py-2 text-sm font-medium hover:bg-yellow-50 hover:text-yellow-700" href="/news">
+      News
+    </Link>
+
+    <Link className="block rounded-lg px-4 py-2 text-sm font-medium hover:bg-yellow-50 hover:text-yellow-700" href="/trending">
+      Trending
+    </Link>
+
+    <Link className="block rounded-lg px-4 py-2 text-sm font-medium hover:bg-yellow-50 hover:text-yellow-700" href="/live">
+      🔴 Live
+    </Link>
+
+    <Link className="block rounded-lg px-4 py-2 text-sm font-medium hover:bg-yellow-50 hover:text-yellow-700" href="/category/culture">
+      Culture
+    </Link>
+
+    <Link className="block rounded-lg px-4 py-2 text-sm font-medium hover:bg-yellow-50 hover:text-yellow-700" href="/category/music">
+      Music
+    </Link>
+
+    <Link className="block rounded-lg px-4 py-2 text-sm font-medium hover:bg-yellow-50 hover:text-yellow-700" href="/shorts">
+      Shorts
+    </Link>
+
+    <Link className="block rounded-lg px-4 py-2 text-sm font-medium hover:bg-yellow-50 hover:text-yellow-700" href="/niacircle">
+      NiaCircle
+    </Link>
+
+    <Link className="block rounded-lg px-4 py-2 text-sm font-medium hover:bg-yellow-50 hover:text-yellow-700" href="/history">
+      History
+    </Link>
+
+    <Link className="block rounded-lg px-4 py-2 text-sm font-medium hover:bg-yellow-50 hover:text-yellow-700" href="/language">
+      Language
+    </Link>
+
+    <div className="mt-3 grid grid-cols-2 gap-2 border-t pt-3">
+      <Link
+        href="/login"
+        className="rounded-lg bg-black px-4 py-2 text-center text-sm font-bold text-white hover:bg-gray-800"
+      >
+        Upload
+      </Link>
+
+      <Link
+        href="/login"
+        className="rounded-lg border-2 border-green-600 px-4 py-2 text-center text-sm font-bold text-black hover:bg-gray-100"
+      >
+        Login
+      </Link>
+    </div>
+  </div>
+)}
           {!simple && (
             <nav className="ml-6 hidden items-center gap-5 text-[16px] font-medium md:flex">
               <Link href="/news">News</Link>
