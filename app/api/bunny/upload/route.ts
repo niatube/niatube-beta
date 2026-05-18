@@ -3,6 +3,13 @@ import { NextResponse } from "next/server";
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
 
+export async function GET() {
+  return Response.json({
+    bunnyLibraryIdPresent: Boolean(process.env.BUNNY_STREAM_LIBRARY_ID),
+    bunnyApiKeyPresent: Boolean(process.env.BUNNY_STREAM_API_KEY),
+  });
+}
+
 export async function POST(req: Request) {
   try {
     const libraryId = process.env.BUNNY_STREAM_LIBRARY_ID;
