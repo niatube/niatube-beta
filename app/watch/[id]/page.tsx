@@ -529,17 +529,37 @@ export default function WatchPage() {
               )}
             </div>
 
-            <div className="rounded-2xl border border-yellow-200 bg-yellow-50 p-4 shadow-sm">
-              <p className="text-xs font-semibold uppercase text-yellow-700">
-                Sponsored Live Event
-              </p>
-              <h3 className="mt-1 text-lg font-bold text-gray-900">
-                Ad Space Available
-              </h3>
-              <p className="mt-1 text-sm text-gray-700">
-                Promote your brand during NiaTube Live broadcasts.
-              </p>
-            </div>
+            {isLive ? (
+  <div className="rounded-2xl border border-yellow-200 bg-yellow-50 p-4 shadow-sm">
+    <p className="text-xs font-semibold uppercase text-yellow-700">
+      Sponsored Live Event
+    </p>
+    <h3 className="mt-1 text-lg font-bold text-gray-900">
+      Ad Space Available
+    </h3>
+    <p className="mt-1 text-sm text-gray-700">
+      Promote your brand during NiaTube Live broadcasts.
+    </p>
+  </div>
+) : (
+  <div className="rounded-2xl bg-black p-5 text-white shadow-sm">
+    <p className="text-xs font-bold uppercase text-yellow-400">
+      Sponsored
+    </p>
+    <h3 className="mt-2 text-xl font-extrabold">
+      Advertise on NiaTube
+    </h3>
+    <p className="mt-2 text-sm text-gray-300">
+      Reach Pan-African creators, viewers, and diaspora audiences.
+    </p>
+    <a
+      href="/advertise"
+      className="mt-4 inline-block rounded-md bg-yellow-400 px-4 py-2 text-sm font-bold text-black hover:bg-yellow-300"
+    >
+      Book Ad Space
+    </a>
+  </div>
+)}
           </aside>
 
           <section>
@@ -683,60 +703,124 @@ export default function WatchPage() {
             </div>
           </section>
 
-          <aside>
-            <div className="flex h-[600px] flex-col rounded-2xl border border-gray-200 bg-white p-4 shadow-sm">
-              <h2 className="text-lg font-bold text-red-600">🔴 Live Chat</h2>
+         <aside className="space-y-4">
+  {isLive ? (
+    <div className="flex h-[600px] flex-col rounded-2xl border border-gray-200 bg-white p-4 shadow-sm">
+      <h2 className="text-lg font-bold text-red-600">🔴 Live Chat</h2>
 
-              <div className="mt-3 flex-1 overflow-y-auto rounded-xl border bg-gray-50 p-3">
-                {visibleMessages.length === 0 ? (
-                  <p className="text-sm text-gray-500">No messages yet.</p>
-                ) : (
-                  visibleMessages.map((msg) => (
-                    <div key={msg.id} className="mb-3 text-sm">
-                      <span className="font-bold text-blue-700">
-                        {msg.username}:{" "}
-                      </span>
-                      <span className="text-gray-700">{msg.message}</span>
-                    </div>
-                  ))
-                )}
-
-                <div ref={chatEndRef} />
-              </div>
-
-              <div className="mt-3 space-y-2">
-                <input
-                  value={username}
-                  onChange={(e) => setUsername(e.target.value)}
-                  className="w-full rounded-lg border px-3 py-2 text-sm"
-                  placeholder="Name"
-                />
-
-                <input
-                  value={input}
-                  onChange={(e) => setInput(e.target.value)}
-                  onKeyDown={(e) => {
-                    if (e.key === "Enter") sendMessage();
-                  }}
-                  className="w-full rounded-lg border px-3 py-2 text-sm"
-                  placeholder={
-                    chatRestricted
-                      ? "Chat is currently restricted."
-                      : "Write a message..."
-                  }
-                  disabled={chatRestricted}
-                />
-
-                <button
-                  onClick={sendMessage}
-                  disabled={chatRestricted}
-                  className="w-full rounded-lg bg-yellow-400 px-4 py-2 text-sm font-bold text-black disabled:cursor-not-allowed disabled:bg-gray-300 disabled:text-gray-500"
-                >
-                  Send
-                </button>
-              </div>
+      <div className="mt-3 flex-1 overflow-y-auto rounded-xl border bg-gray-50 p-3">
+        {visibleMessages.length === 0 ? (
+          <p className="text-sm text-gray-500">No messages yet.</p>
+        ) : (
+          visibleMessages.map((msg) => (
+            <div key={msg.id} className="mb-3 text-sm">
+              <span className="font-bold text-blue-700">
+                {msg.username}:{" "}
+              </span>
+              <span className="text-gray-700">{msg.message}</span>
             </div>
-          </aside>
+          ))
+        )}
+
+        <div ref={chatEndRef} />
+      </div>
+
+      <div className="mt-3 space-y-2">
+        <input
+          value={username}
+          onChange={(e) => setUsername(e.target.value)}
+          className="w-full rounded-lg border px-3 py-2 text-sm"
+          placeholder="Name"
+        />
+
+        <input
+          value={input}
+          onChange={(e) => setInput(e.target.value)}
+          onKeyDown={(e) => {
+            if (e.key === "Enter") sendMessage();
+          }}
+          className="w-full rounded-lg border px-3 py-2 text-sm"
+          placeholder={
+            chatRestricted
+              ? "Chat is currently restricted."
+              : "Write a message..."
+          }
+          disabled={chatRestricted}
+        />
+
+        <button
+          onClick={sendMessage}
+          disabled={chatRestricted}
+          className="w-full rounded-lg bg-yellow-400 px-4 py-2 text-sm font-bold text-black disabled:cursor-not-allowed disabled:bg-gray-300 disabled:text-gray-500"
+        >
+          Send
+        </button>
+      </div>
+    </div>
+  ) : (
+    <>
+      <div className="rounded-2xl bg-black p-5 text-white shadow-sm">
+        <p className="text-xs font-bold uppercase text-yellow-400">
+          Sponsored
+        </p>
+        <h2 className="mt-2 text-xl font-extrabold">
+          Advertise on NiaTube
+        </h2>
+        <p className="mt-2 text-sm text-gray-300">
+          Reach Pan-African creators, viewers, and diaspora audiences.
+        </p>
+        <a
+          href="/advertise"
+          className="mt-4 inline-block rounded-md bg-yellow-400 px-4 py-2 text-sm font-bold text-black hover:bg-yellow-300"
+        >
+          Book Ad Space
+        </a>
+      </div>
+
+      <div className="rounded-2xl bg-white p-4 shadow-sm">
+        <h2 className="text-lg font-bold text-gray-900">Up Next</h2>
+
+        {recommendedVideos.length === 0 ? (
+          <p className="mt-3 text-sm text-gray-500">
+            More videos coming soon.
+          </p>
+        ) : (
+          <div className="mt-3 space-y-3">
+            {recommendedVideos.map((item) => (
+              <a
+                key={item.id}
+                href={`/watch/${item.id}`}
+                className="flex gap-3 rounded-xl p-2 hover:bg-gray-50"
+              >
+                <img
+                  src={
+                    item.thumbnail_url ||
+                    item.image ||
+                    "/default-thumbnail.jpg"
+                  }
+                  onError={(e) => {
+                    e.currentTarget.src = "/default-thumbnail.jpg";
+                  }}
+                  alt={item.title}
+                  className="h-16 w-24 rounded-lg object-cover"
+                />
+
+                <div>
+                  <p className="line-clamp-2 text-sm font-bold text-gray-900">
+                    {item.title}
+                  </p>
+                  <p className="mt-1 text-xs text-gray-500">
+                    {item.creator}
+                  </p>
+                </div>
+              </a>
+            ))}
+          </div>
+        )}
+      </div>
+    </>
+  )}
+</aside>
         </section>
       </main>
     </>
