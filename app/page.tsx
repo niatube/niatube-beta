@@ -290,8 +290,7 @@ export default function Home() {
   <span>👍 {video.likes || 0} likes</span>
   <span>📅 {formatUploadTime(video.created_at)}</span>
 
- 
-</div>
+ </div>
 
               <Link
                 href={watchHref}

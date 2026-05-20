@@ -4,7 +4,7 @@ import { useEffect, useState } from "react";
 import { supabase } from "@/lib/supabase-browser";
 import Navbar from "@/components/Navbar";
 
-const MAX_VIDEO_SIZE = 500 * 1024 * 1024; // 500MB
+const MAX_VIDEO_SIZE = 1024 * 1024 * 1024; // 1GB
 const ALLOWED_VIDEO_TYPES = ["video/mp4"];
 const ALLOWED_THUMBNAIL_TYPES = ["image/jpeg", "image/png", "image/webp"];
 
@@ -84,7 +84,7 @@ export default function UploadPage() {
     }
 
     if (file.size > MAX_VIDEO_SIZE) {
-      setError("Video exceeds the 500MB beta upload limit.");
+      setError("Video exceeds the 1GB upload limit.");
       return;
     }
 
@@ -164,10 +164,13 @@ export default function UploadPage() {
       bunnyFormData.append("title", cleanTitle);
       bunnyFormData.append("file", videoFile);
 
-      const bunnyRes = await fetch("/api/bunny/upload", {
-        method: "POST",
-        body: bunnyFormData,
-      });
+      const bunnyRes = await fetch(
+  "https://niatube-beta-production.up.railway.app/upload",
+  {
+    method: "POST",
+    body: bunnyFormData,
+  }
+);
 
       let bunnyData: any = null;
 
@@ -189,10 +192,12 @@ export default function UploadPage() {
         return;
       }
 
-      if (!bunnyData?.embed_url) {
-        setError("Video uploaded, but Bunny did not return a playable URL.");
-        return;
-      }
+      const bunnyEmbedUrl = bunnyData?.embedUrl || bunnyData?.embed_url;
+
+if (!bunnyEmbedUrl) {
+  setError("Video uploaded, but Bunny did not return a playable URL.");
+  return;
+}
 
       const thumbExt = thumbnailFile.name.split(".").pop() || "jpg";
       const thumbFileName = `${Date.now()}-thumbnail.${thumbExt}`;
@@ -228,7 +233,7 @@ export default function UploadPage() {
           creator: cleanCreator,
           description: cleanDescription,
           thumbnail_url: thumbnailUrl,
-          video_url: bunnyData.embed_url,
+         video_url: bunnyEmbedUrl,
           category,
           duration_seconds: duration,
           status: "published",
@@ -290,7 +295,7 @@ export default function UploadPage() {
           <div className="mb-6 rounded-xl border border-yellow-200 bg-yellow-50 p-4">
             <p className="font-semibold text-gray-900">Recommended Format</p>
             <p className="mt-1 text-sm text-gray-700">
-              .mp4 · H.264 · AAC · 720p/1080p · 24–30fps · Max 500MB
+              .mp4 · H.264 · AAC · 720p/1080p · 24–30fps · Max 1GB
             </p>
           </div>
 
