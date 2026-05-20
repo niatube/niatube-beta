@@ -23,6 +23,10 @@ app.get("/", (req, res) => {
 });
 
 app.post("/upload", upload.single("file"), async (req, res) => {
+    console.log("Upload request received");
+console.log("Title:", req.body?.title);
+console.log("File received:", req.file?.originalname);
+console.log("File size:", req.file?.size);
   try {
     const libraryId = process.env.BUNNY_STREAM_LIBRARY_ID;
     const apiKey = process.env.BUNNY_STREAM_API_KEY;
