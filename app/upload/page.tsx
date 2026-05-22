@@ -26,6 +26,7 @@ export default function UploadPage() {
   const [category, setCategory] = useState("culture");
   const [duration, setDuration] = useState<number | null>(null);
 
+const [uploadedVideoId, setUploadedVideoId] = useState("");
   useEffect(() => {
     async function loadCreatorName() {
       const {
@@ -258,6 +259,8 @@ setUploadStage("Finalizing publish...");
 
       try {
         metadataData = await metadataRes.json();
+
+        console.log("Metadata response:", metadataData);
       } catch {
         metadataData = null;
       }
@@ -274,6 +277,8 @@ setUploadStage("Finalizing publish...");
       }
 
       setUploadedTitle(cleanTitle);
+
+      setUploadedVideoId(metadataData?.upload?.id || metadataData?.id || "");
       setUploadProgress(100);
 setUploadStage("Upload complete.");
       setSubmitted(true);
@@ -511,7 +516,7 @@ setUploadStage("Upload complete.");
 
         <div className="mt-5 flex flex-wrap gap-3">
           <a
-            href="/"
+          href={uploadedVideoId ? `/watch/${uploadedVideoId}` : "/"}
             className="rounded-xl bg-black px-4 py-2 text-sm font-bold text-white hover:bg-gray-800"
           >
             Watch Video
