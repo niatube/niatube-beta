@@ -486,12 +486,48 @@ setUploadStage("Upload complete.");
   </div>
 )}
             
-             {submitted && (
-            <div className="mb-5 rounded-xl border border-green-200 bg-green-50 p-4 text-green-800">
-              Upload successful: <strong>{uploadedTitle}</strong>
-            </div>
-          )}
+         {submitted && (
+  <div className="mb-5 rounded-2xl border border-green-200 bg-green-50 p-5 shadow-sm">
+    <div className="flex items-start gap-3">
+      <div className="mt-1 text-2xl">✅</div>
 
+      <div className="flex-1">
+        <h3 className="text-lg font-black text-green-800">
+          Video Published Successfully
+        </h3>
+
+        <p className="mt-1 text-sm text-green-700">
+          Your video <strong>{uploadedTitle}</strong> is now live on
+          NiaTube.
+        </p>
+
+        {thumbnailPreview && (
+          <img
+            src={thumbnailPreview}
+            alt="Thumbnail preview"
+            className="mt-4 h-40 w-full rounded-xl object-cover shadow-sm"
+          />
+        )}
+
+        <div className="mt-5 flex flex-wrap gap-3">
+          <a
+            href="/"
+            className="rounded-xl bg-black px-4 py-2 text-sm font-bold text-white hover:bg-gray-800"
+          >
+            Watch Video
+          </a>
+
+          <a
+            href="/creator-dashboard"
+            className="rounded-xl border border-green-700 px-4 py-2 text-sm font-bold text-green-800 hover:bg-green-100"
+          >
+            Go to Creator Dashboard
+          </a>
+        </div>
+      </div>
+    </div>
+  </div>
+)}
           {error && (
             <div className="mb-5 rounded-xl border border-red-200 bg-red-50 p-4 text-red-700">
               {error}
