@@ -16,7 +16,10 @@ export default function UploadPage() {
   const [thumbnailFile, setThumbnailFile] = useState<File | null>(null);
   const [videoPreview, setVideoPreview] = useState("");
   const [thumbnailPreview, setThumbnailPreview] = useState("");
+ 
   const [uploading, setUploading] = useState(false);
+  const [uploadProgress, setUploadProgress] = useState(0);
+  const [uploadStage, setUploadStage] = useState("");
   const [submitted, setSubmitted] = useState(false);
   const [uploadedTitle, setUploadedTitle] = useState("");
   const [error, setError] = useState("");
@@ -148,7 +151,7 @@ export default function UploadPage() {
     }
 
     if (videoFile.size > MAX_VIDEO_SIZE) {
-      setError("Video exceeds the 500MB beta upload limit.");
+      setError("Video exceeds the 1GB upload limit.");
       return;
     }
 
@@ -158,7 +161,11 @@ export default function UploadPage() {
     }
 
     try {
+      setUploadProgress(5);
+setUploadStage("Preparing upload...");
       setUploading(true);
+      setUploadProgress(15);
+setUploadStage("Uploading video to NiaTube...");
 
       const bunnyFormData = new FormData();
       bunnyFormData.append("title", cleanTitle);
@@ -181,23 +188,26 @@ export default function UploadPage() {
       }
 
       if (!bunnyRes.ok) {
-        console.error("Bunny upload failed:", bunnyData);
+  console.error("Bunny upload failed:", bunnyData);
 
-        setError(
-          bunnyData?.error
-            ? `${bunnyData.error} ${bunnyData.details || ""}`
-            : "Video upload failed. Please try again."
-        );
+  setError(
+    bunnyData?.error
+      ? `${bunnyData.error} ${bunnyData.details || ""}`
+      : "Video upload failed. Please try again."
+  );
 
-        return;
-      }
+  return;
+}
 
-      const bunnyEmbedUrl = bunnyData?.embedUrl || bunnyData?.embed_url;
+const bunnyEmbedUrl = bunnyData?.embedUrl || bunnyData?.embed_url;
 
 if (!bunnyEmbedUrl) {
   setError("Video uploaded, but Bunny did not return a playable URL.");
   return;
 }
+
+setUploadProgress(70);
+setUploadStage("Processing video...");
 
       const thumbExt = thumbnailFile.name.split(".").pop() || "jpg";
       const thumbFileName = `${Date.now()}-thumbnail.${thumbExt}`;
@@ -211,10 +221,13 @@ if (!bunnyEmbedUrl) {
         });
 
       if (thumbnailUploadError) {
-        console.error("Thumbnail upload failed:", thumbnailUploadError);
-        setError("Thumbnail upload failed. Please try another image.");
-        return;
-      }
+  console.error("Thumbnail upload failed:", thumbnailUploadError);
+  setError("Thumbnail upload failed. Please try another image.");
+  return;
+}
+
+setUploadProgress(85);
+setUploadStage("Finalizing publish...");
 
       const { data: thumbnailPublicData } = supabase.storage
         .from("videos")
@@ -261,6 +274,8 @@ if (!bunnyEmbedUrl) {
       }
 
       setUploadedTitle(cleanTitle);
+      setUploadProgress(100);
+setUploadStage("Upload complete.");
       setSubmitted(true);
 
       setTitle("");
@@ -451,6 +466,25 @@ if (!bunnyEmbedUrl) {
             >
               {uploading ? "Uploading... Please do not refresh" : "Upload"}
             </button>
+            {uploading && (
+  <div className="rounded-xl border border-blue-200 bg-blue-50 p-4">
+    <div className="mb-2 flex items-center justify-between text-sm font-bold text-blue-800">
+      <span>{uploadStage || "Uploading..."}</span>
+      <span>{uploadProgress}%</span>
+    </div>
+
+    <div className="h-3 overflow-hidden rounded-full bg-blue-100">
+      <div
+        className="h-full rounded-full bg-blue-600 transition-all duration-500"
+        style={{ width: `${uploadProgress}%` }}
+      />
+    </div>
+
+    <p className="mt-2 text-xs text-blue-700">
+      Please keep this page open while your video uploads.
+    </p>
+  </div>
+)}
             
              {submitted && (
             <div className="mb-5 rounded-xl border border-green-200 bg-green-50 p-4 text-green-800">
