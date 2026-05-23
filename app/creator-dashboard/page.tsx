@@ -126,6 +126,13 @@ export default function CreatorDashboardPage() {
   0
 );
 
+const topVideo = uploads.reduce<Upload | null>((top, upload) => {
+  if (!top) return upload;
+
+  return Number(upload.views || 0) > Number(top.views || 0)
+    ? upload
+    : top;
+}, null);
   const totalWatchHours = uploads.reduce((sum, upload) => {
     const views = Number(upload.views || 0);
     const duration = Number(upload.duration_seconds || 0);
@@ -203,6 +210,40 @@ export default function CreatorDashboardPage() {
             <p className="mt-2 text-3xl font-black">{totalTips}</p>
           </div>
         </div>
+        {topVideo && (
+  <div className="mt-8 rounded-3xl bg-white p-6 shadow-sm">
+    <h2 className="text-2xl font-black text-gray-900">
+      Top Performing Video
+    </h2>
+
+    <div className="mt-5 flex flex-col gap-5 md:flex-row md:items-center">
+      {topVideo.thumbnail_url && (
+        <img
+          src={topVideo.thumbnail_url}
+          alt={topVideo.title}
+          className="h-40 w-full rounded-2xl object-cover md:w-64"
+        />
+      )}
+
+      <div>
+        <h3 className="text-xl font-black text-gray-900">
+          {topVideo.title}
+        </h3>
+
+        <p className="mt-2 text-sm text-gray-600">
+          {topVideo.views || 0} views • {topVideo.likes || 0} likes
+        </p>
+
+        <a
+          href={`/watch/${topVideo.id}`}
+          className="mt-4 inline-block rounded-xl bg-black px-4 py-2 text-sm font-bold text-white hover:bg-gray-800"
+        >
+          Watch Top Video
+        </a>
+      </div>
+    </div>
+  </div>
+)}
 
         <div className="mt-8 rounded-3xl bg-white p-6 shadow-sm">
           <h2 className="text-2xl font-black text-gray-900">
