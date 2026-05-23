@@ -185,7 +185,7 @@ export default function CreatorDashboardPage() {
           {uploads.length === 0 ? (
             <p className="mt-4 text-gray-500">No videos submitted yet.</p>
           ) : (
-     <div className="mt-5 space-y-4">
+           <div className="mt-5 space-y-4">
   {uploads.map((upload) => {
     const videoWatchHours =
       (Number(upload.views || 0) *
@@ -246,7 +246,7 @@ export default function CreatorDashboardPage() {
       </div>
     );
   })}
-</div>        </div>
+
 
         <div className="mt-8 rounded-3xl bg-white p-6 shadow-sm">
           <h2 className="text-2xl font-black text-gray-900">Tips</h2>
