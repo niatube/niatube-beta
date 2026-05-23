@@ -121,6 +121,11 @@ export default function CreatorDashboardPage() {
     0
   );
 
+  const totalLikes = uploads.reduce(
+  (sum, upload) => sum + Number(upload.likes || 0),
+  0
+);
+
   const totalWatchHours = uploads.reduce((sum, upload) => {
     const views = Number(upload.views || 0);
     const duration = Number(upload.duration_seconds || 0);
@@ -158,7 +163,7 @@ export default function CreatorDashboardPage() {
   </p>
 )}
 
-        <div className="mt-8 grid gap-5 md:grid-cols-3 xl:grid-cols-6">
+        <div className="mt-8 grid gap-5 md:grid-cols-3 xl:grid-cols-7">
           <div className="rounded-2xl bg-white p-5 shadow-sm">
             <p className="text-sm font-bold text-gray-500">Submitted Videos</p>
             <p className="mt-2 text-3xl font-black">{uploads.length}</p>
@@ -173,6 +178,13 @@ export default function CreatorDashboardPage() {
             <p className="text-sm font-bold text-gray-500">Total Views</p>
             <p className="mt-2 text-3xl font-black">{totalViews}</p>
           </div>
+          <div className="rounded-2xl bg-white p-5 shadow-sm">
+  <p className="text-sm font-bold text-gray-500">Total Likes</p>
+
+  <p className="mt-2 text-3xl font-black">
+    {totalLikes}
+  </p>
+</div>
 
           <div className="rounded-2xl bg-white p-5 shadow-sm">
             <p className="text-sm font-bold text-gray-500">Watch Hours</p>
