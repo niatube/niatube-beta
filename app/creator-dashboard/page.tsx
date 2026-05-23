@@ -1,9 +1,23 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
 import Navbar from "@/components/Navbar";
 import { supabase } from "@/lib/supabase-browser";
+
+import {
+  ResponsiveContainer,
+  LineChart,
+  Line,
+  XAxis,
+  YAxis,
+  Tooltip,
+  CartesianGrid,
+  AreaChart,
+  Area,
+  BarChart,
+  Bar,
+} from "recharts";
 
 type Upload = {
   id: string;
@@ -88,13 +102,13 @@ export default function CreatorDashboardPage() {
         .from("uploads")
         .select("*")
         .eq("creator", activeCreatorName)
-        .order("created_at", { ascending: false });
+        .order("created_at", { ascending: true });
 
       const { data: tipsData } = await supabase
         .from("tips")
         .select("*")
         .eq("creator_name", activeCreatorName)
-        .order("created_at", { ascending: false });
+        .order("created_at", { ascending: true });
 
       const { data: payoutData } = await supabase
         .from("payout_requests")
@@ -148,6 +162,25 @@ export default function CreatorDashboardPage() {
       : top;
   }, null);
 
+  const analyticsData = useMemo(() => {
+    return uploads.map((upload, index) => ({
+      name: `Video ${index + 1}`,
+      views: Number(upload.views || 0),
+      likes: Number(upload.likes || 0),
+      watchHours:
+        (Number(upload.views || 0) *
+          Number(upload.duration_seconds || 0)) /
+        3600,
+    }));
+  }, [uploads]);
+
+  const tipsChartData = useMemo(() => {
+    return tips.map((tip, index) => ({
+      name: `Tip ${index + 1}`,
+      amount: Number(tip.amount || 0),
+    }));
+  }, [tips]);
+
   if (loading) {
     return (
       <main className="min-h-screen bg-gray-50">
@@ -168,8 +201,8 @@ export default function CreatorDashboardPage() {
         </h1>
 
         <p className="mt-2 text-gray-600">
-          Review your submitted videos, subscribers, watch hours, earnings,
-          tips, payout activity, and creator performance.
+          Review your submitted videos, subscribers, watch hours,
+          earnings, tips, payout activity, and creator performance.
         </p>
 
         {creatorSince && (
@@ -247,6 +280,82 @@ export default function CreatorDashboardPage() {
             <p className="mt-2 text-3xl font-black">
               {totalTips}
             </p>
+          </div>
+        </div>
+
+        <div className="mt-8 grid gap-6 lg:grid-cols-2">
+          <div className="rounded-3xl bg-white p-6 shadow-sm">
+            <h2 className="text-2xl font-black text-gray-900">
+              Views & Likes Analytics
+            </h2>
+
+            <div className="mt-6 h-[300px]">
+              <ResponsiveContainer width="100%" height="100%">
+                <LineChart data={analyticsData}>
+                  <CartesianGrid strokeDasharray="3 3" />
+                  <XAxis dataKey="name" />
+                  <YAxis />
+                  <Tooltip />
+                  <Line
+                    type="monotone"
+                    dataKey="views"
+                    stroke="#2563eb"
+                    strokeWidth={3}
+                  />
+                  <Line
+                    type="monotone"
+                    dataKey="likes"
+                    stroke="#16a34a"
+                    strokeWidth={3}
+                  />
+                </LineChart>
+              </ResponsiveContainer>
+            </div>
+          </div>
+
+          <div className="rounded-3xl bg-white p-6 shadow-sm">
+            <h2 className="text-2xl font-black text-gray-900">
+              Watch Hours Trend
+            </h2>
+
+            <div className="mt-6 h-[300px]">
+              <ResponsiveContainer width="100%" height="100%">
+                <AreaChart data={analyticsData}>
+                  <CartesianGrid strokeDasharray="3 3" />
+                  <XAxis dataKey="name" />
+                  <YAxis />
+                  <Tooltip />
+                  <Area
+                    type="monotone"
+                    dataKey="watchHours"
+                    stroke="#7c3aed"
+                    fill="#c4b5fd"
+                  />
+                </AreaChart>
+              </ResponsiveContainer>
+            </div>
+          </div>
+        </div>
+
+        <div className="mt-6 rounded-3xl bg-white p-6 shadow-sm">
+          <h2 className="text-2xl font-black text-gray-900">
+            Tips Revenue Analytics
+          </h2>
+
+          <div className="mt-6 h-[320px]">
+            <ResponsiveContainer width="100%" height="100%">
+              <BarChart data={tipsChartData}>
+                <CartesianGrid strokeDasharray="3 3" />
+                <XAxis dataKey="name" />
+                <YAxis />
+                <Tooltip />
+                <Bar
+                  dataKey="amount"
+                  fill="#f59e0b"
+                  radius={[8, 8, 0, 0]}
+                />
+              </BarChart>
+            </ResponsiveContainer>
           </div>
         </div>
 
@@ -360,8 +469,7 @@ export default function CreatorDashboardPage() {
                   className="rounded-2xl border bg-gray-50 p-5"
                 >
                   <p className="font-bold">
-                    {tip.amount}{" "}
-                    {tip.currency_code || ""}
+                    {tip.amount} {tip.currency_code || ""}
                   </p>
 
                   <p className="mt-1 text-sm text-gray-600">
@@ -384,80 +492,81 @@ export default function CreatorDashboardPage() {
             </p>
           ) : (
             <div className="mt-5 grid grid-cols-1 gap-5 sm:grid-cols-2 xl:grid-cols-3">
-              {uploads.map((upload) => {
-                const videoWatchHours =
-                  (Number(upload.views || 0) *
-                    Number(upload.duration_seconds || 0)) /
-                  3600;
+              {uploads
+                .slice()
+                .reverse()
+                .map((upload) => {
+                  const videoWatchHours =
+                    (Number(upload.views || 0) *
+                      Number(upload.duration_seconds || 0)) /
+                    3600;
 
-                return (
-                  <div
-                    key={upload.id}
-                    className="overflow-hidden rounded-2xl border border-gray-200 bg-white shadow-sm"
-                  >
-                    {upload.thumbnail_url && (
-                      <img
-                        src={upload.thumbnail_url}
-                        alt={upload.title}
-                        className="h-[180px] w-full object-cover"
-                      />
-                    )}
+                  return (
+                    <div
+                      key={upload.id}
+                      className="overflow-hidden rounded-2xl border border-gray-200 bg-white shadow-sm"
+                    >
+                      {upload.thumbnail_url && (
+                        <img
+                          src={upload.thumbnail_url}
+                          alt={upload.title}
+                          className="h-[180px] w-full object-cover"
+                        />
+                      )}
 
-                    <div className="p-4">
-                      <h3 className="line-clamp-2 text-base font-black text-gray-900">
-                        {upload.title}
-                      </h3>
+                      <div className="p-4">
+                        <h3 className="line-clamp-2 text-base font-black text-gray-900">
+                          {upload.title}
+                        </h3>
 
-                      <div className="mt-3 space-y-1 text-sm text-gray-600">
-                        <p>
-                          Status:{" "}
-                          <strong>
-                            {upload.status || "pending"}
-                          </strong>
-                        </p>
+                        <div className="mt-3 space-y-1 text-sm text-gray-600">
+                          <p>
+                            Status:{" "}
+                            <strong>
+                              {upload.status || "pending"}
+                            </strong>
+                          </p>
 
-                        <p>Views: {upload.views || 0}</p>
+                          <p>Views: {upload.views || 0}</p>
 
-                        <p>
-                          Likes: {upload.likes || 0}
-                        </p>
+                          <p>Likes: {upload.likes || 0}</p>
 
-                        <p>
-                          Watch Hours:{" "}
-                          {videoWatchHours.toFixed(1)}
-                        </p>
+                          <p>
+                            Watch Hours:{" "}
+                            {videoWatchHours.toFixed(1)}
+                          </p>
 
-                        <p>
-                          Submitted:{" "}
-                          {upload.created_at
-                            ? new Date(
-                                upload.created_at
-                              ).toLocaleDateString()
-                            : "Not available"}
-                        </p>
-                      </div>
+                          <p>
+                            Submitted:{" "}
+                            {upload.created_at
+                              ? new Date(
+                                  upload.created_at
+                                ).toLocaleDateString()
+                              : "Not available"}
+                          </p>
+                        </div>
 
-                      <div className="mt-4 flex flex-wrap gap-3">
-                        <a
-                          href={`/watch/${upload.id}`}
-                          className="rounded-lg bg-black px-4 py-2 text-sm font-bold text-white hover:bg-gray-800"
-                        >
-                          Watch
-                        </a>
+                        <div className="mt-4 flex flex-wrap gap-3">
+                          <a
+                            href={`/watch/${upload.id}`}
+                            className="rounded-lg bg-black px-4 py-2 text-sm font-bold text-white hover:bg-gray-800"
+                          >
+                            Watch
+                          </a>
 
-                        <a
-                          href={`/channel/${encodeURIComponent(
-                            upload.creator || ""
-                          )}`}
-                          className="rounded-lg border border-gray-300 px-4 py-2 text-sm font-bold text-gray-700 hover:bg-gray-100"
-                        >
-                          View Channel
-                        </a>
+                          <a
+                            href={`/channel/${encodeURIComponent(
+                              upload.creator || ""
+                            )}`}
+                            className="rounded-lg border border-gray-300 px-4 py-2 text-sm font-bold text-gray-700 hover:bg-gray-100"
+                          >
+                            View Channel
+                          </a>
+                        </div>
                       </div>
                     </div>
-                  </div>
-                );
-              })}
+                  );
+                })}
             </div>
           )}
         </div>
