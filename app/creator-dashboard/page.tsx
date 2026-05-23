@@ -57,14 +57,15 @@ export default function CreatorDashboardPage() {
         router.push("/login");
         return;
       }
+
       if (user.created_at) {
-  setCreatorSince(
-    new Date(user.created_at).toLocaleDateString("en-US", {
-      month: "long",
-      year: "numeric",
-    })
-  );
-}
+        setCreatorSince(
+          new Date(user.created_at).toLocaleDateString("en-US", {
+            month: "long",
+            year: "numeric",
+          })
+        );
+      }
 
       let activeCreatorName =
         user.user_metadata?.creator_name ||
@@ -110,6 +111,7 @@ export default function CreatorDashboardPage() {
       setTips((tipsData || []) as Tip[]);
       setPayouts((payoutData || []) as PayoutRequest[]);
       setSubscriberCount(subscriberData?.length || 0);
+
       setLoading(false);
     }
 
@@ -122,29 +124,35 @@ export default function CreatorDashboardPage() {
   );
 
   const totalLikes = uploads.reduce(
-  (sum, upload) => sum + Number(upload.likes || 0),
-  0
-);
+    (sum, upload) => sum + Number(upload.likes || 0),
+    0
+  );
 
-const topVideo = uploads.reduce<Upload | null>((top, upload) => {
-  if (!top) return upload;
-
-  return Number(upload.views || 0) > Number(top.views || 0)
-    ? upload
-    : top;
-}, null);
   const totalWatchHours = uploads.reduce((sum, upload) => {
     const views = Number(upload.views || 0);
     const duration = Number(upload.duration_seconds || 0);
+
     return sum + (views * duration) / 3600;
   }, 0);
 
-  const totalTips = tips.reduce((sum, tip) => sum + Number(tip.amount || 0), 0);
+  const totalTips = tips.reduce(
+    (sum, tip) => sum + Number(tip.amount || 0),
+    0
+  );
+
+  const topVideo = uploads.reduce<Upload | null>((top, upload) => {
+    if (!top) return upload;
+
+    return Number(upload.views || 0) > Number(top.views || 0)
+      ? upload
+      : top;
+  }, null);
 
   if (loading) {
     return (
       <main className="min-h-screen bg-gray-50">
         <Navbar />
+
         <div className="p-8">Loading creator dashboard...</div>
       </main>
     );
@@ -165,85 +173,205 @@ const topVideo = uploads.reduce<Upload | null>((top, upload) => {
         </p>
 
         {creatorSince && (
-  <p className="mt-2 text-sm font-semibold text-gray-500">
-    Creator Since: {creatorSince}
-  </p>
-)}
+          <p className="mt-2 text-sm font-semibold text-gray-500">
+            Creator Since: {creatorSince}
+          </p>
+        )}
 
         <div className="mt-8 grid gap-5 md:grid-cols-3 xl:grid-cols-7">
           <div className="rounded-2xl bg-white p-5 shadow-sm">
-            <p className="text-sm font-bold text-gray-500">Submitted Videos</p>
-            <p className="mt-2 text-3xl font-black">{uploads.length}</p>
+            <p className="text-sm font-bold text-gray-500">
+              Videos Uploaded
+            </p>
+
+            <p className="mt-2 text-3xl font-black">
+              {uploads.length}
+            </p>
           </div>
 
           <div className="rounded-2xl bg-white p-5 shadow-sm">
-            <p className="text-sm font-bold text-gray-500">Subscribers</p>
-            <p className="mt-2 text-3xl font-black">{subscriberCount}</p>
+            <p className="text-sm font-bold text-gray-500">
+              Subscribers
+            </p>
+
+            <p className="mt-2 text-3xl font-black">
+              {subscriberCount}
+            </p>
           </div>
 
           <div className="rounded-2xl bg-white p-5 shadow-sm">
-            <p className="text-sm font-bold text-gray-500">Total Views</p>
-            <p className="mt-2 text-3xl font-black">{totalViews}</p>
+            <p className="text-sm font-bold text-gray-500">
+              Total Views
+            </p>
+
+            <p className="mt-2 text-3xl font-black">
+              {totalViews}
+            </p>
           </div>
-          <div className="rounded-2xl bg-white p-5 shadow-sm">
-  <p className="text-sm font-bold text-gray-500">Total Likes</p>
-
-  <p className="mt-2 text-3xl font-black">
-    {totalLikes}
-  </p>
-</div>
 
           <div className="rounded-2xl bg-white p-5 shadow-sm">
-            <p className="text-sm font-bold text-gray-500">Watch Hours</p>
+            <p className="text-sm font-bold text-gray-500">
+              Total Likes
+            </p>
+
+            <p className="mt-2 text-3xl font-black">
+              {totalLikes}
+            </p>
+          </div>
+
+          <div className="rounded-2xl bg-white p-5 shadow-sm">
+            <p className="text-sm font-bold text-gray-500">
+              Watch Hours
+            </p>
+
             <p className="mt-2 text-3xl font-black">
               {totalWatchHours.toFixed(1)}
             </p>
           </div>
 
           <div className="rounded-2xl bg-white p-5 shadow-sm">
-            <p className="text-sm font-bold text-gray-500">Tips Received</p>
-            <p className="mt-2 text-3xl font-black">{tips.length}</p>
+            <p className="text-sm font-bold text-gray-500">
+              Tips Received
+            </p>
+
+            <p className="mt-2 text-3xl font-black">
+              {tips.length}
+            </p>
           </div>
 
           <div className="rounded-2xl bg-white p-5 shadow-sm">
-            <p className="text-sm font-bold text-gray-500">Total Tip Amount</p>
-            <p className="mt-2 text-3xl font-black">{totalTips}</p>
+            <p className="text-sm font-bold text-gray-500">
+              Total Tip Amount
+            </p>
+
+            <p className="mt-2 text-3xl font-black">
+              {totalTips}
+            </p>
           </div>
         </div>
+
+        <div className="mt-8 rounded-3xl bg-white p-6 shadow-sm">
+          <div className="flex items-center justify-between">
+            <h2 className="text-2xl font-black text-gray-900">
+              Payout Requests
+            </h2>
+
+            <button
+              onClick={async () => {
+                const { error } = await supabase
+                  .from("payout_requests")
+                  .insert([
+                    {
+                      creator_name: creatorName,
+                      amount: totalTips,
+                      status: "pending",
+                    },
+                  ]);
+
+                if (error) {
+                  console.error(error);
+                  alert("Payout request failed.");
+                  return;
+                }
+
+                alert("Payout request submitted.");
+                window.location.reload();
+              }}
+              className="rounded-xl bg-green-700 px-4 py-2 text-sm font-bold text-white hover:bg-green-800"
+            >
+              Request Payout
+            </button>
+          </div>
+
+          {payouts.length === 0 ? (
+            <p className="mt-4 text-gray-500">
+              No payout requests yet.
+            </p>
+          ) : (
+            <div className="mt-5 space-y-4">
+              {payouts.map((payout) => (
+                <div
+                  key={payout.id}
+                  className="rounded-2xl border bg-gray-50 p-5"
+                >
+                  <p className="font-bold">
+                    Amount: {payout.amount}
+                  </p>
+
+                  <p className="text-sm text-gray-600">
+                    Status: {payout.status || "pending"}
+                  </p>
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
+
         {topVideo && (
-  <div className="mt-8 rounded-3xl bg-white p-6 shadow-sm">
-    <h2 className="text-2xl font-black text-gray-900">
-      Top Performing Video
-    </h2>
+          <div className="mt-8 rounded-3xl bg-white p-6 shadow-sm">
+            <h2 className="text-2xl font-black text-gray-900">
+              Top Performing Video
+            </h2>
 
-    <div className="mt-5 flex flex-col gap-5 md:flex-row md:items-center">
-      {topVideo.thumbnail_url && (
-        <img
-          src={topVideo.thumbnail_url}
-          alt={topVideo.title}
-          className="h-40 w-full rounded-2xl object-cover md:w-64"
-        />
-      )}
+            <div className="mt-5 flex flex-col gap-5 md:flex-row md:items-center">
+              {topVideo.thumbnail_url && (
+                <img
+                  src={topVideo.thumbnail_url}
+                  alt={topVideo.title}
+                  className="h-40 w-full rounded-2xl object-cover md:w-64"
+                />
+              )}
 
-      <div>
-        <h3 className="text-xl font-black text-gray-900">
-          {topVideo.title}
-        </h3>
+              <div>
+                <h3 className="text-xl font-black text-gray-900">
+                  {topVideo.title}
+                </h3>
 
-        <p className="mt-2 text-sm text-gray-600">
-          {topVideo.views || 0} views • {topVideo.likes || 0} likes
-        </p>
+                <p className="mt-2 text-sm text-gray-600">
+                  {topVideo.views || 0} views •{" "}
+                  {topVideo.likes || 0} likes
+                </p>
 
-        <a
-          href={`/watch/${topVideo.id}`}
-          className="mt-4 inline-block rounded-xl bg-black px-4 py-2 text-sm font-bold text-white hover:bg-gray-800"
-        >
-          Watch Top Video
-        </a>
-      </div>
-    </div>
-  </div>
-)}
+                <a
+                  href={`/watch/${topVideo.id}`}
+                  className="mt-4 inline-block rounded-xl bg-black px-4 py-2 text-sm font-bold text-white hover:bg-gray-800"
+                >
+                  Watch Top Video
+                </a>
+              </div>
+            </div>
+          </div>
+        )}
+
+        <div className="mt-8 rounded-3xl bg-white p-6 shadow-sm">
+          <h2 className="text-2xl font-black text-gray-900">
+            Tips
+          </h2>
+
+          {tips.length === 0 ? (
+            <p className="mt-4 text-gray-500">
+              No tips received yet.
+            </p>
+          ) : (
+            <div className="mt-5 space-y-4">
+              {tips.map((tip) => (
+                <div
+                  key={tip.id}
+                  className="rounded-2xl border bg-gray-50 p-5"
+                >
+                  <p className="font-bold">
+                    {tip.amount}{" "}
+                    {tip.currency_code || ""}
+                  </p>
+
+                  <p className="mt-1 text-sm text-gray-600">
+                    {tip.message || "No message"}
+                  </p>
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
 
         <div className="mt-8 rounded-3xl bg-white p-6 shadow-sm">
           <h2 className="text-2xl font-black text-gray-900">
@@ -251,7 +379,9 @@ const topVideo = uploads.reduce<Upload | null>((top, upload) => {
           </h2>
 
           {uploads.length === 0 ? (
-            <p className="mt-4 text-gray-500">No videos submitted yet.</p>
+            <p className="mt-4 text-gray-500">
+              No videos submitted yet.
+            </p>
           ) : (
             <div className="mt-5 grid grid-cols-1 gap-5 sm:grid-cols-2 xl:grid-cols-3">
               {uploads.map((upload) => {
@@ -281,17 +411,28 @@ const topVideo = uploads.reduce<Upload | null>((top, upload) => {
                       <div className="mt-3 space-y-1 text-sm text-gray-600">
                         <p>
                           Status:{" "}
-                          <strong>{upload.status || "pending"}</strong>
+                          <strong>
+                            {upload.status || "pending"}
+                          </strong>
                         </p>
 
                         <p>Views: {upload.views || 0}</p>
 
-                        <p>Watch Hours: {videoWatchHours.toFixed(1)}</p>
+                        <p>
+                          Likes: {upload.likes || 0}
+                        </p>
+
+                        <p>
+                          Watch Hours:{" "}
+                          {videoWatchHours.toFixed(1)}
+                        </p>
 
                         <p>
                           Submitted:{" "}
                           {upload.created_at
-                            ? new Date(upload.created_at).toLocaleDateString()
+                            ? new Date(
+                                upload.created_at
+                              ).toLocaleDateString()
                             : "Not available"}
                         </p>
                       </div>
@@ -317,52 +458,6 @@ const topVideo = uploads.reduce<Upload | null>((top, upload) => {
                   </div>
                 );
               })}
-            </div>
-          )}
-        </div>
-
-        <div className="mt-8 rounded-3xl bg-white p-6 shadow-sm">
-          <h2 className="text-2xl font-black text-gray-900">Tips</h2>
-
-          {tips.length === 0 ? (
-            <p className="mt-4 text-gray-500">No tips received yet.</p>
-          ) : (
-            <div className="mt-5 space-y-4">
-              {tips.map((tip) => (
-                <div key={tip.id} className="rounded-2xl border bg-gray-50 p-5">
-                  <p className="font-bold">
-                    {tip.amount} {tip.currency_code || ""}
-                  </p>
-
-                  <p className="mt-1 text-sm text-gray-600">
-                    {tip.message || "No message"}
-                  </p>
-                </div>
-              ))}
-            </div>
-          )}
-        </div>
-
-        <div className="mt-8 rounded-3xl bg-white p-6 shadow-sm">
-          <h2 className="text-2xl font-black text-gray-900">
-            Payout Requests
-          </h2>
-
-          {payouts.length === 0 ? (
-            <p className="mt-4 text-gray-500">No payout requests yet.</p>
-          ) : (
-            <div className="mt-5 space-y-4">
-              {payouts.map((payout) => (
-                <div
-                  key={payout.id}
-                  className="rounded-2xl border bg-gray-50 p-5"
-                >
-                  <p className="font-bold">Amount: {payout.amount}</p>
-                  <p className="text-sm text-gray-600">
-                    Status: {payout.status || "pending"}
-                  </p>
-                </div>
-              ))}
             </div>
           )}
         </div>
