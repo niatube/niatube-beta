@@ -185,56 +185,68 @@ export default function CreatorDashboardPage() {
           {uploads.length === 0 ? (
             <p className="mt-4 text-gray-500">No videos submitted yet.</p>
           ) : (
-            <div className="mt-5 space-y-4">
-              {uploads.map((upload) => {
-                const videoWatchHours =
-                  (Number(upload.views || 0) *
-                    Number(upload.duration_seconds || 0)) /
-                  3600;
+     <div className="mt-5 space-y-4">
+  {uploads.map((upload) => {
+    const videoWatchHours =
+      (Number(upload.views || 0) *
+        Number(upload.duration_seconds || 0)) /
+      3600;
 
-                return (
-                  <div
-                    key={upload.id}
-                    className="rounded-2xl border bg-gray-50 p-5"
-                  >
-                    <h3 className="text-lg font-black text-gray-900">
-                      {upload.title}
-                    </h3>
+    return (
+      <div
+        key={upload.id}
+        className="rounded-2xl border border-gray-200 bg-gray-50 p-5 shadow-sm"
+      >
+        <h3 className="text-lg font-black text-gray-900">
+          {upload.title}
+        </h3>
 
-                    <p className="mt-2 text-sm text-gray-600">
-                      Status: <strong>{upload.status || "pending"}</strong>
-                    </p>
+        <p className="mt-2 text-sm text-gray-600">
+          Status: <strong>{upload.status || "pending"}</strong>
+        </p>
 
-                    <p className="text-sm text-gray-600">
-                      Views: {upload.views || 0}
-                    </p>
-                    <div className="mt-4 flex flex-wrap items-center gap-3">
-  {upload.is_live ? (
-    <>
-     
+        <p className="text-sm text-gray-600">
+          Views: {upload.views || 0}
+        </p>
 
-      
-    </>
-  ) : (
-    
-</div>
+        <p className="text-sm text-gray-600">
+          Watch Hours: {videoWatchHours.toFixed(1)}
+        </p>
 
-                    <p className="text-sm text-gray-600">
-                      Watch Hours: {videoWatchHours.toFixed(1)}
-                    </p>
+        <p className="text-sm text-gray-600">
+          Submitted:{" "}
+          {upload.created_at
+            ? new Date(upload.created_at).toLocaleString()
+            : "Not available"}
+        </p>
 
-                    <p className="text-sm text-gray-600">
-                      Submitted:{" "}
-                      {upload.created_at
-                        ? new Date(upload.created_at).toLocaleString()
-                        : "Not available"}
-                    </p>
-                  </div>
-                );
-              })}
-            </div>
-          )}
+        {upload.thumbnail_url && (
+          <img
+            src={upload.thumbnail_url}
+            alt={upload.title}
+            className="mt-4 h-40 w-full rounded-xl object-cover"
+          />
+        )}
+
+        <div className="mt-4 flex flex-wrap gap-3">
+          <a
+            href={`/watch/${upload.id}`}
+            className="rounded-lg bg-black px-4 py-2 text-sm font-bold text-white hover:bg-gray-800"
+          >
+            Watch
+          </a>
+
+          <a
+            href={`/channel/${encodeURIComponent(upload.creator || "")}`}
+            className="rounded-lg border border-gray-300 px-4 py-2 text-sm font-bold text-gray-700 hover:bg-gray-100"
+          >
+            View Channel
+          </a>
         </div>
+      </div>
+    );
+  })}
+</div>        </div>
 
         <div className="mt-8 rounded-3xl bg-white p-6 shadow-sm">
           <h2 className="text-2xl font-black text-gray-900">Tips</h2>
