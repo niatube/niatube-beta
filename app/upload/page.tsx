@@ -498,7 +498,7 @@ setUploadStage("Upload complete.");
 
       <div className="flex-1">
         <h3 className="text-lg font-black text-green-800">
-          Video Published Successfully
+          Your video was uploaded successfully. It may take just a few minutes to finish processing before playback becomes available
         </h3>
 
         <p className="mt-1 text-sm text-green-700">
