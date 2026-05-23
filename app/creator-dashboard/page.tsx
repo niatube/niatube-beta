@@ -58,6 +58,9 @@ export default function CreatorDashboardPage() {
   const [subscriberCount, setSubscriberCount] = useState(0);
   const [loading, setLoading] = useState(true);
   const [creatorSince, setCreatorSince] = useState("");
+  const [currentPage, setCurrentPage] = useState(1);
+
+  const videosPerPage = 6;
 
   useEffect(() => {
     async function loadDashboard() {
@@ -145,7 +148,6 @@ export default function CreatorDashboardPage() {
   const totalWatchHours = uploads.reduce((sum, upload) => {
     const views = Number(upload.views || 0);
     const duration = Number(upload.duration_seconds || 0);
-
     return sum + (views * duration) / 3600;
   }, 0);
 
@@ -156,10 +158,7 @@ export default function CreatorDashboardPage() {
 
   const topVideo = uploads.reduce<Upload | null>((top, upload) => {
     if (!top) return upload;
-
-    return Number(upload.views || 0) > Number(top.views || 0)
-      ? upload
-      : top;
+    return Number(upload.views || 0) > Number(top.views || 0) ? upload : top;
   }, null);
 
   const analyticsData = useMemo(() => {
@@ -168,8 +167,7 @@ export default function CreatorDashboardPage() {
       views: Number(upload.views || 0),
       likes: Number(upload.likes || 0),
       watchHours:
-        (Number(upload.views || 0) *
-          Number(upload.duration_seconds || 0)) /
+        (Number(upload.views || 0) * Number(upload.duration_seconds || 0)) /
         3600,
     }));
   }, [uploads]);
@@ -181,11 +179,25 @@ export default function CreatorDashboardPage() {
     }));
   }, [tips]);
 
+  const sortedUploads = useMemo(() => {
+    return [...uploads].sort((a, b) => {
+      const dateA = a.created_at ? new Date(a.created_at).getTime() : 0;
+      const dateB = b.created_at ? new Date(b.created_at).getTime() : 0;
+      return dateB - dateA;
+    });
+  }, [uploads]);
+
+  const totalPages = Math.max(1, Math.ceil(sortedUploads.length / videosPerPage));
+
+  const paginatedUploads = sortedUploads.slice(
+    (currentPage - 1) * videosPerPage,
+    currentPage * videosPerPage
+  );
+
   if (loading) {
     return (
       <main className="min-h-screen bg-gray-50">
         <Navbar />
-
         <div className="p-8">Loading creator dashboard...</div>
       </main>
     );
@@ -201,8 +213,8 @@ export default function CreatorDashboardPage() {
         </h1>
 
         <p className="mt-2 text-gray-600">
-          Review your submitted videos, subscribers, watch hours,
-          earnings, tips, payout activity, and creator performance.
+          Review your submitted videos, subscribers, watch hours, earnings,
+          tips, payout activity, and creator performance.
         </p>
 
         {creatorSince && (
@@ -213,73 +225,40 @@ export default function CreatorDashboardPage() {
 
         <div className="mt-8 grid gap-5 md:grid-cols-3 xl:grid-cols-7">
           <div className="rounded-2xl bg-white p-5 shadow-sm">
-            <p className="text-sm font-bold text-gray-500">
-              Videos Uploaded
-            </p>
-
-            <p className="mt-2 text-3xl font-black">
-              {uploads.length}
-            </p>
+            <p className="text-sm font-bold text-gray-500">Videos Uploaded</p>
+            <p className="mt-2 text-3xl font-black">{uploads.length}</p>
           </div>
 
           <div className="rounded-2xl bg-white p-5 shadow-sm">
-            <p className="text-sm font-bold text-gray-500">
-              Subscribers
-            </p>
-
-            <p className="mt-2 text-3xl font-black">
-              {subscriberCount}
-            </p>
+            <p className="text-sm font-bold text-gray-500">Subscribers</p>
+            <p className="mt-2 text-3xl font-black">{subscriberCount}</p>
           </div>
 
           <div className="rounded-2xl bg-white p-5 shadow-sm">
-            <p className="text-sm font-bold text-gray-500">
-              Total Views
-            </p>
-
-            <p className="mt-2 text-3xl font-black">
-              {totalViews}
-            </p>
+            <p className="text-sm font-bold text-gray-500">Total Views</p>
+            <p className="mt-2 text-3xl font-black">{totalViews}</p>
           </div>
 
           <div className="rounded-2xl bg-white p-5 shadow-sm">
-            <p className="text-sm font-bold text-gray-500">
-              Total Likes
-            </p>
-
-            <p className="mt-2 text-3xl font-black">
-              {totalLikes}
-            </p>
+            <p className="text-sm font-bold text-gray-500">Total Likes</p>
+            <p className="mt-2 text-3xl font-black">{totalLikes}</p>
           </div>
 
           <div className="rounded-2xl bg-white p-5 shadow-sm">
-            <p className="text-sm font-bold text-gray-500">
-              Watch Hours
-            </p>
-
+            <p className="text-sm font-bold text-gray-500">Watch Hours</p>
             <p className="mt-2 text-3xl font-black">
               {totalWatchHours.toFixed(1)}
             </p>
           </div>
 
           <div className="rounded-2xl bg-white p-5 shadow-sm">
-            <p className="text-sm font-bold text-gray-500">
-              Tips Received
-            </p>
-
-            <p className="mt-2 text-3xl font-black">
-              {tips.length}
-            </p>
+            <p className="text-sm font-bold text-gray-500">Tips Received</p>
+            <p className="mt-2 text-3xl font-black">{tips.length}</p>
           </div>
 
           <div className="rounded-2xl bg-white p-5 shadow-sm">
-            <p className="text-sm font-bold text-gray-500">
-              Total Tip Amount
-            </p>
-
-            <p className="mt-2 text-3xl font-black">
-              {totalTips}
-            </p>
+            <p className="text-sm font-bold text-gray-500">Total Tip Amount</p>
+            <p className="mt-2 text-3xl font-black">{totalTips}</p>
           </div>
         </div>
 
@@ -296,18 +275,8 @@ export default function CreatorDashboardPage() {
                   <XAxis dataKey="name" />
                   <YAxis />
                   <Tooltip />
-                  <Line
-                    type="monotone"
-                    dataKey="views"
-                    stroke="#2563eb"
-                    strokeWidth={3}
-                  />
-                  <Line
-                    type="monotone"
-                    dataKey="likes"
-                    stroke="#16a34a"
-                    strokeWidth={3}
-                  />
+                  <Line type="monotone" dataKey="views" stroke="#2563eb" strokeWidth={3} />
+                  <Line type="monotone" dataKey="likes" stroke="#16a34a" strokeWidth={3} />
                 </LineChart>
               </ResponsiveContainer>
             </div>
@@ -325,12 +294,7 @@ export default function CreatorDashboardPage() {
                   <XAxis dataKey="name" />
                   <YAxis />
                   <Tooltip />
-                  <Area
-                    type="monotone"
-                    dataKey="watchHours"
-                    stroke="#7c3aed"
-                    fill="#c4b5fd"
-                  />
+                  <Area type="monotone" dataKey="watchHours" stroke="#7c3aed" fill="#c4b5fd" />
                 </AreaChart>
               </ResponsiveContainer>
             </div>
@@ -349,11 +313,7 @@ export default function CreatorDashboardPage() {
                 <XAxis dataKey="name" />
                 <YAxis />
                 <Tooltip />
-                <Bar
-                  dataKey="amount"
-                  fill="#f59e0b"
-                  radius={[8, 8, 0, 0]}
-                />
+                <Bar dataKey="amount" fill="#f59e0b" radius={[8, 8, 0, 0]} />
               </BarChart>
             </ResponsiveContainer>
           </div>
@@ -367,15 +327,13 @@ export default function CreatorDashboardPage() {
 
             <button
               onClick={async () => {
-                const { error } = await supabase
-                  .from("payout_requests")
-                  .insert([
-                    {
-                      creator_name: creatorName,
-                      amount: totalTips,
-                      status: "pending",
-                    },
-                  ]);
+                const { error } = await supabase.from("payout_requests").insert([
+                  {
+                    creator_name: creatorName,
+                    amount: totalTips,
+                    status: "pending",
+                  },
+                ]);
 
                 if (error) {
                   console.error(error);
@@ -393,20 +351,12 @@ export default function CreatorDashboardPage() {
           </div>
 
           {payouts.length === 0 ? (
-            <p className="mt-4 text-gray-500">
-              No payout requests yet.
-            </p>
+            <p className="mt-4 text-gray-500">No payout requests yet.</p>
           ) : (
             <div className="mt-5 space-y-4">
               {payouts.map((payout) => (
-                <div
-                  key={payout.id}
-                  className="rounded-2xl border bg-gray-50 p-5"
-                >
-                  <p className="font-bold">
-                    Amount: {payout.amount}
-                  </p>
-
+                <div key={payout.id} className="rounded-2xl border bg-gray-50 p-5">
+                  <p className="font-bold">Amount: {payout.amount}</p>
                   <p className="text-sm text-gray-600">
                     Status: {payout.status || "pending"}
                   </p>
@@ -437,8 +387,7 @@ export default function CreatorDashboardPage() {
                 </h3>
 
                 <p className="mt-2 text-sm text-gray-600">
-                  {topVideo.views || 0} views •{" "}
-                  {topVideo.likes || 0} likes
+                  {topVideo.views || 0} views • {topVideo.likes || 0} likes
                 </p>
 
                 <a
@@ -453,21 +402,14 @@ export default function CreatorDashboardPage() {
         )}
 
         <div className="mt-8 rounded-3xl bg-white p-6 shadow-sm">
-          <h2 className="text-2xl font-black text-gray-900">
-            Tips
-          </h2>
+          <h2 className="text-2xl font-black text-gray-900">Tips</h2>
 
           {tips.length === 0 ? (
-            <p className="mt-4 text-gray-500">
-              No tips received yet.
-            </p>
+            <p className="mt-4 text-gray-500">No tips received yet.</p>
           ) : (
             <div className="mt-5 space-y-4">
               {tips.map((tip) => (
-                <div
-                  key={tip.id}
-                  className="rounded-2xl border bg-gray-50 p-5"
-                >
+                <div key={tip.id} className="rounded-2xl border bg-gray-50 p-5">
                   <p className="font-bold">
                     {tip.amount} {tip.currency_code || ""}
                   </p>
@@ -482,20 +424,50 @@ export default function CreatorDashboardPage() {
         </div>
 
         <div className="mt-8 rounded-3xl bg-white p-6 shadow-sm">
-          <h2 className="text-2xl font-black text-gray-900">
-            Submitted Videos
-          </h2>
+          <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+            <div>
+              <h2 className="text-2xl font-black text-gray-900">
+                Submitted Videos
+              </h2>
+
+              <p className="mt-1 text-sm text-gray-500">
+                Showing {paginatedUploads.length} of {uploads.length} videos
+              </p>
+            </div>
+
+            {uploads.length > videosPerPage && (
+              <div className="flex items-center gap-3">
+                <button
+                  onClick={() => setCurrentPage((page) => Math.max(1, page - 1))}
+                  disabled={currentPage === 1}
+                  className="rounded-lg border px-4 py-2 text-sm font-bold text-gray-700 disabled:cursor-not-allowed disabled:opacity-40"
+                >
+                  Previous
+                </button>
+
+                <span className="text-sm font-bold text-gray-600">
+                  Page {currentPage} of {totalPages}
+                </span>
+
+                <button
+                  onClick={() =>
+                    setCurrentPage((page) => Math.min(totalPages, page + 1))
+                  }
+                  disabled={currentPage === totalPages}
+                  className="rounded-lg border px-4 py-2 text-sm font-bold text-gray-700 disabled:cursor-not-allowed disabled:opacity-40"
+                >
+                  Next
+                </button>
+              </div>
+            )}
+          </div>
 
           {uploads.length === 0 ? (
-            <p className="mt-4 text-gray-500">
-              No videos submitted yet.
-            </p>
+            <p className="mt-4 text-gray-500">No videos submitted yet.</p>
           ) : (
-            <div className="mt-5 grid grid-cols-1 gap-5 sm:grid-cols-2 xl:grid-cols-3">
-              {uploads
-                .slice()
-                .reverse()
-                .map((upload) => {
+            <>
+              <div className="mt-5 grid grid-cols-1 gap-5 sm:grid-cols-2 xl:grid-cols-3">
+                {paginatedUploads.map((upload) => {
                   const videoWatchHours =
                     (Number(upload.views || 0) *
                       Number(upload.duration_seconds || 0)) /
@@ -522,26 +494,17 @@ export default function CreatorDashboardPage() {
                         <div className="mt-3 space-y-1 text-sm text-gray-600">
                           <p>
                             Status:{" "}
-                            <strong>
-                              {upload.status || "pending"}
-                            </strong>
+                            <strong>{upload.status || "pending"}</strong>
                           </p>
 
                           <p>Views: {upload.views || 0}</p>
-
                           <p>Likes: {upload.likes || 0}</p>
-
-                          <p>
-                            Watch Hours:{" "}
-                            {videoWatchHours.toFixed(1)}
-                          </p>
+                          <p>Watch Hours: {videoWatchHours.toFixed(1)}</p>
 
                           <p>
                             Submitted:{" "}
                             {upload.created_at
-                              ? new Date(
-                                  upload.created_at
-                                ).toLocaleDateString()
+                              ? new Date(upload.created_at).toLocaleDateString()
                               : "Not available"}
                           </p>
                         </div>
@@ -567,7 +530,34 @@ export default function CreatorDashboardPage() {
                     </div>
                   );
                 })}
-            </div>
+              </div>
+
+              {uploads.length > videosPerPage && (
+                <div className="mt-6 flex items-center justify-center gap-3">
+                  <button
+                    onClick={() => setCurrentPage((page) => Math.max(1, page - 1))}
+                    disabled={currentPage === 1}
+                    className="rounded-lg border px-4 py-2 text-sm font-bold text-gray-700 disabled:cursor-not-allowed disabled:opacity-40"
+                  >
+                    Previous
+                  </button>
+
+                  <span className="text-sm font-bold text-gray-600">
+                    Page {currentPage} of {totalPages}
+                  </span>
+
+                  <button
+                    onClick={() =>
+                      setCurrentPage((page) => Math.min(totalPages, page + 1))
+                    }
+                    disabled={currentPage === totalPages}
+                    className="rounded-lg border px-4 py-2 text-sm font-bold text-gray-700 disabled:cursor-not-allowed disabled:opacity-40"
+                  >
+                    Next
+                  </button>
+                </div>
+              )}
+            </>
           )}
         </div>
       </section>
