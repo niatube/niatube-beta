@@ -139,8 +139,8 @@ export default function CreatorDashboardPage() {
         </h1>
 
         <p className="mt-2 text-gray-600">
-          Review your submitted videos, subscribers, watch hours, earnings, tips,
-          payout activity, and creator performance.
+          Review your submitted videos, subscribers, watch hours, earnings,
+          tips, payout activity, and creator performance.
         </p>
 
         <div className="mt-8 grid gap-5 md:grid-cols-3 xl:grid-cols-6">
@@ -185,7 +185,7 @@ export default function CreatorDashboardPage() {
           {uploads.length === 0 ? (
             <p className="mt-4 text-gray-500">No videos submitted yet.</p>
           ) : (
-            <div className="mt-5 space-y-4">
+            <div className="mt-5 grid grid-cols-1 gap-5 sm:grid-cols-2 xl:grid-cols-3">
               {uploads.map((upload) => {
                 const videoWatchHours =
                   (Number(upload.views || 0) *
@@ -195,55 +195,56 @@ export default function CreatorDashboardPage() {
                 return (
                   <div
                     key={upload.id}
-                    className="rounded-2xl border border-gray-200 bg-gray-50 p-5 shadow-sm"
+                    className="overflow-hidden rounded-2xl border border-gray-200 bg-white shadow-sm"
                   >
-                    <h3 className="text-lg font-black text-gray-900">
-                      {upload.title}
-                    </h3>
-
-                    <p className="mt-2 text-sm text-gray-600">
-                      Status: <strong>{upload.status || "pending"}</strong>
-                    </p>
-
-                    <p className="text-sm text-gray-600">
-                      Views: {upload.views || 0}
-                    </p>
-
-                    <p className="text-sm text-gray-600">
-                      Watch Hours: {videoWatchHours.toFixed(1)}
-                    </p>
-
-                    <p className="text-sm text-gray-600">
-                      Submitted:{" "}
-                      {upload.created_at
-                        ? new Date(upload.created_at).toLocaleString()
-                        : "Not available"}
-                    </p>
-
                     {upload.thumbnail_url && (
                       <img
                         src={upload.thumbnail_url}
                         alt={upload.title}
-                        className="mt-4 h-40 w-full rounded-xl object-cover"
+                        className="h-[180px] w-full object-cover"
                       />
                     )}
 
-                    <div className="mt-4 flex flex-wrap gap-3">
-                      <a
-                        href={`/watch/${upload.id}`}
-                        className="rounded-lg bg-black px-4 py-2 text-sm font-bold text-white hover:bg-gray-800"
-                      >
-                        Watch
-                      </a>
+                    <div className="p-4">
+                      <h3 className="line-clamp-2 text-base font-black text-gray-900">
+                        {upload.title}
+                      </h3>
 
-                      <a
-                        href={`/channel/${encodeURIComponent(
-                          upload.creator || ""
-                        )}`}
-                        className="rounded-lg border border-gray-300 px-4 py-2 text-sm font-bold text-gray-700 hover:bg-gray-100"
-                      >
-                        View Channel
-                      </a>
+                      <div className="mt-3 space-y-1 text-sm text-gray-600">
+                        <p>
+                          Status:{" "}
+                          <strong>{upload.status || "pending"}</strong>
+                        </p>
+
+                        <p>Views: {upload.views || 0}</p>
+
+                        <p>Watch Hours: {videoWatchHours.toFixed(1)}</p>
+
+                        <p>
+                          Submitted:{" "}
+                          {upload.created_at
+                            ? new Date(upload.created_at).toLocaleDateString()
+                            : "Not available"}
+                        </p>
+                      </div>
+
+                      <div className="mt-4 flex flex-wrap gap-3">
+                        <a
+                          href={`/watch/${upload.id}`}
+                          className="rounded-lg bg-black px-4 py-2 text-sm font-bold text-white hover:bg-gray-800"
+                        >
+                          Watch
+                        </a>
+
+                        <a
+                          href={`/channel/${encodeURIComponent(
+                            upload.creator || ""
+                          )}`}
+                          className="rounded-lg border border-gray-300 px-4 py-2 text-sm font-bold text-gray-700 hover:bg-gray-100"
+                        >
+                          View Channel
+                        </a>
+                      </div>
                     </div>
                   </div>
                 );
