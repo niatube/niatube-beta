@@ -43,6 +43,7 @@ export default function CreatorDashboardPage() {
   const [payouts, setPayouts] = useState<PayoutRequest[]>([]);
   const [subscriberCount, setSubscriberCount] = useState(0);
   const [loading, setLoading] = useState(true);
+  const [creatorSince, setCreatorSince] = useState("");
 
   useEffect(() => {
     async function loadDashboard() {
@@ -56,6 +57,14 @@ export default function CreatorDashboardPage() {
         router.push("/login");
         return;
       }
+      if (user.created_at) {
+  setCreatorSince(
+    new Date(user.created_at).toLocaleDateString("en-US", {
+      month: "long",
+      year: "numeric",
+    })
+  );
+}
 
       let activeCreatorName =
         user.user_metadata?.creator_name ||
@@ -142,6 +151,12 @@ export default function CreatorDashboardPage() {
           Review your submitted videos, subscribers, watch hours, earnings,
           tips, payout activity, and creator performance.
         </p>
+
+        {creatorSince && (
+  <p className="mt-2 text-sm font-semibold text-gray-500">
+    Creator Since: {creatorSince}
+  </p>
+)}
 
         <div className="mt-8 grid gap-5 md:grid-cols-3 xl:grid-cols-6">
           <div className="rounded-2xl bg-white p-5 shadow-sm">
