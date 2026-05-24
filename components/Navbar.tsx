@@ -74,6 +74,60 @@ export default function Navbar({ simple = false }: { simple?: boolean }) {
     loadNotifications();
   }, [pathname]);
 
+  useEffect(() => {
+    if (!creatorName) return;
+
+    const channel = supabase
+      .channel(`navbar-notifications-${creatorName}`)
+      .on(
+        "postgres_changes",
+        {
+          event: "INSERT",
+          schema: "public",
+          table: "notifications",
+          filter: `creator_name=eq.${creatorName}`,
+        },
+        (payload) => {
+          const newNotification = payload.new as NotificationItem;
+
+          setNotifications((prev) => {
+            const alreadyExists = prev.some(
+              (notification) => notification.id === newNotification.id
+            );
+
+            if (alreadyExists) return prev;
+
+            return [newNotification, ...prev].slice(0, 5);
+          });
+        }
+      )
+      .on(
+        "postgres_changes",
+        {
+          event: "UPDATE",
+          schema: "public",
+          table: "notifications",
+          filter: `creator_name=eq.${creatorName}`,
+        },
+        (payload) => {
+          const updatedNotification = payload.new as NotificationItem;
+
+          setNotifications((prev) =>
+            prev.map((notification) =>
+              notification.id === updatedNotification.id
+                ? updatedNotification
+                : notification
+            )
+          );
+        }
+      )
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(channel);
+    };
+  }, [creatorName]);
+
   async function markNotificationsAsRead() {
     const unreadIds = notifications
       .filter((notification) => !notification.read)
@@ -342,7 +396,7 @@ export default function Navbar({ simple = false }: { simple?: boolean }) {
 
                     {creatorName && (
                       <p className="mt-3 text-center text-xs text-gray-500">
-                        Alerts for {creatorName}
+                        Live alerts for {creatorName}
                       </p>
                     )}
                   </div>
