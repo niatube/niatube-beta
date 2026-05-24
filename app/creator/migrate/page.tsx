@@ -103,19 +103,19 @@ export default function CreatorMigrationPage() {
       <section className="mx-auto max-w-4xl px-6 py-10">
         <div className="rounded-3xl bg-white p-8 shadow-sm">
           <p className="text-sm font-black uppercase tracking-wide text-yellow-600">
-            Creator Migration
-          </p>
+  Subscriber Migration
+</p>
 
           <h1 className="mt-2 text-4xl font-black text-gray-900">
-            Bring Your Audience to NiaTube
-          </h1>
+  Keep your monetization momentum.
+  <br />
+  Bring your audience to NiaTube.
+</h1>
 
-          <p className="mt-3 text-gray-600">
-            Submit your existing creator audience from YouTube, TikTok,
-            Instagram, Facebook, Twitch, or another platform. After review,
-            approved migrated subscribers can be reflected in your NiaTube
-            creator profile.
-          </p>
+        <p className="mt-3 text-gray-600">
+  Request verification of your existing subscribers or followers so
+  your NiaTube profile reflects the audience you have already built.
+</p>
 
           <div className="mt-6 rounded-2xl border border-yellow-200 bg-yellow-50 p-5">
             <h2 className="text-lg font-black text-gray-900">
@@ -222,11 +222,11 @@ export default function CreatorMigrationPage() {
             </div>
 
             <button
-              type="submit"
-              className="w-full rounded-xl bg-black px-5 py-3 text-sm font-bold text-white hover:bg-gray-800"
-            >
-              Submit Migration Request
-            </button>
+  type="submit"
+  className="w-full rounded-xl bg-black px-5 py-3 text-sm font-bold text-white hover:bg-gray-800"
+>
+  Submit Subscriber Migration Request
+</button>
 
             {status && (
               <p className="rounded-xl bg-gray-100 p-4 text-sm font-bold text-gray-700">
