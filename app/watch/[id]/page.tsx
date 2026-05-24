@@ -375,6 +375,15 @@ export default function WatchPage() {
       return;
     }
 
+    await supabase.from("notifications").insert([
+      {
+        creator_name: video.creator,
+        type: "subscriber",
+        title: "New subscriber",
+        message: "Someone subscribed to your channel.",
+      },
+    ]);
+
     setSubscribed(true);
     setSubscriberCount((prev) => prev + 1);
   }
