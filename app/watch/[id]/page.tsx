@@ -417,11 +417,22 @@ export default function WatchPage() {
       return;
     }
 
-    if (data) setTips((prev) => [data as Tip, ...prev].slice(0, 5));
+   if (data) {
+  setTips((prev) => [data as Tip, ...prev].slice(0, 5));
 
-    setTipAmount("");
-    setTipMessage("");
-    setTipStatus(`Tip sent in ${tipCurrency}.`);
+  await supabase.from("notifications").insert([
+    {
+      creator_name: video.creator,
+      type: "tip",
+      title: "New tip received",
+      message: `You received a tip of ${tipCurrency} ${amount}.`,
+    },
+  ]);
+}
+
+setTipAmount("");
+setTipMessage("");
+setTipStatus(`Tip sent in ${tipCurrency}.`);
   }
 
   async function sendComment() {
