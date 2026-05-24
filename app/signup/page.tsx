@@ -25,16 +25,16 @@ export default function SignupPage() {
     }
 
     const { error: signupError } = await supabase.auth.signUp({
-  email: email.trim(),
-  password,
-  options: {
-    emailRedirectTo: `${window.location.origin}/login/creator`,
-    data: {
-      creator_name: creatorName.trim(),
-      creator_interest: interest,
-    },
-  },
-});
+      email: email.trim(),
+      password,
+      options: {
+        emailRedirectTo: `${window.location.origin}/login/creator`,
+        data: {
+          creator_name: creatorName.trim(),
+          creator_interest: interest,
+        },
+      },
+    });
 
     if (signupError) {
       setMessage(`Signup error: ${signupError.message}`);
@@ -45,11 +45,11 @@ export default function SignupPage() {
     const { error: profileError } = await supabase
       .from("creator_profiles")
       .insert([
-  {
-    creator_name: creatorName.trim(),
-    email: email.trim(),
-  },
-]);
+        {
+          creator_name: creatorName.trim(),
+          email: email.trim(),
+        },
+      ]);
 
     setLoading(false);
 
@@ -64,8 +64,8 @@ export default function SignupPage() {
     setInterest("Culture");
 
     setMessage(
-  "Congratulations. Your account was created. Please check your email to confirm your account, then return here to log in."
-);
+      "Congratulations. Your account was created. Please check your email to confirm your account, then return here to log in."
+    );
   }
 
   return (
@@ -111,7 +111,7 @@ export default function SignupPage() {
             >
               <option>Culture</option>
               <option>News</option>
-              <option>Music</option>
+              <option>Afrobeats</option>
               <option>Podcast</option>
               <option>Education</option>
               <option>Business</option>
@@ -138,19 +138,53 @@ export default function SignupPage() {
             </button>
           </form>
 
+ <div className="mt-10 border-t pt-8">
+  <p className="text-center text-sm font-bold uppercase tracking-wide text-yellow-700">
+    Already have an audience?
+  </p>
+
+  <h2 className="mt-3 text-center text-2xl font-black text-gray-900">
+    Keep your monetization momentum.
+    <br />
+    Bring your audience to NiaTube.
+  </h2>
+
+  <p className="mx-auto mt-4 max-w-lg text-center text-sm leading-6 text-gray-700">
+    Verified creators can request subscriber migration from platforms like
+    YouTube, TikTok, Instagram, Twitch, and more.
+  </p>
+
+  <div className="mx-auto mt-5 max-w-lg rounded-2xl border border-yellow-300 bg-yellow-50 p-4">
+    <p className="text-center text-sm font-bold text-gray-800">
+      Make sure you signed up first and confirmed your email before starting
+      subscribers migration.
+    </p>
+  </div>
+
+  <div className="mt-6 text-center">
+    <Link
+      href="/creator/migrate"
+      className="inline-block rounded-xl bg-black px-6 py-3 text-sm font-black text-white hover:bg-gray-800"
+    >
+      Start Subscribers Migration
+    </Link>
+  </div>
+</div>
+
           {message && (
             <p className="mt-5 rounded-xl bg-green-50 p-4 text-sm font-semibold text-green-800">
               {message}
             </p>
           )}
+
           <div className="mt-6 text-center">
-  <Link
-    href="/login/creator"
-    className="text-sm font-bold text-yellow-700 hover:underline"
-  >
-    Already signed up? Go back to Login
-  </Link>
-</div>
+            <Link
+              href="/login/creator"
+              className="text-sm font-bold text-yellow-700 hover:underline"
+            >
+              Already signed up? Go back to Login
+            </Link>
+          </div>
         </div>
       </section>
     </main>

@@ -67,7 +67,9 @@ export default function CreatorDashboardPage() {
   const [tips, setTips] = useState<Tip[]>([]);
   const [payouts, setPayouts] = useState<PayoutRequest[]>([]);
   const [notifications, setNotifications] = useState<NotificationItem[]>([]);
-  const [subscriberCount, setSubscriberCount] = useState(0);
+  const [nativeSubscriberCount, setNativeSubscriberCount] = useState(0);
+const [migratedSubscriberCount, setMigratedSubscriberCount] = useState(0);
+const [subscriberCount, setSubscriberCount] = useState(0);
   const [loading, setLoading] = useState(true);
   const [creatorSince, setCreatorSince] = useState("");
   const [currentPage, setCurrentPage] = useState(1);
@@ -137,6 +139,15 @@ export default function CreatorDashboardPage() {
         .select("*")
         .eq("creator_name", activeCreatorName);
 
+        const { data: creatorProfile } = await supabase
+  .from("creator_profiles")
+  .select("migrated_subscribers")
+  .eq("creator_name", activeCreatorName)
+  .maybeSingle();
+
+const migratedSubscribers =
+  Number(creatorProfile?.migrated_subscribers || 0);
+
       const { data: notificationsData } = await supabase
         .from("notifications")
         .select("*")
@@ -148,7 +159,12 @@ export default function CreatorDashboardPage() {
       setTips((tipsData || []) as Tip[]);
       setPayouts((payoutData || []) as PayoutRequest[]);
       setNotifications((notificationsData || []) as NotificationItem[]);
-      setSubscriberCount(subscriberData?.length || 0);
+      const nativeSubscribers = subscriberData?.length || 0;
+const totalSubscribers = nativeSubscribers + migratedSubscribers;
+
+setNativeSubscriberCount(nativeSubscribers);
+setMigratedSubscriberCount(migratedSubscribers);
+setSubscriberCount(totalSubscribers);
 
       setLoading(false);
     }
@@ -464,8 +480,18 @@ export default function CreatorDashboardPage() {
           </div>
 
           <div className="rounded-2xl bg-white p-5 shadow-sm">
-            <p className="text-sm font-bold text-gray-500">Subscribers</p>
-            <p className="mt-2 text-3xl font-black">{subscriberCount}</p>
+           <p className="text-sm font-bold text-gray-500">
+  Total Subscribers
+</p>
+
+<p className="mt-2 text-3xl font-black">
+  {subscriberCount}
+</p>
+
+<p className="mt-2 text-xs text-gray-500">
+  {migratedSubscriberCount.toLocaleString()} migrated •{" "}
+  {nativeSubscriberCount.toLocaleString()} native
+</p>
           </div>
 
           <div className="rounded-2xl bg-white p-5 shadow-sm">
