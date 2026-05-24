@@ -53,6 +53,12 @@ const currencies = [
   { code: "TZS", label: "Tanzanian Shilling", symbol: "TSh" },
 ];
 
+const subscriberMilestones = [10, 100, 1000, 10000, 100000];
+
+function milestoneTitle(milestone: number) {
+  return `Milestone unlocked: ${milestone.toLocaleString()} subscribers`;
+}
+
 export default function WatchPage() {
   const params = useParams();
   const id = params?.id as string;
@@ -363,6 +369,9 @@ export default function WatchPage() {
       return;
     }
 
+    const previousSubscriberCount = subscriberCount;
+    const newSubscriberCount = subscriberCount + 1;
+
     const { error } = await supabase.from("creator_subscriptions").insert([
       {
         creator_name: video.creator,
@@ -384,8 +393,36 @@ export default function WatchPage() {
       },
     ]);
 
+    const unlockedMilestones = subscriberMilestones.filter(
+      (milestone) =>
+        previousSubscriberCount < milestone && newSubscriberCount >= milestone
+    );
+
+    for (const milestone of unlockedMilestones) {
+      const title = milestoneTitle(milestone);
+
+      const { data: existingMilestoneNotification } = await supabase
+        .from("notifications")
+        .select("id")
+        .eq("creator_name", video.creator)
+        .eq("type", "milestone")
+        .eq("title", title)
+        .maybeSingle();
+
+      if (!existingMilestoneNotification) {
+        await supabase.from("notifications").insert([
+          {
+            creator_name: video.creator,
+            type: "milestone",
+            title,
+            message: `Congratulations! You reached ${milestone.toLocaleString()} subscribers on NiaTube.`,
+          },
+        ]);
+      }
+    }
+
     setSubscribed(true);
-    setSubscriberCount((prev) => prev + 1);
+    setSubscriberCount(newSubscriberCount);
   }
 
   async function sendTip() {
@@ -417,22 +454,22 @@ export default function WatchPage() {
       return;
     }
 
-   if (data) {
-  setTips((prev) => [data as Tip, ...prev].slice(0, 5));
+    if (data) {
+      setTips((prev) => [data as Tip, ...prev].slice(0, 5));
 
-  await supabase.from("notifications").insert([
-    {
-      creator_name: video.creator,
-      type: "tip",
-      title: "New tip received",
-      message: `You received a tip of ${tipCurrency} ${amount}.`,
-    },
-  ]);
-}
+      await supabase.from("notifications").insert([
+        {
+          creator_name: video.creator,
+          type: "tip",
+          title: "New tip received",
+          message: `You received a tip of ${tipCurrency} ${amount}.`,
+        },
+      ]);
+    }
 
-setTipAmount("");
-setTipMessage("");
-setTipStatus(`Tip sent in ${tipCurrency}.`);
+    setTipAmount("");
+    setTipMessage("");
+    setTipStatus(`Tip sent in ${tipCurrency}.`);
   }
 
   async function sendComment() {
