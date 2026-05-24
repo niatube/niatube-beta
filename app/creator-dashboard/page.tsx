@@ -44,6 +44,7 @@ type PayoutRequest = {
   id: string;
   creator_name: string;
   amount: number;
+  currency_code?: string;
   status?: string;
   requested_at?: string;
 };
@@ -70,6 +71,7 @@ export default function CreatorDashboardPage() {
   const [loading, setLoading] = useState(true);
   const [creatorSince, setCreatorSince] = useState("");
   const [currentPage, setCurrentPage] = useState(1);
+  const [selectedPayoutCurrency, setSelectedPayoutCurrency] = useState("NGN");
 
   const videosPerPage = 6;
 
@@ -198,10 +200,35 @@ export default function CreatorDashboardPage() {
     return sum + (views * duration) / 3600;
   }, 0);
 
-  const totalTips = tips.reduce(
-    (sum, tip) => sum + Number(tip.amount || 0),
-    0
-  );
+  const tipTotalsByCurrency = useMemo(() => {
+    const totals: Record<string, number> = {};
+
+    tips.forEach((tip) => {
+      const currency = tip.currency_code || "UNKNOWN";
+      totals[currency] = (totals[currency] || 0) + Number(tip.amount || 0);
+    });
+
+    return Object.entries(totals)
+      .map(([currency, amount]) => ({ currency, amount }))
+      .sort((a, b) => a.currency.localeCompare(b.currency));
+  }, [tips]);
+
+  const selectedCurrencyTotal =
+    tipTotalsByCurrency.find(
+      (item) => item.currency === selectedPayoutCurrency
+    )?.amount || 0;
+
+  useEffect(() => {
+    if (tipTotalsByCurrency.length === 0) return;
+
+    const selectedCurrencyExists = tipTotalsByCurrency.some(
+      (item) => item.currency === selectedPayoutCurrency
+    );
+
+    if (!selectedCurrencyExists) {
+      setSelectedPayoutCurrency(tipTotalsByCurrency[0].currency);
+    }
+  }, [tipTotalsByCurrency, selectedPayoutCurrency]);
 
   const topVideo = uploads.reduce<Upload | null>((top, upload) => {
     if (!top) return upload;
@@ -285,11 +312,11 @@ export default function CreatorDashboardPage() {
   }, [uploads]);
 
   const tipsChartData = useMemo(() => {
-    return tips.map((tip, index) => ({
-      name: `Tip ${index + 1}`,
-      amount: Number(tip.amount || 0),
+    return tipTotalsByCurrency.map((item) => ({
+      name: item.currency,
+      amount: item.amount,
     }));
-  }, [tips]);
+  }, [tipTotalsByCurrency]);
 
   const sortedUploads = useMemo(() => {
     return [...uploads].sort((a, b) => {
@@ -464,9 +491,48 @@ export default function CreatorDashboardPage() {
           </div>
 
           <div className="rounded-2xl bg-white p-5 shadow-sm">
-            <p className="text-sm font-bold text-gray-500">Total Tip Amount</p>
-            <p className="mt-2 text-3xl font-black">{totalTips}</p>
+            <p className="text-sm font-bold text-gray-500">Currencies</p>
+            <p className="mt-2 text-3xl font-black">
+              {tipTotalsByCurrency.length}
+            </p>
           </div>
+        </div>
+
+        <div className="mt-8 rounded-3xl bg-white p-6 shadow-sm">
+          <h2 className="text-2xl font-black text-gray-900">
+            Tips by Currency
+          </h2>
+
+          <p className="mt-1 text-sm text-gray-600">
+            Tips are separated by currency. NiaTube should not combine NGN, GHS,
+            KES, or other currencies without an approved FX/NiaCredit
+            conversion layer.
+          </p>
+
+          {tipTotalsByCurrency.length === 0 ? (
+            <p className="mt-4 text-gray-500">No tips received yet.</p>
+          ) : (
+            <div className="mt-5 grid gap-4 md:grid-cols-3">
+              {tipTotalsByCurrency.map((item) => (
+                <div
+                  key={item.currency}
+                  className="rounded-2xl border border-gray-200 bg-gray-50 p-5"
+                >
+                  <p className="text-sm font-bold text-gray-500">
+                    {item.currency}
+                  </p>
+
+                  <p className="mt-2 text-3xl font-black text-gray-900">
+                    {item.amount}
+                  </p>
+
+                  <p className="mt-1 text-xs text-gray-500">
+                    Available before FX conversion
+                  </p>
+                </div>
+              ))}
+            </div>
+          )}
         </div>
 
         <div className="mt-8 rounded-3xl bg-white p-6 shadow-sm">
@@ -619,7 +685,7 @@ export default function CreatorDashboardPage() {
 
         <div className="mt-6 rounded-3xl bg-white p-6 shadow-sm">
           <h2 className="text-2xl font-black text-gray-900">
-            Tips Revenue Analytics
+            Tips Revenue Analytics by Currency
           </h2>
 
           <div className="mt-6 h-[320px]">
@@ -636,43 +702,76 @@ export default function CreatorDashboardPage() {
         </div>
 
         <div className="mt-8 rounded-3xl bg-white p-6 shadow-sm">
-          <div className="flex items-center justify-between">
-            <h2 className="text-2xl font-black text-gray-900">
-              Payout Requests
-            </h2>
+          <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+            <div>
+              <h2 className="text-2xl font-black text-gray-900">
+                Payout Requests
+              </h2>
 
-            <button
-              onClick={async () => {
-                const { error } = await supabase.from("payout_requests").insert([
-                  {
-                    creator_name: creatorName,
-                    amount: totalTips,
-                    status: "pending",
-                  },
-                ]);
+              <p className="mt-1 text-sm text-gray-600">
+                Request payouts by currency. Mixed-currency payouts require a
+                future FX/NiaCredit conversion layer.
+              </p>
+            </div>
 
-                if (error) {
-                  console.error(error);
-                  alert("Payout request failed.");
-                  return;
-                }
+            {tipTotalsByCurrency.length > 0 && (
+              <div className="flex flex-col gap-2 sm:flex-row sm:items-center">
+                <select
+                  value={selectedPayoutCurrency}
+                  onChange={(e) => setSelectedPayoutCurrency(e.target.value)}
+                  className="rounded-xl border px-4 py-2 text-sm font-bold"
+                >
+                  {tipTotalsByCurrency.map((item) => (
+                    <option key={item.currency} value={item.currency}>
+                      {item.currency} — {item.amount}
+                    </option>
+                  ))}
+                </select>
 
-                await supabase.from("notifications").insert([
-                  {
-                    creator_name: creatorName,
-                    type: "payout",
-                    title: "Payout request submitted",
-                    message: `Your payout request for ${totalTips} has been submitted for review.`,
-                  },
-                ]);
+                <button
+                  onClick={async () => {
+                    if (selectedCurrencyTotal <= 0) {
+                      alert("No funds available for this currency.");
+                      return;
+                    }
 
-                alert("Payout request submitted.");
-                window.location.reload();
-              }}
-              className="rounded-xl bg-green-700 px-4 py-2 text-sm font-bold text-white hover:bg-green-800"
-            >
-              Request Payout
-            </button>
+                    const { error } = await supabase
+                      .from("payout_requests")
+                      .insert([
+                        {
+                          creator_name: creatorName,
+                          amount: selectedCurrencyTotal,
+                          currency_code: selectedPayoutCurrency,
+                          status: "pending",
+                        },
+                      ]);
+
+                    if (error) {
+                      console.error(error);
+                      alert("Payout request failed.");
+                      return;
+                    }
+
+                    await supabase.from("notifications").insert([
+                      {
+                        creator_name: creatorName,
+                        type: "payout",
+                        title: "Payout request submitted",
+                        message: `Your payout request for ${selectedPayoutCurrency} ${selectedCurrencyTotal} has been submitted for review.`,
+                      },
+                    ]);
+
+                    alert(
+                      `Payout request submitted for ${selectedPayoutCurrency} ${selectedCurrencyTotal}.`
+                    );
+                    window.location.reload();
+                  }}
+                  className="rounded-xl bg-green-700 px-4 py-2 text-sm font-bold text-white hover:bg-green-800"
+                >
+                  Request {selectedPayoutCurrency} Payout
+                </button>
+              </div>
+            )}
           </div>
 
           {payouts.length === 0 ? (
@@ -684,7 +783,10 @@ export default function CreatorDashboardPage() {
                   key={payout.id}
                   className="rounded-2xl border bg-gray-50 p-5"
                 >
-                  <p className="font-bold">Amount: {payout.amount}</p>
+                  <p className="font-bold">
+                    Amount: {payout.currency_code || "UNKNOWN"}{" "}
+                    {payout.amount}
+                  </p>
                   <p className="text-sm text-gray-600">
                     Status: {payout.status || "pending"}
                   </p>
@@ -742,7 +844,7 @@ export default function CreatorDashboardPage() {
                   className="rounded-2xl border bg-gray-50 p-5"
                 >
                   <p className="font-bold">
-                    {tip.amount} {tip.currency_code || ""}
+                    {tip.currency_code || "UNKNOWN"} {tip.amount}
                   </p>
 
                   <p className="mt-1 text-sm text-gray-600">
