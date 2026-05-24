@@ -161,6 +161,71 @@ export default function CreatorDashboardPage() {
     return Number(upload.views || 0) > Number(top.views || 0) ? upload : top;
   }, null);
 
+  const subscriberMilestones = [100, 1000, 10000, 100000];
+
+  const nextSubscriberMilestone =
+    subscriberMilestones.find((milestone) => subscriberCount < milestone) ||
+    subscriberMilestones[subscriberMilestones.length - 1];
+
+  const previousSubscriberMilestone =
+    [...subscriberMilestones]
+      .reverse()
+      .find((milestone) => subscriberCount >= milestone) || 0;
+
+  const progressToNextMilestone = Math.min(
+    100,
+    Math.round((subscriberCount / nextSubscriberMilestone) * 100)
+  );
+
+  const subscribersRemaining = Math.max(
+    0,
+    nextSubscriberMilestone - subscriberCount
+  );
+
+  const creatorBadges = [
+    {
+      title: "Rising Creator",
+      unlocked: subscriberCount >= 10,
+      description: "Unlocked after reaching 10 subscribers.",
+      icon: "🌱",
+    },
+    {
+      title: "Verified Creator",
+      unlocked: subscriberCount >= 100,
+      description: "Unlocked after reaching 100 subscribers.",
+      icon: "✅",
+    },
+    {
+      title: "Trending Creator",
+      unlocked: totalViews >= 1000,
+      description: "Unlocked after reaching 1,000 total views.",
+      icon: "🔥",
+    },
+  ];
+
+  const milestoneCards = [
+    {
+      title: "100 Subscribers",
+      unlocked: subscriberCount >= 100,
+      description: "First serious audience milestone.",
+    },
+    {
+      title: "1K Subscribers",
+      unlocked: subscriberCount >= 1000,
+      description: "Creator growth credibility milestone.",
+    },
+    {
+      title: "10K Subscribers",
+      unlocked: subscriberCount >= 10000,
+      description: "Strong regional creator milestone.",
+    },
+    {
+      title: "100K Subscribers",
+      unlocked: subscriberCount >= 100000,
+      description: "Major platform creator milestone.",
+    },
+  ];
+
   const analyticsData = useMemo(() => {
     return uploads.map((upload, index) => ({
       name: `Video ${index + 1}`,
@@ -223,6 +288,21 @@ export default function CreatorDashboardPage() {
           </p>
         )}
 
+        <div className="mt-4 flex flex-wrap gap-3">
+          {creatorBadges.map((badge) => (
+            <span
+              key={badge.title}
+              className={`rounded-full px-4 py-2 text-sm font-bold ${
+                badge.unlocked
+                  ? "bg-yellow-400 text-black"
+                  : "bg-gray-200 text-gray-500"
+              }`}
+            >
+              {badge.icon} {badge.unlocked ? badge.title : `Locked: ${badge.title}`}
+            </span>
+          ))}
+        </div>
+
         <div className="mt-8 grid gap-5 md:grid-cols-3 xl:grid-cols-7">
           <div className="rounded-2xl bg-white p-5 shadow-sm">
             <p className="text-sm font-bold text-gray-500">Videos Uploaded</p>
@@ -259,6 +339,100 @@ export default function CreatorDashboardPage() {
           <div className="rounded-2xl bg-white p-5 shadow-sm">
             <p className="text-sm font-bold text-gray-500">Total Tip Amount</p>
             <p className="mt-2 text-3xl font-black">{totalTips}</p>
+          </div>
+        </div>
+
+        <div className="mt-8 rounded-3xl bg-white p-6 shadow-sm">
+          <div className="flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
+            <div>
+              <h2 className="text-2xl font-black text-gray-900">
+                Creator Growth Milestone
+              </h2>
+
+              <p className="mt-1 text-sm text-gray-600">
+                {subscriberCount} subscribers • {subscribersRemaining} more to
+                reach {nextSubscriberMilestone.toLocaleString()} subscribers
+              </p>
+            </div>
+
+            <span className="rounded-full bg-black px-4 py-2 text-sm font-bold text-white">
+              Next: {nextSubscriberMilestone.toLocaleString()} subscribers
+            </span>
+          </div>
+
+          <div className="mt-6 h-4 overflow-hidden rounded-full bg-gray-200">
+            <div
+              className="h-full rounded-full bg-yellow-400 transition-all"
+              style={{ width: `${progressToNextMilestone}%` }}
+            />
+          </div>
+
+          <div className="mt-3 flex justify-between text-xs font-bold text-gray-500">
+            <span>{previousSubscriberMilestone.toLocaleString()}</span>
+            <span>{progressToNextMilestone}% complete</span>
+            <span>{nextSubscriberMilestone.toLocaleString()}</span>
+          </div>
+
+          <div className="mt-6 grid gap-4 md:grid-cols-2 xl:grid-cols-4">
+            {milestoneCards.map((milestone) => (
+              <div
+                key={milestone.title}
+                className={`rounded-2xl border p-5 ${
+                  milestone.unlocked
+                    ? "border-yellow-300 bg-yellow-50"
+                    : "border-gray-200 bg-gray-50"
+                }`}
+              >
+                <p className="text-2xl">{milestone.unlocked ? "🏆" : "🔒"}</p>
+
+                <h3 className="mt-3 text-lg font-black text-gray-900">
+                  {milestone.title}
+                </h3>
+
+                <p className="mt-1 text-sm text-gray-600">
+                  {milestone.description}
+                </p>
+
+                <p
+                  className={`mt-3 text-sm font-bold ${
+                    milestone.unlocked ? "text-green-700" : "text-gray-500"
+                  }`}
+                >
+                  {milestone.unlocked ? "Unlocked" : "Locked"}
+                </p>
+              </div>
+            ))}
+          </div>
+
+          <div className="mt-6 grid gap-4 md:grid-cols-3">
+            {creatorBadges.map((badge) => (
+              <div
+                key={badge.title}
+                className={`rounded-2xl border p-5 ${
+                  badge.unlocked
+                    ? "border-green-300 bg-green-50"
+                    : "border-gray-200 bg-gray-50"
+                }`}
+              >
+                <p className="text-2xl">{badge.icon}</p>
+
+                <h3 className="mt-3 text-lg font-black text-gray-900">
+                  {badge.title}
+                </h3>
+
+                <p className="mt-1 text-sm text-gray-600">
+                  {badge.description}
+                </p>
+
+                <p
+                  className={`mt-3 text-sm font-bold ${
+                    badge.unlocked ? "text-green-700" : "text-gray-500"
+                  }`}
+                >
+                  {badge.unlocked ? "Badge active" : "Badge locked"}
+                </p>
+              </div>
+            ))}
           </div>
         </div>
 
