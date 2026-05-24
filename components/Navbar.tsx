@@ -248,7 +248,7 @@ export default function Navbar({ simple = false }: { simple?: boolean }) {
                 className="block rounded-lg px-4 py-2 text-sm font-medium hover:bg-yellow-50 hover:text-yellow-700"
                 href="/category/music"
               >
-                Music
+                Afrobeats
               </Link>
 
               <Link
@@ -310,7 +310,7 @@ export default function Navbar({ simple = false }: { simple?: boolean }) {
               <Link href="/trending">Trending</Link>
               <Link href="/shorts">Shorts</Link>
               <Link href="/category/culture">Culture</Link>
-              <Link href="/category/music">Music</Link>
+              <Link href="/category/music">Afrobeats</Link>
 
               <Link
                 href="/login"
