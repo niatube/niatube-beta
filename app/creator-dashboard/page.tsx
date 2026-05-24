@@ -48,6 +48,16 @@ type PayoutRequest = {
   requested_at?: string;
 };
 
+type NotificationItem = {
+  id: string;
+  creator_name: string;
+  type: string;
+  title: string;
+  message: string;
+  read?: boolean;
+  created_at?: string;
+};
+
 export default function CreatorDashboardPage() {
   const router = useRouter();
 
@@ -55,6 +65,7 @@ export default function CreatorDashboardPage() {
   const [uploads, setUploads] = useState<Upload[]>([]);
   const [tips, setTips] = useState<Tip[]>([]);
   const [payouts, setPayouts] = useState<PayoutRequest[]>([]);
+  const [notifications, setNotifications] = useState<NotificationItem[]>([]);
   const [subscriberCount, setSubscriberCount] = useState(0);
   const [loading, setLoading] = useState(true);
   const [creatorSince, setCreatorSince] = useState("");
@@ -124,9 +135,17 @@ export default function CreatorDashboardPage() {
         .select("*")
         .eq("creator_name", activeCreatorName);
 
+      const { data: notificationsData } = await supabase
+        .from("notifications")
+        .select("*")
+        .eq("creator_name", activeCreatorName)
+        .order("created_at", { ascending: false })
+        .limit(8);
+
       setUploads((uploadsData || []) as Upload[]);
       setTips((tipsData || []) as Tip[]);
       setPayouts((payoutData || []) as PayoutRequest[]);
+      setNotifications((notificationsData || []) as NotificationItem[]);
       setSubscriberCount(subscriberData?.length || 0);
 
       setLoading(false);
@@ -134,6 +153,34 @@ export default function CreatorDashboardPage() {
 
     loadDashboard();
   }, [router]);
+
+  async function markNotificationsAsRead() {
+    if (notifications.length === 0) return;
+
+    const unreadIds = notifications
+      .filter((notification) => !notification.read)
+      .map((notification) => notification.id);
+
+    if (unreadIds.length === 0) return;
+
+    const { error } = await supabase
+      .from("notifications")
+      .update({ read: true })
+      .in("id", unreadIds);
+
+    if (error) {
+      console.error("Notification update error:", error);
+      return;
+    }
+
+    setNotifications((prev) =>
+      prev.map((notification) => ({ ...notification, read: true }))
+    );
+  }
+
+  const unreadNotificationCount = notifications.filter(
+    (notification) => !notification.read
+  ).length;
 
   const totalViews = uploads.reduce(
     (sum, upload) => sum + Number(upload.views || 0),
@@ -252,7 +299,10 @@ export default function CreatorDashboardPage() {
     });
   }, [uploads]);
 
-  const totalPages = Math.max(1, Math.ceil(sortedUploads.length / videosPerPage));
+  const totalPages = Math.max(
+    1,
+    Math.ceil(sortedUploads.length / videosPerPage)
+  );
 
   const paginatedUploads = sortedUploads.slice(
     (currentPage - 1) * videosPerPage,
@@ -298,9 +348,86 @@ export default function CreatorDashboardPage() {
                   : "bg-gray-200 text-gray-500"
               }`}
             >
-              {badge.icon} {badge.unlocked ? badge.title : `Locked: ${badge.title}`}
+              {badge.icon}{" "}
+              {badge.unlocked ? badge.title : `Locked: ${badge.title}`}
             </span>
           ))}
+        </div>
+
+        <div className="mt-8 rounded-3xl bg-white p-6 shadow-sm">
+          <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+            <div>
+              <h2 className="text-2xl font-black text-gray-900">
+                Notification Center
+              </h2>
+
+              <p className="mt-1 text-sm text-gray-600">
+                {unreadNotificationCount} unread alert
+                {unreadNotificationCount === 1 ? "" : "s"} for tips,
+                subscribers, payouts, and milestones.
+              </p>
+            </div>
+
+            <button
+              onClick={markNotificationsAsRead}
+              disabled={unreadNotificationCount === 0}
+              className="rounded-xl border border-gray-300 px-4 py-2 text-sm font-bold text-gray-700 hover:bg-gray-100 disabled:cursor-not-allowed disabled:opacity-40"
+            >
+              Mark all as read
+            </button>
+          </div>
+
+          {notifications.length === 0 ? (
+            <div className="mt-5 rounded-2xl border border-dashed border-gray-300 bg-gray-50 p-5">
+              <p className="font-bold text-gray-800">No notifications yet.</p>
+
+              <p className="mt-1 text-sm text-gray-600">
+                New subscriber, tip, payout, and milestone alerts will appear
+                here.
+              </p>
+            </div>
+          ) : (
+            <div className="mt-5 grid gap-4 md:grid-cols-2">
+              {notifications.map((notification) => (
+                <div
+                  key={notification.id}
+                  className={`rounded-2xl border p-5 ${
+                    notification.read
+                      ? "border-gray-200 bg-gray-50"
+                      : "border-yellow-300 bg-yellow-50"
+                  }`}
+                >
+                  <div className="flex items-start justify-between gap-3">
+                    <div>
+                      <p className="text-xs font-black uppercase tracking-wide text-gray-500">
+                        {notification.type}
+                      </p>
+
+                      <h3 className="mt-1 text-lg font-black text-gray-900">
+                        {notification.title}
+                      </h3>
+                    </div>
+
+                    {!notification.read && (
+                      <span className="rounded-full bg-yellow-400 px-3 py-1 text-xs font-black text-black">
+                        New
+                      </span>
+                    )}
+                  </div>
+
+                  <p className="mt-2 text-sm leading-6 text-gray-700">
+                    {notification.message}
+                  </p>
+
+                  <p className="mt-3 text-xs font-semibold text-gray-500">
+                    {notification.created_at
+                      ? new Date(notification.created_at).toLocaleString()
+                      : "Just now"}
+                  </p>
+                </div>
+              ))}
+            </div>
+          )}
         </div>
 
         <div className="mt-8 grid gap-5 md:grid-cols-3 xl:grid-cols-7">
@@ -449,8 +576,18 @@ export default function CreatorDashboardPage() {
                   <XAxis dataKey="name" />
                   <YAxis />
                   <Tooltip />
-                  <Line type="monotone" dataKey="views" stroke="#2563eb" strokeWidth={3} />
-                  <Line type="monotone" dataKey="likes" stroke="#16a34a" strokeWidth={3} />
+                  <Line
+                    type="monotone"
+                    dataKey="views"
+                    stroke="#2563eb"
+                    strokeWidth={3}
+                  />
+                  <Line
+                    type="monotone"
+                    dataKey="likes"
+                    stroke="#16a34a"
+                    strokeWidth={3}
+                  />
                 </LineChart>
               </ResponsiveContainer>
             </div>
@@ -468,7 +605,12 @@ export default function CreatorDashboardPage() {
                   <XAxis dataKey="name" />
                   <YAxis />
                   <Tooltip />
-                  <Area type="monotone" dataKey="watchHours" stroke="#7c3aed" fill="#c4b5fd" />
+                  <Area
+                    type="monotone"
+                    dataKey="watchHours"
+                    stroke="#7c3aed"
+                    fill="#c4b5fd"
+                  />
                 </AreaChart>
               </ResponsiveContainer>
             </div>
@@ -515,6 +657,15 @@ export default function CreatorDashboardPage() {
                   return;
                 }
 
+                await supabase.from("notifications").insert([
+                  {
+                    creator_name: creatorName,
+                    type: "payout",
+                    title: "Payout request submitted",
+                    message: `Your payout request for ${totalTips} has been submitted for review.`,
+                  },
+                ]);
+
                 alert("Payout request submitted.");
                 window.location.reload();
               }}
@@ -529,7 +680,10 @@ export default function CreatorDashboardPage() {
           ) : (
             <div className="mt-5 space-y-4">
               {payouts.map((payout) => (
-                <div key={payout.id} className="rounded-2xl border bg-gray-50 p-5">
+                <div
+                  key={payout.id}
+                  className="rounded-2xl border bg-gray-50 p-5"
+                >
                   <p className="font-bold">Amount: {payout.amount}</p>
                   <p className="text-sm text-gray-600">
                     Status: {payout.status || "pending"}
@@ -583,7 +737,10 @@ export default function CreatorDashboardPage() {
           ) : (
             <div className="mt-5 space-y-4">
               {tips.map((tip) => (
-                <div key={tip.id} className="rounded-2xl border bg-gray-50 p-5">
+                <div
+                  key={tip.id}
+                  className="rounded-2xl border bg-gray-50 p-5"
+                >
                   <p className="font-bold">
                     {tip.amount} {tip.currency_code || ""}
                   </p>
@@ -612,7 +769,9 @@ export default function CreatorDashboardPage() {
             {uploads.length > videosPerPage && (
               <div className="flex items-center gap-3">
                 <button
-                  onClick={() => setCurrentPage((page) => Math.max(1, page - 1))}
+                  onClick={() =>
+                    setCurrentPage((page) => Math.max(1, page - 1))
+                  }
                   disabled={currentPage === 1}
                   className="rounded-lg border px-4 py-2 text-sm font-bold text-gray-700 disabled:cursor-not-allowed disabled:opacity-40"
                 >
@@ -709,7 +868,9 @@ export default function CreatorDashboardPage() {
               {uploads.length > videosPerPage && (
                 <div className="mt-6 flex items-center justify-center gap-3">
                   <button
-                    onClick={() => setCurrentPage((page) => Math.max(1, page - 1))}
+                    onClick={() =>
+                      setCurrentPage((page) => Math.max(1, page - 1))
+                    }
                     disabled={currentPage === 1}
                     className="rounded-lg border px-4 py-2 text-sm font-bold text-gray-700 disabled:cursor-not-allowed disabled:opacity-40"
                   >
