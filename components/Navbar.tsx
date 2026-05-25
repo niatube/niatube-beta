@@ -153,7 +153,7 @@ export default function Navbar({ simple = false }: { simple?: boolean }) {
   function handleSearch() {
     if (!searchQuery.trim()) return;
 
-    router.push(`/discover?q=${encodeURIComponent(searchQuery.trim())}`);
+    window.location.href = `/discover?q=${encodeURIComponent(searchQuery.trim())}`;
     setSearchQuery("");
     setMenuOpen(false);
   }
