@@ -55,6 +55,25 @@ export default function RevenuePartnershipPage() {
       setStatus("Please complete all required fields.");
       return;
     }
+ if (!storeUrl.trim().startsWith("https://")) {
+  setStatus("Store Website URL must start with https://");
+  return;
+}
+
+if (!promoVideoUrl.trim()) {
+  setStatus("Promo Video URL is required.");
+  return;
+}
+
+if (!promoVideoUrl.trim().startsWith("https://")) {
+  setStatus("Promo Video URL must start with https://");
+  return;
+}
+
+if (!promoVideoUrl.trim().toLowerCase().includes(".mp4")) {
+  setStatus("Promo Video URL must point to an MP4 video.");
+  return;
+}
 
     if (!agreementAccepted) {
       setStatus("Please accept the Revenue Partnership agreement.");
@@ -196,10 +215,26 @@ export default function RevenuePartnershipPage() {
                 placeholder="https://..."
               />
 
-              <p className="mt-2 text-xs text-gray-500">
-                Add a short promo/store/product video link. This video may later
-                appear inside NiaMALL storefront listings.
-              </p>
+             <p className="mt-2 text-xs leading-6 text-gray-500">
+  Upload or link a short MP4 promo video showcasing your store or
+  product. This video may later appear inside NiaMALL storefront
+  listings.
+</p>
+
+<div className="mt-3 rounded-xl border border-gray-200 bg-gray-50 p-4">
+  <p className="text-xs font-black uppercase tracking-wide text-gray-700">
+    Recommended Promo Video Format
+  </p>
+
+  <ul className="mt-2 space-y-1 text-xs text-gray-600">
+    <li>• Format: .mp4</li>
+    <li>• Video Codec: H.264</li>
+    <li>• Audio Codec: AAC</li>
+    <li>• Resolution: 720p or 1080p</li>
+    <li>• Recommended Length: 15–60 seconds</li>
+    <li>• Recommended Size: Under 100MB</li>
+  </ul>
+</div>
             </div>
 
             <div>
@@ -244,6 +279,7 @@ export default function RevenuePartnershipPage() {
                 Agreement Acknowledgement
               </h3>
 
+
               <p className="mt-2 text-sm leading-6 text-gray-700">
                 I understand that submitting this application does not guarantee
                 placement on NiaMALL. NiaTube may review, approve, reject, or
@@ -261,6 +297,17 @@ export default function RevenuePartnershipPage() {
                 I accept the Revenue Partnership Program review terms.
               </label>
             </div>
+            <div className="rounded-2xl border border-blue-200 bg-blue-50 p-5">
+  <h3 className="text-lg font-black text-gray-900">
+    Application Status Updates
+  </h3>
+
+  <p className="mt-2 text-sm leading-6 text-gray-700">
+    After submission, please monitor your Creator Dashboard and notification
+    bell for approval status updates regarding your Revenue Partnership
+    application.
+  </p>
+</div>
 
             <button
               type="submit"
