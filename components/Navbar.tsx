@@ -209,95 +209,60 @@ export default function Navbar({ simple = false }: { simple?: boolean }) {
                 />
               )}
 
-              <Link
-                className="block rounded-lg px-4 py-2 text-sm font-bold hover:bg-yellow-50 hover:text-yellow-700"
-                href="/"
-              >
+              <Link className="block rounded-lg px-4 py-2 text-sm font-bold hover:bg-yellow-50 hover:text-yellow-700" href="/">
                 Home
               </Link>
 
-              <Link
-                className="block rounded-lg px-4 py-2 text-sm font-medium hover:bg-yellow-50 hover:text-yellow-700"
-                href="/news"
-              >
+              <Link className="block rounded-lg px-4 py-2 text-sm font-medium hover:bg-yellow-50 hover:text-yellow-700" href="/news">
                 News
               </Link>
 
-              <Link
-                className="block rounded-lg px-4 py-2 text-sm font-medium hover:bg-yellow-50 hover:text-yellow-700"
-                href="/trending"
-              >
+              <Link className="block rounded-lg px-4 py-2 text-sm font-medium hover:bg-yellow-50 hover:text-yellow-700" href="/trending">
                 Trending
               </Link>
 
-              <Link
-                className="block rounded-lg px-4 py-2 text-sm font-medium hover:bg-yellow-50 hover:text-yellow-700"
-                href="/live"
-              >
+              <Link className="block rounded-lg px-4 py-2 text-sm font-medium hover:bg-yellow-50 hover:text-yellow-700" href="/live">
                 🔴 Live
               </Link>
 
-              <Link
-                className="block rounded-lg px-4 py-2 text-sm font-medium hover:bg-yellow-50 hover:text-yellow-700"
-                href="/category/culture"
-              >
+              <Link className="block rounded-lg px-4 py-2 text-sm font-medium hover:bg-yellow-50 hover:text-yellow-700" href="/category/culture">
                 Culture
               </Link>
 
-              <Link
-                className="block rounded-lg px-4 py-2 text-sm font-medium hover:bg-yellow-50 hover:text-yellow-700"
-                href="/category/music"
-              >
+              <Link className="block rounded-lg px-4 py-2 text-sm font-medium hover:bg-yellow-50 hover:text-yellow-700" href="/category/music">
                 Afrobeats
               </Link>
 
-              <Link
-                className="block rounded-lg px-4 py-2 text-sm font-medium hover:bg-yellow-50 hover:text-yellow-700"
-                href="/shorts"
-              >
+              <Link className="block rounded-lg px-4 py-2 text-sm font-medium hover:bg-yellow-50 hover:text-yellow-700" href="/niamall">
+                NiaMALL
+              </Link>
+
+              <Link className="block rounded-lg px-4 py-2 text-sm font-medium hover:bg-yellow-50 hover:text-yellow-700" href="/shorts">
                 Shorts
               </Link>
 
-              <Link
-                className="block rounded-lg px-4 py-2 text-sm font-medium hover:bg-yellow-50 hover:text-yellow-700"
-                href="/niacircle"
-              >
+              <Link className="block rounded-lg px-4 py-2 text-sm font-medium hover:bg-yellow-50 hover:text-yellow-700" href="/niacircle">
                 NiaCircle
               </Link>
 
-              <Link
-                className="block rounded-lg px-4 py-2 text-sm font-medium hover:bg-yellow-50 hover:text-yellow-700"
-                href="/history"
-              >
+              <Link className="block rounded-lg px-4 py-2 text-sm font-medium hover:bg-yellow-50 hover:text-yellow-700" href="/history">
                 History
               </Link>
 
-              <Link
-                className="block rounded-lg px-4 py-2 text-sm font-medium hover:bg-yellow-50 hover:text-yellow-700"
-                href="/language"
-              >
+              <Link className="block rounded-lg px-4 py-2 text-sm font-medium hover:bg-yellow-50 hover:text-yellow-700" href="/language">
                 Language
               </Link>
 
-              <Link
-                className="block rounded-lg px-4 py-2 text-sm font-medium hover:bg-yellow-50 hover:text-yellow-700"
-                href="/creator-dashboard"
-              >
+              <Link className="block rounded-lg px-4 py-2 text-sm font-medium hover:bg-yellow-50 hover:text-yellow-700" href="/creator-dashboard">
                 Creator Dashboard
               </Link>
 
               <div className="mt-3 grid grid-cols-2 gap-2 border-t pt-3">
-                <Link
-                  href="/login"
-                  className="rounded-lg bg-black px-4 py-2 text-center text-sm font-bold text-white hover:bg-gray-800"
-                >
+                <Link href="/login" className="rounded-lg bg-black px-4 py-2 text-center text-sm font-bold text-white hover:bg-gray-800">
                   Upload
                 </Link>
 
-                <Link
-                  href="/login"
-                  className="rounded-lg border-2 border-green-600 px-4 py-2 text-center text-sm font-bold text-black hover:bg-gray-100"
-                >
+                <Link href="/login" className="rounded-lg border-2 border-green-600 px-4 py-2 text-center text-sm font-bold text-black hover:bg-gray-100">
                   Login
                 </Link>
               </div>
@@ -305,12 +270,13 @@ export default function Navbar({ simple = false }: { simple?: boolean }) {
           )}
 
           {!simple && (
-            <nav className="ml-6 hidden items-center gap-5 text-[16px] font-medium md:flex">
+            <nav className="ml-6 hidden items-center gap-4 text-[15px] font-medium md:flex">
               <Link href="/news">News</Link>
               <Link href="/trending">Trending</Link>
               <Link href="/shorts">Shorts</Link>
               <Link href="/category/culture">Culture</Link>
               <Link href="/category/music">Afrobeats</Link>
+              <Link href="/niamall">NiaMALL</Link>
 
               <Link
                 href="/login"
@@ -405,7 +371,7 @@ export default function Navbar({ simple = false }: { simple?: boolean }) {
 
               <Link
                 href="/login"
-                className="ml-4 rounded-lg bg-black px-3 py-1.5 text-sm font-semibold text-white hover:bg-gray-800"
+                className="ml-2 rounded-lg bg-black px-3 py-1.5 text-sm font-semibold text-white hover:bg-gray-800"
               >
                 Upload
               </Link>
