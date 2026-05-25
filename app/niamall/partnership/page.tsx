@@ -8,6 +8,7 @@ export default function RevenuePartnershipPage() {
   const [creatorName, setCreatorName] = useState("");
   const [storeName, setStoreName] = useState("");
   const [storeUrl, setStoreUrl] = useState("");
+  const [promoVideoUrl, setPromoVideoUrl] = useState("");
   const [category, setCategory] = useState("Merchandise");
   const [description, setDescription] = useState("");
   const [agreementAccepted, setAgreementAccepted] = useState(false);
@@ -65,6 +66,7 @@ export default function RevenuePartnershipPage() {
         creator_name: creatorName.trim(),
         store_name: storeName.trim(),
         store_url: storeUrl.trim(),
+        promo_video_url: promoVideoUrl.trim(),
         category,
         description: description.trim(),
         agreement_accepted: agreementAccepted,
@@ -74,9 +76,7 @@ export default function RevenuePartnershipPage() {
 
     if (error) {
       console.error(error);
-      setStatus(
-        "Application failed. Make sure the niamall_applications table exists."
-      );
+      setStatus("Application failed. Please try again.");
       return;
     }
 
@@ -91,8 +91,10 @@ export default function RevenuePartnershipPage() {
     ]);
 
     setStatus("Application submitted for review.");
+
     setStoreName("");
     setStoreUrl("");
+    setPromoVideoUrl("");
     setCategory("Merchandise");
     setDescription("");
     setAgreementAccepted(false);
@@ -109,16 +111,27 @@ export default function RevenuePartnershipPage() {
           </p>
 
           <h1 className="mt-2 text-4xl font-black text-gray-900">
-            Apply to feature your store on NiaMALL
+            Turn audience attention into creator commerce.
           </h1>
 
           <p className="mt-3 max-w-3xl text-gray-600">
-            Approved creators can showcase their store, products, services, or
-            external storefront links inside NiaMALL. This program helps
-            creators convert audience attention into commerce opportunities.
+            Apply to feature your creator store, products, services, or
+            external storefront inside NiaMALL.
           </p>
 
           <div className="mt-6 rounded-2xl border border-yellow-200 bg-yellow-50 p-5">
+            <h2 className="text-lg font-black text-gray-900">
+              Video-Commerce Advantage
+            </h2>
+
+            <p className="mt-2 text-sm leading-6 text-gray-700">
+              Approved creators can showcase their products using short promo
+              videos. This allows viewers to discover products visually before
+              visiting the creator’s external store website.
+            </p>
+          </div>
+
+          <div className="mt-6 rounded-2xl border border-gray-200 bg-gray-50 p-5">
             <h2 className="text-lg font-black text-gray-900">
               Partnership Requirement
             </h2>
@@ -169,6 +182,24 @@ export default function RevenuePartnershipPage() {
                 className="mt-2 w-full rounded-xl border px-4 py-3 text-sm"
                 placeholder="https://yourstore.com"
               />
+            </div>
+
+            <div>
+              <label className="text-sm font-bold text-gray-700">
+                Promo Video URL
+              </label>
+
+              <input
+                value={promoVideoUrl}
+                onChange={(e) => setPromoVideoUrl(e.target.value)}
+                className="mt-2 w-full rounded-xl border px-4 py-3 text-sm"
+                placeholder="https://..."
+              />
+
+              <p className="mt-2 text-xs text-gray-500">
+                Add a short promo/store/product video link. This video may later
+                appear inside NiaMALL storefront listings.
+              </p>
             </div>
 
             <div>
