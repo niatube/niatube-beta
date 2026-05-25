@@ -7,7 +7,7 @@ import { supabase } from "@/lib/supabase-browser";
 
 type NotificationItem = {
   id: string;
- creator_name: string;
+  creator_name: string;
   type: string;
   title: string;
   message: string;
@@ -42,9 +42,7 @@ export default function Navbar({ simple = false }: { simple?: boolean }) {
       if (!user) return;
 
       let activeCreatorName =
-        user.user_metadata?.creator_name ||
-        user.email?.split("@")[0] ||
-        "";
+        user.user_metadata?.creator_name || user.email?.split("@")[0] || "";
 
       const { data: profileByEmail } = await supabase
         .from("creator_profiles")
@@ -145,10 +143,7 @@ export default function Navbar({ simple = false }: { simple?: boolean }) {
     }
 
     setNotifications((prev) =>
-      prev.map((notification) => ({
-        ...notification,
-        read: true,
-      }))
+      prev.map((notification) => ({ ...notification, read: true }))
     );
   }
 
@@ -191,6 +186,7 @@ export default function Navbar({ simple = false }: { simple?: boolean }) {
               type="button"
               onClick={() => setMenuOpen(!menuOpen)}
               className="text-2xl font-bold text-gray-800 transition hover:text-yellow-600"
+              aria-label="Open menu"
             >
               ☰
             </button>
@@ -217,6 +213,76 @@ export default function Navbar({ simple = false }: { simple?: boolean }) {
             )}
           </div>
 
+          {menuOpen && (
+            <div className="absolute left-3 right-3 top-20 z-50 rounded-2xl border border-gray-100 bg-white p-4 shadow-2xl md:left-4 md:right-auto md:w-64">
+              {!simple && (
+                <input
+                  type="text"
+                  placeholder="Search videos or creators"
+                  value={searchQuery}
+                  onChange={(e) => setSearchQuery(e.target.value)}
+                  onKeyDown={(e) => {
+                    if (e.key === "Enter") handleSearch();
+                  }}
+                  className="mb-3 w-full rounded-full border px-4 py-2 text-sm"
+                />
+              )}
+
+              <Link className="block rounded-lg px-4 py-2 text-sm font-bold hover:bg-yellow-50 hover:text-yellow-700" href="/">
+                Home
+              </Link>
+              <Link className="block rounded-lg px-4 py-2 text-sm font-medium hover:bg-yellow-50 hover:text-yellow-700" href="/news">
+                News
+              </Link>
+              <Link className="block rounded-lg px-4 py-2 text-sm font-medium hover:bg-yellow-50 hover:text-yellow-700" href="/trending">
+                Trending
+              </Link>
+              <Link className="block rounded-lg px-4 py-2 text-sm font-medium hover:bg-yellow-50 hover:text-yellow-700" href="/live">
+                🔴 Live
+              </Link>
+              <Link className="block rounded-lg px-4 py-2 text-sm font-medium hover:bg-yellow-50 hover:text-yellow-700" href="/category/culture">
+                Culture
+              </Link>
+              <Link className="block rounded-lg px-4 py-2 text-sm font-medium hover:bg-yellow-50 hover:text-yellow-700" href="/category/music">
+                Afrobeats
+              </Link>
+              <Link className="block rounded-lg px-4 py-2 text-sm font-medium hover:bg-yellow-50 hover:text-yellow-700" href="/niamall">
+                NiaMALL
+              </Link>
+              <Link className="block rounded-lg px-4 py-2 text-sm font-medium hover:bg-yellow-50 hover:text-yellow-700" href="/shorts">
+                Shorts
+              </Link>
+              <Link className="block rounded-lg px-4 py-2 text-sm font-medium hover:bg-yellow-50 hover:text-yellow-700" href="/niacircle">
+                NiaCircle
+              </Link>
+              <Link className="block rounded-lg px-4 py-2 text-sm font-medium hover:bg-yellow-50 hover:text-yellow-700" href="/history">
+                History
+              </Link>
+              <Link className="block rounded-lg px-4 py-2 text-sm font-medium hover:bg-yellow-50 hover:text-yellow-700" href="/language">
+                Language
+              </Link>
+              <Link className="block rounded-lg px-4 py-2 text-sm font-medium hover:bg-yellow-50 hover:text-yellow-700" href="/creator-dashboard">
+                Creator Dashboard
+              </Link>
+
+              <div className="mt-3 grid grid-cols-2 gap-2 border-t pt-3">
+                <Link
+                  href="/login"
+                  className="rounded-lg bg-black px-4 py-2 text-center text-sm font-bold text-white hover:bg-gray-800"
+                >
+                  Upload
+                </Link>
+
+                <Link
+                  href="/login"
+                  className="rounded-lg border-2 border-green-600 px-4 py-2 text-center text-sm font-bold text-black hover:bg-gray-100"
+                >
+                  Login
+                </Link>
+              </div>
+            </div>
+          )}
+
           {!simple && (
             <nav className="ml-6 hidden items-center gap-4 text-[15px] font-medium md:flex">
               <Link href="/news">News</Link>
@@ -235,12 +301,15 @@ export default function Navbar({ simple = false }: { simple?: boolean }) {
               </Link>
 
               <Link href="/niacircle">NiaCircle</Link>
+              <Link href="/history">History</Link>
+              <Link href="/language">Language</Link>
 
               <div className="relative">
                 <button
                   type="button"
                   onClick={() => setNotificationOpen((prev) => !prev)}
                   className="relative rounded-full border border-gray-200 bg-white px-3 py-2 text-lg shadow-sm hover:bg-gray-50"
+                  aria-label="Notifications"
                 >
                   🔔
 
@@ -306,6 +375,13 @@ export default function Navbar({ simple = false }: { simple?: boolean }) {
                         ))}
                       </div>
                     )}
+
+                    <Link
+                      href="/creator-dashboard"
+                      className="mt-4 block rounded-xl bg-black px-4 py-2 text-center text-sm font-bold text-white hover:bg-gray-800"
+                    >
+                      View dashboard
+                    </Link>
                   </div>
                 )}
               </div>
@@ -315,6 +391,13 @@ export default function Navbar({ simple = false }: { simple?: boolean }) {
                 className="rounded-lg bg-black px-3 py-1.5 text-sm font-semibold text-white hover:bg-gray-800"
               >
                 Upload
+              </Link>
+
+              <Link
+                href="/login"
+                className="rounded-lg border-2 border-green-600 px-3 py-1.5 text-sm font-semibold text-black hover:bg-gray-100"
+              >
+                Login
               </Link>
             </nav>
           )}
