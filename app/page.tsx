@@ -23,7 +23,6 @@ function formatUploadTime(dateString?: string | null) {
   if (!dateString) return "Recently uploaded";
 
   const uploadedTime = new Date(dateString).getTime();
-
   if (Number.isNaN(uploadedTime)) return "Recently uploaded";
 
   const now = Date.now();
@@ -53,6 +52,7 @@ function formatUploadTime(dateString?: string | null) {
 export default function Home() {
   const [uploads, setUploads] = useState<UploadItem[]>([]);
   const [selectedLanguage, setSelectedLanguage] = useState<string | null>(null);
+
   useEffect(() => {
     const savedLanguage = localStorage.getItem("niatube_language");
     setSelectedLanguage(savedLanguage);
@@ -120,7 +120,6 @@ export default function Home() {
     (video) => {
       if (!selectedLanguage) return true;
 
-      // Do not hide real uploaded videos just because language is missing.
       if (video.isUploadedVideo && !video.language) return true;
 
       return video.language === selectedLanguage;
@@ -140,9 +139,16 @@ export default function Home() {
     return bTime - aTime;
   });
 
-  const videos = uploadedVideos.length > 0
-  ? uploadedVideos.slice(0, 6)
-  : fallbackWithStats.slice(0, 6);
+  const videos = sortedVideos.filter((video: any) => !video.is_live).slice(0, 6);
+
+  const recommendedVideos = [...sortedVideos]
+    .filter((video: any) => !video.is_live)
+    .sort((a: any, b: any) => {
+      const aScore = Number(a.views || 0) + Number(a.likes || 0) * 4;
+      const bScore = Number(b.views || 0) + Number(b.likes || 0) * 4;
+      return bScore - aScore;
+    })
+    .slice(0, 6);
 
   return (
     <main className="min-h-screen bg-[#f6f6f6] text-black">
@@ -213,166 +219,233 @@ export default function Home() {
                 </div>
               </div>
             </div>
-<section id="videos" className="mt-10">
-  <div className="mb-6 flex flex-col gap-4 md:flex-row md:items-start md:justify-between">
-    <div>
-      <h2 className="text-4xl font-extrabold text-black">
-        Discover on NiaTube
-      </h2>
 
-      <p className="mt-2 text-xl text-gray-700">
-        Content that informs, inspires, and connects Africa & the Diaspora.
-      </p>
-    </div>
+            <section id="videos" className="mt-10">
+              <div className="mb-6 flex flex-col gap-4 md:flex-row md:items-start md:justify-between">
+                <div>
+                  <h2 className="text-4xl font-extrabold text-black">
+                    Discover on NiaTube
+                  </h2>
 
-    <Link
-      href="/discover"
-      className="inline-flex h-10 items-center justify-center rounded-md bg-yellow-400 px-4 text-sm font-semibold text-black hover:bg-yellow-300"
-    >
-      View All
-    </Link>
-  </div>
+                  <p className="mt-2 text-xl text-gray-700">
+                    Content that informs, inspires, and connects Africa & the
+                    Diaspora.
+                  </p>
+                </div>
 
-  <div className="grid grid-cols-1 gap-5 sm:gap-6 md:grid-cols-2 xl:grid-cols-3">
-    {videos
-      .filter((video: any) => !video.is_live)
-      .map((video: any, i: number) => {
-        const watchHref = video.id ? `/watch/${video.id}` : "/discover";
+                <Link
+                  href="/discover"
+                  className="inline-flex h-10 items-center justify-center rounded-md bg-yellow-400 px-4 text-sm font-semibold text-black hover:bg-yellow-300"
+                >
+                  View All
+                </Link>
+              </div>
 
-        return (
-          <div
-            key={`${video.id}-${i}`}
-            className={`group overflow-hidden rounded-2xl bg-white shadow-sm transition-all duration-300 hover:-translate-y-1 hover:shadow-xl ${
-              i === 0 ? "ring-2 ring-yellow-400" : ""
-            }`}
-          >
-            <Link
-              href={watchHref}
-              className="relative block h-[210px] overflow-hidden bg-gray-100 sm:h-[190px]"
-            >
-              {i === 0 && (
-                <div className="absolute left-3 top-3 z-20 rounded-full bg-yellow-400 px-3 py-1 text-xs font-bold text-black shadow">
-                  NEW
+              <div className="grid grid-cols-1 gap-5 sm:gap-6 md:grid-cols-2 xl:grid-cols-3">
+                {videos.map((video: any, i: number) => {
+                  const watchHref = video.id ? `/watch/${video.id}` : "/discover";
+
+                  return (
+                    <div
+                      key={`${video.id}-${i}`}
+                      className={`group overflow-hidden rounded-2xl bg-white shadow-sm transition-all duration-300 hover:-translate-y-1 hover:shadow-xl ${
+                        i === 0 ? "ring-2 ring-yellow-400" : ""
+                      }`}
+                    >
+                      <Link
+                        href={watchHref}
+                        className="relative block h-[210px] overflow-hidden bg-gray-100 sm:h-[190px]"
+                      >
+                        {i === 0 && (
+                          <div className="absolute left-3 top-3 z-20 rounded-full bg-yellow-400 px-3 py-1 text-xs font-bold text-black shadow">
+                            NEW
+                          </div>
+                        )}
+
+                        <img
+                          src={video.image || "/default-thumbnail.jpg"}
+                          alt={video.title}
+                          onError={(e) => {
+                            e.currentTarget.src = "/default-thumbnail.jpg";
+                          }}
+                          className="h-full w-full object-cover transition-transform duration-500 group-hover:scale-105"
+                        />
+
+                        <div className="absolute inset-0 bg-black/20" />
+                      </Link>
+
+                      <div className="p-5">
+                        <div className="text-xs font-semibold text-green-600">
+                          ● Available now
+                        </div>
+
+                        <h3 className="mt-2 line-clamp-2 text-base font-bold leading-snug text-gray-900">
+                          {video.title}
+                        </h3>
+
+                        <Link
+                          href={`/channel/${encodeURIComponent(video.creator)}`}
+                          className="mt-1 block text-sm font-semibold text-gray-600 hover:text-yellow-600"
+                        >
+                          {video.creator}
+                        </Link>
+
+                        <div className="mt-3 flex flex-wrap items-center gap-4 text-sm font-semibold text-gray-600">
+                          <span>👁️ {video.views || 0} views</span>
+                          <span>👍 {video.likes || 0} likes</span>
+                          <span>📅 {formatUploadTime(video.created_at)}</span>
+                        </div>
+
+                        <Link
+                          href={watchHref}
+                          className="mt-4 inline-block rounded-lg bg-black px-4 py-2 text-sm font-bold text-white hover:bg-gray-800"
+                        >
+                          Watch
+                        </Link>
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+
+              <div className="mt-12 rounded-3xl bg-white p-6 shadow-sm">
+                <div className="mb-6 flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
+                  <div>
+                    <h2 className="text-3xl font-black text-gray-900">
+                      Recommended for You
+                    </h2>
+
+                    <p className="mt-2 text-gray-600">
+                      Suggested videos based on engagement, views, likes, and
+                      creator momentum.
+                    </p>
+                  </div>
+
+                  <Link
+                    href="/discover"
+                    className="inline-flex h-10 items-center justify-center rounded-md bg-black px-4 text-sm font-bold text-white hover:bg-gray-800"
+                  >
+                    Explore More
+                  </Link>
+                </div>
+
+                {recommendedVideos.length === 0 ? (
+                  <p className="text-sm text-gray-500">
+                    Recommendations will appear as more videos are published.
+                  </p>
+                ) : (
+                  <div className="grid grid-cols-1 gap-5 md:grid-cols-2 xl:grid-cols-3">
+                    {recommendedVideos.map((video: any, i: number) => (
+                      <Link
+                        key={`recommended-${video.id}-${i}`}
+                        href={`/watch/${video.id}`}
+                        className="group overflow-hidden rounded-2xl border bg-gray-50 transition hover:bg-white hover:shadow-md"
+                      >
+                        <div className="relative h-[170px] overflow-hidden bg-gray-100">
+                          <img
+                            src={video.image || "/default-thumbnail.jpg"}
+                            alt={video.title}
+                            onError={(e) => {
+                              e.currentTarget.src = "/default-thumbnail.jpg";
+                            }}
+                            className="h-full w-full object-cover transition-transform duration-500 group-hover:scale-105"
+                          />
+
+                          <div className="absolute left-3 top-3 rounded-full bg-black px-3 py-1 text-xs font-black text-white">
+                            Recommended
+                          </div>
+                        </div>
+
+                        <div className="p-4">
+                          <h3 className="line-clamp-2 text-base font-black text-gray-900">
+                            {video.title}
+                          </h3>
+
+                          <p className="mt-1 text-sm font-semibold text-gray-600">
+                            {video.creator}
+                          </p>
+
+                          <p className="mt-2 text-sm text-gray-500">
+                            {video.views || 0} views • {video.likes || 0} likes
+                          </p>
+                        </div>
+                      </Link>
+                    ))}
+                  </div>
+                )}
+              </div>
+
+              {uploadedVideos.some((video: any) => video.is_live) && (
+                <div className="mt-10 rounded-3xl border border-red-100 bg-red-50 p-5">
+                  <div className="mb-5 flex items-center justify-between">
+                    <div>
+                      <h2 className="text-3xl font-extrabold text-red-700">
+                        🔴 Live Now
+                      </h2>
+
+                      <p className="mt-1 text-sm text-red-700/80">
+                        Join active livestreams happening now on NiaTube.
+                      </p>
+                    </div>
+
+                    <Link
+                      href="/live"
+                      className="rounded-lg bg-red-600 px-4 py-2 text-sm font-bold text-white hover:bg-red-700"
+                    >
+                      View Live
+                    </Link>
+                  </div>
+
+                  <div className="grid grid-cols-1 gap-5 md:grid-cols-2 xl:grid-cols-3">
+                    {uploadedVideos
+                      .filter((video: any) => video.is_live)
+                      .slice(0, 3)
+                      .map((video: any, i: number) => (
+                        <Link
+                          key={`live-${video.id}-${i}`}
+                          href={`/watch/${video.id}`}
+                          className="group overflow-hidden rounded-2xl bg-white shadow-sm transition-all duration-300 hover:-translate-y-1 hover:shadow-xl"
+                        >
+                          <div className="relative h-[190px] overflow-hidden bg-black">
+                            <div className="absolute left-3 top-3 z-20 rounded-full bg-red-600 px-3 py-1 text-xs font-bold text-white shadow-md">
+                              🔴 LIVE
+                            </div>
+
+                            <img
+                              src={video.image || "/default-thumbnail.jpg"}
+                              alt={video.title}
+                              onError={(e) => {
+                                e.currentTarget.src = "/default-thumbnail.jpg";
+                              }}
+                              className="h-full w-full object-cover transition-transform duration-500 group-hover:scale-105"
+                            />
+
+                            <div className="absolute inset-0 bg-black/25" />
+                          </div>
+
+                          <div className="p-5">
+                            <p className="text-xs font-bold text-red-600">
+                              ● Live now
+                            </p>
+
+                            <h3 className="mt-2 line-clamp-2 text-base font-bold text-gray-900">
+                              {video.title}
+                            </h3>
+
+                            <p className="mt-1 text-sm font-semibold text-gray-600">
+                              {video.creator}
+                            </p>
+
+                            <button className="mt-4 w-full rounded-lg bg-red-600 px-4 py-2 text-sm font-bold text-white">
+                              Watch Live
+                            </button>
+                          </div>
+                        </Link>
+                      ))}
+                  </div>
                 </div>
               )}
-
-              <img
-                src={video.image || "/default-thumbnail.jpg"}
-                alt={video.title}
-                onError={(e) => {
-                  e.currentTarget.src = "/default-thumbnail.jpg";
-                }}
-                className="h-full w-full object-cover transition-transform duration-500 group-hover:scale-105"
-              />
-
-              <div className="absolute inset-0 bg-black/20" />
-            </Link>
-
-            <div className="p-5">
-              <div className="text-xs font-semibold text-green-600">
-                ● Available now
-              </div>
-
-              <h3 className="mt-2 line-clamp-2 text-base font-bold leading-snug text-gray-900">
-                {video.title}
-              </h3>
-
-              <Link
-                href={`/channel/${encodeURIComponent(video.creator)}`}
-                className="mt-1 block text-sm font-semibold text-gray-600 hover:text-yellow-600"
-              >
-                {video.creator}
-              </Link>
-
-             <div className="mt-3 flex flex-wrap items-center gap-4 text-sm font-semibold text-gray-600">
-  <span>👁️ {video.views || 0} views</span>
-
-  <span>👍 {video.likes || 0} likes</span>
-  <span>📅 {formatUploadTime(video.created_at)}</span>
-
- </div>
-
-              <Link
-                href={watchHref}
-                className="mt-4 inline-block rounded-lg bg-black px-4 py-2 text-sm font-bold text-white hover:bg-gray-800"
-              >
-                Watch
-              </Link>
-            </div>
-          </div>
-        );
-      })}
-  </div>
-
-  {uploadedVideos.some((video: any) => video.is_live) && (
-    <div className="mt-10 rounded-3xl border border-red-100 bg-red-50 p-5">
-      <div className="mb-5 flex items-center justify-between">
-        <div>
-          <h2 className="text-3xl font-extrabold text-red-700">
-            🔴 Live Now
-          </h2>
-
-          <p className="mt-1 text-sm text-red-700/80">
-            Join active livestreams happening now on NiaTube.
-          </p>
-        </div>
-
-        <Link
-          href="/live"
-          className="rounded-lg bg-red-600 px-4 py-2 text-sm font-bold text-white hover:bg-red-700"
-        >
-          View Live
-        </Link>
-      </div>
-
-      <div className="grid grid-cols-1 gap-5 md:grid-cols-2 xl:grid-cols-3">
-        {uploadedVideos
-          .filter((video: any) => video.is_live)
-          .slice(0, 3)
-          .map((video: any, i: number) => (
-            <Link
-              key={`live-${video.id}-${i}`}
-              href={`/watch/${video.id}`}
-              className="group overflow-hidden rounded-2xl bg-white shadow-sm transition-all duration-300 hover:-translate-y-1 hover:shadow-xl"
-            >
-              <div className="relative h-[190px] overflow-hidden bg-black">
-                <div className="absolute left-3 top-3 z-20 rounded-full bg-red-600 px-3 py-1 text-xs font-bold text-white shadow-md">
-                  🔴 LIVE
-                </div>
-
-                <img
-                  src={video.image || "/default-thumbnail.jpg"}
-                  alt={video.title}
-                  onError={(e) => {
-                    e.currentTarget.src = "/default-thumbnail.jpg";
-                  }}
-                  className="h-full w-full object-cover transition-transform duration-500 group-hover:scale-105"
-                />
-
-                <div className="absolute inset-0 bg-black/25" />
-              </div>
-
-              <div className="p-5">
-                <p className="text-xs font-bold text-red-600">● Live now</p>
-
-                <h3 className="mt-2 line-clamp-2 text-base font-bold text-gray-900">
-                  {video.title}
-                </h3>
-
-                <p className="mt-1 text-sm font-semibold text-gray-600">
-                  {video.creator}
-                </p>
-
-                <button className="mt-4 w-full rounded-lg bg-red-600 px-4 py-2 text-sm font-bold text-white">
-                  Watch Live
-                </button>
-              </div>
-            </Link>
-          ))}
-      </div>
-    </div>
-  )}
-</section>
+            </section>
           </div>
 
           <aside className="hidden xl:block">
