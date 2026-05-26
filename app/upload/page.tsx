@@ -374,11 +374,11 @@ setUploadStage("Upload complete.");
                 <option value="culture">Culture</option>
                 <option value="history">History</option>
                 <option value="music">Music</option>
+                <option value="afrobeats">Afrobeats</option>
                 <option value="news">News</option>
                 <option value="trending">Trending</option>
                 <option value="live">Live</option>
                 <option value="shorts">Shorts</option>
-                <option value="niacircle">NiaCircle</option>
                 <option value="vlogs">Vlogs</option>
               </select>
             </label>

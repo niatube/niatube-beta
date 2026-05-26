@@ -80,6 +80,8 @@ export default function WatchPage() {
 
   const [subscriberCount, setSubscriberCount] = useState(0);
   const [subscribed, setSubscribed] = useState(false);
+  const [member, setMember] = useState(false);
+const [membershipLoading, setMembershipLoading] = useState(false);
 
   const [comments, setComments] = useState<VideoComment[]>([]);
   const [showFullDescription, setShowFullDescription] = useState(false);
@@ -146,6 +148,38 @@ export default function WatchPage() {
           .from("uploads")
           .update({ views: updatedViews })
           .eq("id", id);
+
+        const {
+          data: { user },
+        } = await supabase.auth.getUser();
+
+        const isUuid =
+          /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(
+            id
+          );
+
+        if (user?.id && isUuid) {
+          const { error: watchHistoryError } = await supabase
+            .from("watch_history")
+            .insert([
+              {
+                viewer_id: user.id,
+                video_id: id,
+                progress_seconds: 0,
+                completed: false,
+              },
+            ]);
+
+          if (watchHistoryError) {
+            console.error("Watch history insert error:", watchHistoryError);
+          }
+        } else {
+          console.log("Watch history skipped:", {
+            loggedIn: Boolean(user?.id),
+            isUuid,
+            videoId: id,
+          });
+        }
 
         const { data: likesData } = await supabase
           .from("video_likes")
@@ -424,6 +458,41 @@ export default function WatchPage() {
     setSubscribed(true);
     setSubscriberCount(newSubscriberCount);
   }
+  async function handleJoinMembership() {
+  if (!video?.creator || !viewerId) return;
+
+  setMembershipLoading(true);
+
+  const { error } = await supabase
+    .from("creator_memberships")
+    .insert([
+      {
+        creator_name: video.creator,
+        member_id: viewerId,
+        tier_name: "Supporter",
+        monthly_price: 5,
+        status: "active",
+      },
+    ]);
+
+  setMembershipLoading(false);
+
+  if (error) {
+    console.error("Membership error:", error);
+    return;
+  }
+
+  setMember(true);
+
+  await supabase.from("notifications").insert([
+    {
+      creator_name: video.creator,
+      type: "membership",
+      title: "New Membership",
+      message: "A viewer joined your membership program.",
+    },
+  ]);
+}
 
   async function sendTip() {
     if (!video?.creator) return;
@@ -527,386 +596,388 @@ export default function WatchPage() {
   }
 
   return (
-    <>
+    <main className="min-h-screen bg-gray-50">
       <Navbar />
 
-      <main className="min-h-screen bg-[#f6f6f6]">
-        <section className="mx-auto grid max-w-[1300px] grid-cols-1 gap-6 px-6 py-5 lg:grid-cols-[220px_1fr_390px]">
-          <aside className="space-y-4">
-            <div className="rounded-2xl bg-white p-4 shadow-sm">
-              <h2 className="text-lg font-bold text-gray-900">
-                More from {video.creator}
-              </h2>
-
-              {creatorVideo ? (
-                <>
-                  <a
-                    href={`/watch/${creatorVideo.id}`}
-                    className="mt-3 block overflow-hidden rounded-xl bg-gray-100"
-                  >
-                    <img
-                      src={
-                        creatorVideo.thumbnail_url ||
-                        creatorVideo.image ||
-                        "/default-thumbnail.jpg"
-                      }
-                      onError={(e) => {
-                        e.currentTarget.src = "/default-thumbnail.jpg";
-                      }}
-                      alt={creatorVideo.title}
-                      className="h-32 w-full object-cover"
-                    />
-                  </a>
-
-                  <p className="mt-3 line-clamp-2 text-sm font-bold text-gray-900">
-                    {creatorVideo.title}
-                  </p>
-
-                  <p className="mt-1 text-xs text-gray-600">
-                    Watch more videos from this creator.
-                  </p>
-
-                  <div className="mt-3 flex gap-2">
-                    <a
-                      href={`/watch/${creatorVideo.id}`}
-                      className="rounded-lg bg-black px-4 py-2 text-xs font-bold text-white hover:bg-gray-800"
-                    >
-                      Watch
-                    </a>
-
-                    <a
-                      href={`/channel/${encodeURIComponent(video.creator)}`}
-                      className="rounded-lg bg-yellow-400 px-4 py-2 text-xs font-bold text-black hover:bg-yellow-300"
-                    >
-                      Creator Page
-                    </a>
-                  </div>
-                </>
-              ) : (
-                <>
-                  <p className="mt-3 text-sm text-gray-500">
-                    More creator videos coming soon.
-                  </p>
-
-                  <a
-                    href={`/channel/${encodeURIComponent(video.creator)}`}
-                    className="mt-3 inline-block rounded-lg bg-yellow-400 px-4 py-2 text-xs font-bold text-black hover:bg-yellow-300"
-                  >
-                    Visit Creator Page
-                  </a>
-                </>
-              )}
-            </div>
-
-            {isLive ? (
-              <div className="rounded-2xl border border-yellow-200 bg-yellow-50 p-4 shadow-sm">
-                <p className="text-xs font-semibold uppercase text-yellow-700">
-                  Sponsored Live Event
-                </p>
-
-                <h3 className="mt-1 text-lg font-bold text-gray-900">
-                  Ad Space Available
-                </h3>
-
-                <p className="mt-1 text-sm text-gray-700">
-                  Promote your brand during NiaTube Live broadcasts.
-                </p>
-              </div>
-            ) : (
-              <div className="rounded-2xl bg-black p-5 text-white shadow-sm">
-                <p className="text-xs font-bold uppercase text-yellow-400">
-                  Sponsored
-                </p>
-
-                <h3 className="mt-2 text-xl font-extrabold">
-                  Advertise on NiaTube
-                </h3>
-
-                <p className="mt-2 text-sm text-gray-300">
-                  Reach Pan-African creators, viewers, and diaspora audiences.
-                </p>
-
-                <a
-                  href="/advertise"
-                  className="mt-4 inline-block rounded-md bg-yellow-400 px-4 py-2 text-sm font-bold text-black hover:bg-yellow-300"
-                >
-                  Book Ad Space
-                </a>
-              </div>
-            )}
-          </aside>
-
+      <div className="mx-auto max-w-7xl px-4 py-6">
+        <div className="grid gap-6 lg:grid-cols-[1fr_360px]">
           <section>
-            {video.video_url ? (
-              video.video_url.includes("iframe.mediadelivery.net") ? (
-                <div className="aspect-video w-full overflow-hidden rounded-2xl bg-black">
-                  <iframe
-                    src={video.video_url.replace("/play/", "/embed/")}
-                    allow="accelerometer; gyroscope; autoplay; encrypted-media; picture-in-picture"
-                    allowFullScreen
-                    className="h-full w-full border-0"
-                  />
-                </div>
-              ) : (
-                <video
-                  src={video.video_url}
-                  controls
-                  className="aspect-video w-full rounded-2xl bg-black object-contain"
-                />
-              )
-            ) : (
-              <div className="flex aspect-video w-full items-center justify-center rounded-2xl bg-black text-white">
-                NiaTube Live Preview
-              </div>
-            )}
+            <div className="overflow-hidden rounded-2xl bg-black shadow-sm">
+            {video.video_url?.includes("iframe.mediadelivery.net") ? (
+  <iframe
+    src={video.video_url}
+    className="aspect-video w-full bg-black"
+    allow="accelerometer; gyroscope; autoplay; encrypted-media; picture-in-picture;"
+    allowFullScreen
+  />
+) : video.video_url ? (
+  <video
+    controls
+    autoPlay={isLive}
+    className="aspect-video w-full bg-black"
+    poster={
+      video.thumbnail_url ||
+      video.image ||
+      "/default-thumbnail.jpg"
+    }
+  >
+    <source src={video.video_url} type="video/mp4" />
+  </video>
+) : (
+  <img
+    src={
+      video.thumbnail_url ||
+      video.image ||
+      "/default-thumbnail.jpg"
+    }
+    alt={video.title}
+    className="aspect-video w-full object-cover"
+  />
+)}
 
-            <div className="mt-4 rounded-2xl bg-white p-5 shadow-sm">
-              <h1 className="text-2xl font-bold text-gray-900">
-                {video.title}
-              </h1>
+            </div>
 
-              <p className="mt-1 text-sm text-gray-600">
-                {video.creator} • {video.views || 0} views •{" "}
-                {subscriberCount} subscribers
-              </p>
+            <div className="mt-5 rounded-2xl bg-white p-6 shadow-sm">
+              <div className="flex flex-wrap items-start justify-between gap-4">
+                <div>
+                  <h1 className="text-3xl font-black text-gray-900">
+                    {video.title}
+                  </h1>
 
-              {video.description && (
-                <div className="mt-4 rounded-xl bg-gray-50 p-4 text-sm leading-6 text-gray-700">
-                  <p className={showFullDescription ? "" : "line-clamp-3"}>
-                    {video.description}
+                  <p className="mt-2 text-sm font-semibold text-gray-600">
+                    By {video.creator}
                   </p>
 
-                  {video.description.length > 160 && (
-                    <button
-                      onClick={() =>
-                        setShowFullDescription((prev) => !prev)
-                      }
-                      className="mt-2 text-sm font-bold text-black hover:underline"
-                    >
-                      {showFullDescription ? "Show less" : "Show more"}
-                    </button>
-                  )}
+                  <div className="mt-3 flex flex-wrap items-center gap-4 text-sm text-gray-500">
+                    <span>👁️ {video.views || 0} views</span>
+                    <span>👍 {likeCount} likes</span>
+                    <span>👥 {subscriberCount} subscribers</span>
+
+                    {isLive && (
+                      <span className="rounded-full bg-red-100 px-3 py-1 text-xs font-bold text-red-700">
+                        🔴 LIVE • {viewerCount} watching
+                      </span>
+                    )}
+                  </div>
                 </div>
-              )}
 
-              <div className="mt-4 flex flex-wrap items-center gap-3">
-                <button
-                  onClick={handleLike}
-                  className={`rounded-full px-4 py-2 text-sm font-bold ${
-                    liked
-                      ? "bg-yellow-400 text-black"
-                      : "bg-gray-100 text-gray-800 hover:bg-gray-200"
-                  }`}
-                >
-                  👍 {liked ? "Liked" : "Like"} {likeCount}
-                </button>
+                <div className="flex flex-wrap gap-3">
+                  <button
+                    onClick={handleLike}
+                    className={`rounded-xl px-5 py-2 text-sm font-black transition ${
+                      liked
+                        ? "bg-yellow-400 text-black"
+                        : "bg-black text-white hover:bg-gray-800"
+                    }`}
+                  >
+                    {liked ? "Liked" : "Like"}
+                  </button>
 
-                <button
-                  onClick={handleSubscribe}
-                  className={`rounded-full px-4 py-2 text-sm font-bold ${
-                    subscribed
-                      ? "bg-black text-white"
-                      : "bg-yellow-400 text-black hover:bg-yellow-300"
-                  }`}
-                >
-                  {subscribed ? "Subscribed" : "Subscribe"}{" "}
-                  {subscriberCount}
-                </button>
-
-                {isLive ? (
-                  <>
-                    <span className="rounded-full bg-red-600 px-4 py-2 text-sm font-bold text-white">
-                      🔴 LIVE
-                    </span>
-
-                    <span className="rounded-full bg-gray-100 px-4 py-2 text-sm font-semibold text-gray-700">
-                      {viewerCount} watching
-                    </span>
-                  </>
-                ) : (
-                  <span className="rounded-full bg-gray-200 px-4 py-2 text-sm font-semibold text-gray-600">
-                    Offline
-                  </span>
-                )}
-              </div>
-            </div>
-
-            <div className="mt-4 rounded-2xl bg-white p-5 shadow-sm">
-              <h2 className="text-lg font-bold text-gray-900">Tip Creator</h2>
-
-              <div className="mt-4 grid gap-3 md:grid-cols-[1fr_180px]">
-                <input
-                  value={tipAmount}
-                  onChange={(e) => setTipAmount(e.target.value)}
-                  className="rounded-lg border px-3 py-2 text-sm"
-                  placeholder="Amount"
-                  type="number"
-                  min="1"
-                />
-
-                <select
-                  value={tipCurrency}
-                  onChange={(e) => setTipCurrency(e.target.value)}
-                  className="rounded-lg border px-3 py-2 text-sm"
-                >
-                  {currencies.map((currency) => (
-                    <option key={currency.code} value={currency.code}>
-                      {currency.code} — {currency.label}
-                    </option>
-                  ))}
-                </select>
+                  <button
+                    onClick={handleSubscribe}
+                    className={`rounded-xl px-5 py-2 text-sm font-black transition ${
+                      subscribed
+                        ? "bg-green-600 text-white"
+                        : "bg-blue-600 text-white hover:bg-blue-700"
+                    }`}
+                  >
+                    {subscribed ? "Subscribed" : "Subscribe"}
+                  </button>
+                  <a
+  href={`/membership/${encodeURIComponent(video.creator)}`}
+  className="rounded-xl bg-purple-600 px-5 py-2 text-sm font-black text-white transition hover:bg-purple-700"
+>
+  Join Membership
+</a>
+                </div>
               </div>
 
-              <textarea
-                value={tipMessage}
-                onChange={(e) => setTipMessage(e.target.value)}
-                className="mt-3 min-h-[70px] w-full rounded-lg border px-3 py-2 text-sm"
-                placeholder="Optional message"
-              />
+              <div className="mt-6 rounded-2xl bg-gray-50 p-5">
+                <div className="flex items-center justify-between">
+                  <h2 className="text-lg font-black text-gray-900">
+                    Description
+                  </h2>
 
-              <button
-                onClick={sendTip}
-                className="mt-3 rounded-lg bg-yellow-400 px-5 py-2 text-sm font-bold text-black"
-              >
-                Send Tip
-              </button>
+                  <button
+                    onClick={() =>
+                      setShowFullDescription(!showFullDescription)
+                    }
+                    className="text-sm font-bold text-blue-600"
+                  >
+                    {showFullDescription ? "Show less" : "Show more"}
+                  </button>
+                </div>
 
-              {tipStatus && (
-                <p className="mt-3 text-sm font-semibold text-green-700">
-                  {tipStatus}
+                <p className="mt-3 whitespace-pre-line text-sm leading-7 text-gray-700">
+                  {showFullDescription
+                    ? video.description || "No description available."
+                    : (video.description || "No description available.").slice(
+                        0,
+                        220
+                      )}
                 </p>
-              )}
-            </div>
-          </section>
+              </div>
 
-          <aside className="space-y-4">
-            {isLive ? (
-              <div className="flex h-[600px] flex-col rounded-2xl border border-gray-200 bg-white p-4 shadow-sm">
-                <h2 className="text-lg font-bold text-red-600">
-                  🔴 Live Chat
+<div className="mt-6 rounded-2xl border bg-white p-5">
+  <h2 className="text-xl font-black text-gray-900">
+    Support Creator
+  </h2>
+
+  <div className="mt-4 grid gap-4 md:grid-cols-2">
+    <input
+      type="number"
+      placeholder="Tip amount"
+      value={tipAmount}
+      onChange={(e) => setTipAmount(e.target.value)}
+      className="rounded-xl border px-4 py-3"
+    />
+
+    <select
+      value={tipCurrency}
+      onChange={(e) => setTipCurrency(e.target.value)}
+      className="rounded-xl border px-4 py-3"
+    >
+      {currencies.map((currency) => (
+        <option key={currency.code} value={currency.code}>
+          {currency.label}
+        </option>
+      ))}
+    </select>
+  </div>
+
+  <textarea
+    placeholder="Message to creator (optional)"
+    value={tipMessage}
+    onChange={(e) => setTipMessage(e.target.value)}
+    className="mt-4 min-h-[100px] w-full rounded-xl border px-4 py-3"
+  />
+
+  <button
+    onClick={sendTip}
+    className="mt-4 rounded-xl bg-black px-6 py-3 text-sm font-black text-white hover:bg-gray-800"
+  >
+    Send Tip
+  </button>
+
+  {tipStatus && (
+    <p className="mt-3 text-sm font-semibold text-green-700">
+      {tipStatus}
+    </p>
+  )}
+
+  <div className="mt-6 rounded-2xl border border-yellow-200 bg-yellow-50 p-5">
+    <h3 className="text-lg font-black text-gray-900">
+      Recent Tips to this Creator
+    </h3>
+
+    <p className="mt-1 text-sm text-gray-600">
+      Viewers are already supporting this creator through tips.
+    </p>
+
+    {tips.length === 0 ? (
+      <p className="mt-4 text-sm font-semibold text-gray-500">
+        No tips have been displayed yet. Be the first to support this creator.
+      </p>
+    ) : (
+      <div className="mt-4 space-y-3">
+        {tips.map((tip) => (
+          <div key={tip.id} className="rounded-xl bg-white p-4 shadow-sm">
+            <p className="text-sm font-black text-gray-900">
+              {tip.currency_code || "UNKNOWN"} {tip.amount}
+            </p>
+
+            {tip.message && (
+              <p className="mt-1 text-sm text-gray-600">
+                {tip.message}
+              </p>
+            )}
+          </div>
+        ))}
+      </div>
+    )}
+  </div>
+</div>
+              <div className="mt-6 rounded-2xl bg-white p-5 shadow-sm">
+                <h2 className="text-xl font-black text-gray-900">
+                  Comments
                 </h2>
 
-                <div className="mt-3 flex-1 overflow-y-auto rounded-xl border bg-gray-50 p-3">
-                  {visibleMessages.length === 0 ? (
-                    <p className="text-sm text-gray-500">No messages yet.</p>
-                  ) : (
-                    visibleMessages.map((msg) => (
-                      <div key={msg.id} className="mb-3 text-sm">
-                        <span className="font-bold text-blue-700">
-                          {msg.username}:{" "}
-                        </span>
-
-                        <span className="text-gray-700">{msg.message}</span>
-                      </div>
-                    ))
-                  )}
-
-                  <div ref={chatEndRef} />
-                </div>
-
-                <div className="mt-3 space-y-2">
+                <div className="mt-4 grid gap-4">
                   <input
-                    value={username}
-                    onChange={(e) => setUsername(e.target.value)}
-                    className="w-full rounded-lg border px-3 py-2 text-sm"
-                    placeholder="Name"
+                    value={commentName}
+                    onChange={(e) => setCommentName(e.target.value)}
+                    placeholder="Your name"
+                    className="rounded-xl border px-4 py-3"
                   />
 
-                  <input
-                    value={input}
-                    onChange={(e) => setInput(e.target.value)}
-                    onKeyDown={(e) => {
-                      if (e.key === "Enter") sendMessage();
-                    }}
-                    className="w-full rounded-lg border px-3 py-2 text-sm"
-                    placeholder={
-                      chatRestricted
-                        ? "Chat is currently restricted."
-                        : "Write a message..."
-                    }
-                    disabled={chatRestricted}
+                  <textarea
+                    value={commentText}
+                    onChange={(e) => setCommentText(e.target.value)}
+                    placeholder="Write a comment..."
+                    className="min-h-[110px] rounded-xl border px-4 py-3"
                   />
 
                   <button
-                    onClick={sendMessage}
-                    disabled={chatRestricted}
-                    className="w-full rounded-lg bg-yellow-400 px-4 py-2 text-sm font-bold text-black disabled:cursor-not-allowed disabled:bg-gray-300 disabled:text-gray-500"
+                    onClick={sendComment}
+                    className="w-fit rounded-xl bg-black px-5 py-3 text-sm font-black text-white hover:bg-gray-800"
                   >
-                    Send
+                    Post Comment
                   </button>
                 </div>
-              </div>
-            ) : (
-              <>
-                <div className="rounded-2xl bg-black p-5 text-white shadow-sm">
-                  <p className="text-xs font-bold uppercase text-yellow-400">
-                    Sponsored
-                  </p>
 
-                  <h2 className="mt-2 text-xl font-extrabold">
-                    Advertise on NiaTube
-                  </h2>
-
-                  <p className="mt-2 text-sm text-gray-300">
-                    Reach Pan-African creators, viewers, and diaspora
-                    audiences.
-                  </p>
-
-                  <a
-                    href="/advertise"
-                    className="mt-4 inline-block rounded-md bg-yellow-400 px-4 py-2 text-sm font-bold text-black hover:bg-yellow-300"
-                  >
-                    Book Ad Space
-                  </a>
-                </div>
-
-                <div className="rounded-2xl bg-white p-4 shadow-sm">
-                  <h2 className="text-lg font-bold text-gray-900">Up Next</h2>
-
-                  {recommendedVideos.length === 0 ? (
-                    <p className="mt-3 text-sm text-gray-500">
-                      More videos coming soon.
+                <div className="mt-6 space-y-4">
+                  {comments.length === 0 ? (
+                    <p className="text-sm text-gray-500">
+                      No comments yet.
                     </p>
                   ) : (
-                    <div className="mt-3 space-y-3">
-                      {recommendedVideos.map((item) => (
-                        <a
-                          key={item.id}
-                          href={`/watch/${item.id}`}
-                          className="flex gap-3 rounded-xl p-2 hover:bg-gray-50"
-                        >
-                          <img
-                            src={
-                              item.thumbnail_url ||
-                              item.image ||
-                              "/default-thumbnail.jpg"
-                            }
-                            onError={(e) => {
-                              e.currentTarget.src = "/default-thumbnail.jpg";
-                            }}
-                            alt={item.title}
-                            className="h-16 w-24 rounded-lg object-cover"
-                          />
+                    comments.map((comment) => (
+                      <div
+                        key={comment.id}
+                        className="rounded-xl bg-gray-50 p-4"
+                      >
+                        <p className="text-sm font-black text-gray-900">
+                          {comment.username}
+                        </p>
 
-                          <div>
-                            <p className="line-clamp-2 text-sm font-bold text-gray-900">
-                              {item.title}
-                            </p>
-
-                            <p className="mt-1 text-xs text-gray-500">
-                              {item.creator}
-                            </p>
-                          </div>
-                        </a>
-                      ))}
-                    </div>
+                        <p className="mt-1 text-sm leading-6 text-gray-700">
+                          {comment.comment}
+                        </p>
+                      </div>
+                    ))
                   )}
                 </div>
-              </>
+              </div>
+            </div>
+          </section>
+
+          <aside className="space-y-5">
+            <div className="rounded-2xl bg-white p-5 shadow-sm">
+              <h2 className="text-xl font-black text-gray-900">
+                Recommended Videos
+              </h2>
+
+              <div className="mt-5 space-y-4">
+                {recommendedVideos.map((recommended) => (
+                  <a
+                    key={recommended.id}
+                    href={`/watch/${recommended.id}`}
+                    className="flex gap-3 rounded-xl transition hover:bg-gray-50"
+                  >
+                    <img
+                      src={
+                        recommended.thumbnail_url ||
+                        recommended.image ||
+                        "/default-thumbnail.jpg"
+                      }
+                      alt={recommended.title}
+                      className="h-24 w-36 rounded-xl object-cover"
+                    />
+
+                    <div>
+                      <h3 className="line-clamp-2 text-sm font-black text-gray-900">
+                        {recommended.title}
+                      </h3>
+
+                      <p className="mt-1 text-xs font-semibold text-gray-600">
+                        {recommended.creator}
+                      </p>
+                    </div>
+                  </a>
+                ))}
+              </div>
+            </div>
+
+            {creatorVideo && (
+              <div className="rounded-2xl bg-white p-5 shadow-sm">
+                <h2 className="text-xl font-black text-gray-900">
+                  More from {video.creator}
+                </h2>
+
+                <a
+                  href={`/watch/${creatorVideo.id}`}
+                  className="mt-4 block overflow-hidden rounded-2xl border"
+                >
+                  <img
+                    src={
+                      creatorVideo.thumbnail_url ||
+                      creatorVideo.image ||
+                      "/default-thumbnail.jpg"
+                    }
+                    alt={creatorVideo.title}
+                    className="h-48 w-full object-cover"
+                  />
+
+                  <div className="p-4">
+                    <h3 className="text-base font-black text-gray-900">
+                      {creatorVideo.title}
+                    </h3>
+                  </div>
+                </a>
+              </div>
             )}
+
+          {isLive && (
+  <div className="rounded-2xl bg-white p-5 shadow-sm">
+    <h2 className="text-xl font-black text-gray-900">
+      Live Chat
+    </h2>
+
+    <div className="mt-4 h-[320px] overflow-y-auto rounded-2xl border bg-gray-50 p-4">
+      {visibleMessages.length === 0 ? (
+        <p className="text-sm text-gray-500">No messages yet.</p>
+      ) : (
+        visibleMessages.map((msg) => (
+          <div key={msg.id} className="mb-3">
+            <span className="text-sm font-black text-blue-700">
+              {msg.username}:{" "}
+            </span>
+
+            <span className="text-sm text-gray-700">
+              {msg.message}
+            </span>
+          </div>
+        ))
+      )}
+
+      <div ref={chatEndRef} />
+    </div>
+
+    <div className="mt-4 grid gap-3">
+      <input
+        value={username}
+        onChange={(e) => setUsername(e.target.value)}
+        placeholder="Display name"
+        className="rounded-xl border px-4 py-3"
+      />
+
+      <textarea
+        value={input}
+        onChange={(e) => setInput(e.target.value)}
+        placeholder={
+          chatRestricted
+            ? "Chat is currently restricted."
+            : "Write a message..."
+        }
+        disabled={chatRestricted}
+        className="min-h-[90px] rounded-xl border px-4 py-3"
+      />
+
+      <button
+        onClick={sendMessage}
+        disabled={chatRestricted}
+        className={`rounded-xl px-5 py-3 text-sm font-black text-white ${
+          chatRestricted ? "bg-gray-400" : "bg-black hover:bg-gray-800"
+        }`}
+      >
+        Send Message
+      </button>
+    </div>
+  </div>
+)}
           </aside>
-        </section>
-      </main>
-    </>
+        </div>
+      </div>
+    </main>
   );
 }
