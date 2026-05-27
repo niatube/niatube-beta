@@ -285,9 +285,9 @@ export default function Navbar({ simple = false }: { simple?: boolean }) {
 
           {!simple && (
             <nav className="ml-6 hidden items-center gap-4 text-[15px] font-medium md:flex">
-              <Link href="/news">News</Link>
+              <Link href="/category/news">News</Link>
               <Link href="/trending">Trending</Link>
-              <Link href="/shorts">Shorts</Link>
+              <Link href="/category/shorts">Shorts</Link>
               <Link href="/category/culture">Culture</Link>
               <Link href="/category/afrobeats">Afrobeats</Link>
               <Link href="/niamall">NiaMALL</Link>
@@ -301,7 +301,7 @@ export default function Navbar({ simple = false }: { simple?: boolean }) {
               </Link>
 
               <Link href="/niacircle">NiaCircle</Link>
-              <Link href="/history">History</Link>
+              <Link href="/category/history">History</Link>
               <Link href="/language">Language</Link>
 
               <div className="relative">
