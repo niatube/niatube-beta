@@ -289,7 +289,7 @@ export default function Navbar({ simple = false }: { simple?: boolean }) {
               <Link href="/trending">Trending</Link>
               <Link href="/shorts">Shorts</Link>
               <Link href="/category/culture">Culture</Link>
-              <Link href="/category/music">Afrobeats</Link>
+              <Link href="/category/afrobeats">Afrobeats</Link>
               <Link href="/niamall">NiaMALL</Link>
 
               <Link
