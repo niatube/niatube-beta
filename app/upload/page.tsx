@@ -372,14 +372,20 @@ setUploadStage("Upload complete.");
                 className="mt-2 w-full rounded-xl border border-gray-300 px-4 py-3 disabled:bg-gray-100"
               >
                 <option value="culture">Culture</option>
-                <option value="history">History</option>
-                <option value="music">Music</option>
-                <option value="afrobeats">Afrobeats</option>
-                <option value="news">News</option>
-                <option value="trending">Trending</option>
-                <option value="live">Live</option>
-                <option value="shorts">Shorts</option>
-                <option value="vlogs">Vlogs</option>
+<option value="history">History</option>
+<option value="music">Music</option>
+<option value="afrobeats">Afrobeats</option>
+<option value="news">News</option>
+<option value="trending">Trending</option>
+<option value="live">Live</option>
+<option value="shorts">Shorts</option>
+<option value="vlogs">Vlogs</option>
+<option value="podcast">Podcast</option>
+<option value="education">Education</option>
+<option value="business">Business</option>
+<option value="sport">Sport</option>
+<option value="travel">Travel</option>
+<option value="film">Film</option>
               </select>
             </label>
 

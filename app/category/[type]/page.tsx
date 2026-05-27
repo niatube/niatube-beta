@@ -1,179 +1,135 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { useParams } from "next/navigation";
 import Link from "next/link";
+import { useParams } from "next/navigation";
+import Navbar from "@/components/Navbar";
 
-type Upload = {
+type CategoryVideo = {
   id: string;
   title: string;
   creator: string;
+  description?: string;
   thumbnail_url?: string;
-  video_url?: string;
-  status?: string;
-  category?: string;
   views?: number;
-  duration_seconds?: number;
+  likes?: number;
   created_at?: string;
+  category?: string;
 };
 
-function formatViews(views?: number) {
-  if (!views) return "0 views";
-  if (views >= 1000000) return `${(views / 1000000).toFixed(1)}M views`;
-  if (views >= 1000) return `${(views / 1000).toFixed(1)}K views`;
-  return `${views} views`;
-}
-
-function isNewVideo(createdAt?: string) {
-  if (!createdAt) return false;
-
-  const created = new Date(createdAt).getTime();
-  const now = Date.now();
-  const sevenDays = 7 * 24 * 60 * 60 * 1000;
-
-  return now - created < sevenDays;
-}
-
-function formatDuration(seconds?: number) {
-  if (!seconds) return "0:00";
-
-  const mins = Math.floor(seconds / 60);
-  const secs = seconds % 60;
-
-  return `${mins}:${secs.toString().padStart(2, "0")}`;
+function formatCategoryName(category: string) {
+  return category
+    .replace(/-/g, " ")
+    .replace(/\b\w/g, (char) => char.toUpperCase());
 }
 
 export default function CategoryPage() {
   const params = useParams();
-  const type = String(params?.type || "").toLowerCase();
+  const category = params?.type as string;
 
-  const [videos, setVideos] = useState<Upload[]>([]);
+  const [videos, setVideos] = useState<CategoryVideo[]>([]);
   const [loading, setLoading] = useState(true);
 
+  const displayName = formatCategoryName(category || "category");
+
   useEffect(() => {
-    async function loadVideos() {
-      try {
-        const res = await fetch("/api/uploads?all=true", {
-          cache: "no-store",
-        });
+    async function loadCategoryVideos() {
+      setLoading(true);
 
-        const data = await res.json();
+      const res = await fetch(`/api/uploads?all=true&ts=${Date.now()}`, {
+        cache: "no-store",
+      });
 
-        const filtered = (data.uploads || data || []).filter((video: Upload) => {
-          return (
-            video.status === "published" &&
-            video.category?.toLowerCase() === type
-          );
-        });
+      const result = await res.json();
 
-        setVideos(filtered);
-      } catch (error) {
-        console.error("Failed to load category videos:", error);
-      } finally {
-        setLoading(false);
-      }
+      const filteredVideos = Array.isArray(result.uploads)
+        ? result.uploads.filter(
+            (video: any) =>
+              String(video.category || "").toLowerCase() ===
+              String(category || "").toLowerCase()
+          )
+        : [];
+
+      setVideos(filteredVideos as CategoryVideo[]);
+      setLoading(false);
     }
 
-    loadVideos();
-  }, [type]);
+    if (category) {
+      loadCategoryVideos();
+    }
+  }, [category]);
 
   return (
-    <main className="min-h-screen bg-[#f7f8f4] px-6 py-8">
-      <div className="mx-auto max-w-7xl">
-        <h1 className="text-3xl font-bold capitalize text-gray-900">
-          {type}
-        </h1>
+    <main className="min-h-screen bg-gradient-to-b from-yellow-50 to-white">
+      <Navbar />
 
-        <p className="mt-2 text-gray-600">Videos in the {type} category</p>
+      <section className="mx-auto max-w-7xl px-6 py-14">
+        <div className="rounded-3xl bg-white p-8 shadow-sm">
+          <p className="text-sm font-black uppercase tracking-wide text-yellow-600">
+            NiaTube Category
+          </p>
 
-        {loading && <p className="mt-8 text-gray-500">Loading videos...</p>}
+          <h1 className="mt-2 text-5xl font-black text-gray-900">
+            {displayName} Library
+          </h1>
 
-        {!loading && videos.length === 0 && (
-          <div className="mt-8 rounded-2xl bg-white p-8 shadow-sm">
-            <h2 className="text-xl font-semibold">No videos yet</h2>
-            <p className="mt-2 text-gray-600">
-              Once creators upload videos in this category, they will appear here.
+          <p className="mt-4 max-w-3xl text-lg leading-relaxed text-gray-700">
+            Explore published creator videos in the {displayName} category.
+          </p>
+        </div>
+
+        {loading ? (
+          <div className="mt-8 rounded-3xl bg-white p-8 shadow-sm">
+            Loading {displayName} videos...
+          </div>
+        ) : videos.length === 0 ? (
+          <div className="mt-8 rounded-3xl border border-dashed border-gray-300 bg-white p-10 text-center shadow-sm">
+            <p className="text-lg font-semibold text-gray-600">
+              No {displayName} videos uploaded yet.
             </p>
           </div>
-        )}
-
-        {!loading && videos.length > 0 && (
-          <div className="mt-8 grid grid-cols-1 gap-6 sm:grid-cols-2 lg:grid-cols-3">
+        ) : (
+          <div className="mt-8 grid gap-6 md:grid-cols-2 xl:grid-cols-3">
             {videos.map((video) => (
               <Link
                 key={video.id}
                 href={`/watch/${video.id}`}
-                className="group block"
+                className="overflow-hidden rounded-3xl bg-white shadow-sm transition hover:-translate-y-1 hover:shadow-lg"
               >
-                <div className="overflow-hidden rounded-2xl bg-white shadow-sm transition duration-300 hover:shadow-lg">
-                  <div className="relative h-48 w-full overflow-hidden bg-gray-200">
-                    <img
-                      src={
-                        video.thumbnail_url?.trim()
-                          ? video.thumbnail_url
-                          : "/default-thumbnail.jpg"
-                      }
-                      alt={video.title}
-                      className="absolute inset-0 h-full w-full object-cover transition-opacity duration-300 group-hover:opacity-0"
-                      onError={(e) => {
-                        e.currentTarget.src = "/default-thumbnail.jpg";
-                      }}
-                    />
+                <img
+                  src={video.thumbnail_url || "/default-thumbnail.jpg"}
+                  alt={video.title}
+                  className="h-52 w-full object-cover"
+                />
 
-                    {video.video_url && (
-                      <video
-                        src={video.video_url}
-                        muted
-                        loop
-                        playsInline
-                        className="absolute inset-0 h-full w-full object-cover opacity-0 transition-opacity duration-300 group-hover:opacity-100"
-                        onMouseEnter={(e) => e.currentTarget.play()}
-                        onMouseLeave={(e) => e.currentTarget.pause()}
-                      />
-                    )}
+                <div className="p-5">
+                  <span className="rounded-full bg-yellow-100 px-3 py-1 text-xs font-black text-yellow-700">
+                    {displayName}
+                  </span>
 
-                    <div className="absolute bottom-2 right-2 rounded bg-black/80 px-2 py-1 text-xs text-white">
-                      {formatDuration(video.duration_seconds)}
-                    </div>
+                  <h2 className="mt-4 line-clamp-2 text-xl font-black text-gray-900">
+                    {video.title}
+                  </h2>
 
-                    {isNewVideo(video.created_at) && (
-                      <div className="absolute left-2 top-2 rounded bg-yellow-500 px-2 py-1 text-xs font-semibold text-black">
-                        NEW
-                      </div>
-                    )}
-                  </div>
+                  <p className="mt-2 text-sm font-semibold text-gray-600">
+                    {video.creator}
+                  </p>
 
-                  <div className="p-4">
-                    <h2 className="line-clamp-2 text-lg font-semibold text-gray-900 group-hover:text-yellow-600">
-                      {video.title}
-                    </h2>
-
-                    <div className="mt-2 flex items-center gap-2">
-                      <div className="flex h-8 w-8 items-center justify-center rounded-full bg-gray-300 text-xs font-bold text-white">
-                        {video.creator?.charAt(0).toUpperCase()}
-                      </div>
-
-                      <div className="flex items-center gap-1">
-                        <p className="text-sm text-gray-600">
-                          {video.creator}
-                        </p>
-
-                        <span className="inline-flex h-4 w-4 items-center justify-center rounded-full bg-blue-600 text-[10px] font-bold text-white">
-                          ✓
-                        </span>
-                      </div>
-                    </div>
-
-                    <p className="mt-1 text-xs text-gray-500">
-                      {formatViews(video.views)}
+                  {video.description && (
+                    <p className="mt-3 line-clamp-3 text-sm leading-6 text-gray-600">
+                      {video.description}
                     </p>
-                  </div>
+                  )}
+
+                  <p className="mt-4 text-sm text-gray-500">
+                    {video.views || 0} views • {video.likes || 0} likes
+                  </p>
                 </div>
               </Link>
             ))}
           </div>
         )}
-      </div>
+      </section>
     </main>
   );
 }

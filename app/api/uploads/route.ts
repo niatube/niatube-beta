@@ -98,6 +98,8 @@ export async function POST(req: Request) {
           duration_seconds: duration_seconds || 0,
           status: "published",
           trending_score: 100,
+          is_live: false,
+          live_status: null,
         },
       ])
       .select()
