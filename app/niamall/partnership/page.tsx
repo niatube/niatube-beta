@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import Link from "next/link";
 import Navbar from "@/components/Navbar";
 import { supabase } from "@/lib/supabase-browser";
 
@@ -13,6 +14,8 @@ export default function RevenuePartnershipPage() {
   const [description, setDescription] = useState("");
   const [agreementAccepted, setAgreementAccepted] = useState(false);
   const [status, setStatus] = useState("");
+  const [checkingAuth, setCheckingAuth] = useState(true);
+  const [isSignedIn, setIsSignedIn] = useState(false);
 
   useEffect(() => {
     async function loadCreator() {
@@ -20,12 +23,16 @@ export default function RevenuePartnershipPage() {
         data: { user },
       } = await supabase.auth.getUser();
 
-      if (!user) return;
+      if (!user) {
+        setIsSignedIn(false);
+        setCheckingAuth(false);
+        return;
+      }
+
+      setIsSignedIn(true);
 
       let activeCreatorName =
-        user.user_metadata?.creator_name ||
-        user.email?.split("@")[0] ||
-        "";
+        user.user_metadata?.creator_name || user.email?.split("@")[0] || "";
 
       const { data: profile } = await supabase
         .from("creator_profiles")
@@ -38,6 +45,7 @@ export default function RevenuePartnershipPage() {
       }
 
       setCreatorName(activeCreatorName);
+      setCheckingAuth(false);
     }
 
     loadCreator();
@@ -45,6 +53,11 @@ export default function RevenuePartnershipPage() {
 
   async function submitApplication(e: React.FormEvent) {
     e.preventDefault();
+
+    if (!isSignedIn) {
+      setStatus("You must sign up and log in before applying.");
+      return;
+    }
 
     if (
       !creatorName.trim() ||
@@ -55,25 +68,26 @@ export default function RevenuePartnershipPage() {
       setStatus("Please complete all required fields.");
       return;
     }
- if (!storeUrl.trim().startsWith("https://")) {
-  setStatus("Store Website URL must start with https://");
-  return;
-}
 
-if (!promoVideoUrl.trim()) {
-  setStatus("Promo Video URL is required.");
-  return;
-}
+    if (!storeUrl.trim().startsWith("https://")) {
+      setStatus("Store Website URL must start with https://");
+      return;
+    }
 
-if (!promoVideoUrl.trim().startsWith("https://")) {
-  setStatus("Promo Video URL must start with https://");
-  return;
-}
+    if (!promoVideoUrl.trim()) {
+      setStatus("Promo Video URL is required.");
+      return;
+    }
 
-if (!promoVideoUrl.trim().toLowerCase().includes(".mp4")) {
-  setStatus("Promo Video URL must point to an MP4 video.");
-  return;
-}
+    if (!promoVideoUrl.trim().startsWith("https://")) {
+      setStatus("Promo Video URL must start with https://");
+      return;
+    }
+
+    if (!promoVideoUrl.trim().toLowerCase().includes(".mp4")) {
+      setStatus("Promo Video URL must point to an MP4 video.");
+      return;
+    }
 
     if (!agreementAccepted) {
       setStatus("Please accept the Revenue Partnership agreement.");
@@ -110,7 +124,6 @@ if (!promoVideoUrl.trim().toLowerCase().includes(".mp4")) {
     ]);
 
     setStatus("Application submitted for review.");
-
     setStoreName("");
     setStoreUrl("");
     setPromoVideoUrl("");
@@ -118,6 +131,21 @@ if (!promoVideoUrl.trim().toLowerCase().includes(".mp4")) {
     setDescription("");
     setAgreementAccepted(false);
   }
+
+  if (checkingAuth) {
+    return (
+      <main className="min-h-screen bg-gradient-to-b from-yellow-50 to-white">
+        <Navbar />
+        <section className="mx-auto max-w-5xl px-6 py-12">
+          <div className="rounded-3xl bg-white p-8 shadow-sm">
+            Checking creator access...
+          </div>
+        </section>
+      </main>
+    );
+  }
+
+ 
 
   return (
     <main className="min-h-screen bg-gradient-to-b from-yellow-50 to-white">
@@ -134,151 +162,74 @@ if (!promoVideoUrl.trim().toLowerCase().includes(".mp4")) {
           </h1>
 
           <p className="mt-3 max-w-3xl text-gray-600">
-            Apply to feature your creator store, products, services, or
-            external storefront inside NiaMALL.
+            Apply to feature your creator store, products, services, or external
+            storefront inside NiaMALL.
           </p>
 
-          <div className="mt-6 rounded-2xl border border-yellow-200 bg-yellow-50 p-5">
-            <h2 className="text-lg font-black text-gray-900">
-              Video-Commerce Advantage
-            </h2>
-
-            <p className="mt-2 text-sm leading-6 text-gray-700">
-              Approved creators can showcase their products using short promo
-              videos. This allows viewers to discover products visually before
-              visiting the creator’s external store website.
-            </p>
-          </div>
-
-          <div className="mt-6 rounded-2xl border border-gray-200 bg-gray-50 p-5">
-            <h2 className="text-lg font-black text-gray-900">
-              Partnership Requirement
-            </h2>
-
-            <p className="mt-2 text-sm leading-6 text-gray-700">
-              NiaMALL is curated. Creators must apply and be approved before any
-              store or product appears publicly. This protects viewers,
-              strengthens creator trust, and keeps commerce opportunities
-              high-quality.
+          <div className="mt-6 rounded-2xl border border-green-200 bg-green-50 p-5">
+            <p className="text-sm font-bold text-green-800">
+              Signed in as: {creatorName}
             </p>
           </div>
 
           <form onSubmit={submitApplication} className="mt-8 space-y-5">
-            <div>
-              <label className="text-sm font-bold text-gray-700">
-                Creator Name
-              </label>
+            <input
+              value={creatorName}
+              onChange={(e) => setCreatorName(e.target.value)}
+              className="w-full rounded-xl border px-4 py-3 text-sm"
+              placeholder="Creator name"
+            />
 
-              <input
-                value={creatorName}
-                onChange={(e) => setCreatorName(e.target.value)}
-                className="mt-2 w-full rounded-xl border px-4 py-3 text-sm"
-                placeholder="Creator name"
-              />
-            </div>
+            <input
+              value={storeName}
+              onChange={(e) => setStoreName(e.target.value)}
+              className="w-full rounded-xl border px-4 py-3 text-sm"
+              placeholder="Store / Product Name"
+            />
 
-            <div>
-              <label className="text-sm font-bold text-gray-700">
-                Store / Product Name
-              </label>
+            <input
+              value={storeUrl}
+              onChange={(e) => setStoreUrl(e.target.value)}
+              className="w-full rounded-xl border px-4 py-3 text-sm"
+              placeholder="https://yourstore.com"
+            />
 
-              <input
-                value={storeName}
-                onChange={(e) => setStoreName(e.target.value)}
-                className="mt-2 w-full rounded-xl border px-4 py-3 text-sm"
-                placeholder="Example: Zuri Apparel"
-              />
-            </div>
+            <input
+              value={promoVideoUrl}
+              onChange={(e) => setPromoVideoUrl(e.target.value)}
+              className="w-full rounded-xl border px-4 py-3 text-sm"
+              placeholder="https://your-video.mp4"
+            />
 
-            <div>
-              <label className="text-sm font-bold text-gray-700">
-                Store Website URL
-              </label>
+            <select
+              value={category}
+              onChange={(e) => setCategory(e.target.value)}
+              className="w-full rounded-xl border px-4 py-3 text-sm"
+            >
+              <option>Merchandise</option>
+              <option>Fashion</option>
+              <option>Books</option>
+              <option>Courses</option>
+              <option>Music</option>
+              <option>Digital Products</option>
+              <option>Art</option>
+              <option>Food & Culture</option>
+              <option>Events</option>
+              <option>Services</option>
+              <option>Other</option>
+            </select>
 
-              <input
-                value={storeUrl}
-                onChange={(e) => setStoreUrl(e.target.value)}
-                className="mt-2 w-full rounded-xl border px-4 py-3 text-sm"
-                placeholder="https://yourstore.com"
-              />
-            </div>
-
-            <div>
-              <label className="text-sm font-bold text-gray-700">
-                Promo Video URL
-              </label>
-
-              <input
-                value={promoVideoUrl}
-                onChange={(e) => setPromoVideoUrl(e.target.value)}
-                className="mt-2 w-full rounded-xl border px-4 py-3 text-sm"
-                placeholder="https://..."
-              />
-
-             <p className="mt-2 text-xs leading-6 text-gray-500">
-  Upload or link a short MP4 promo video showcasing your store or
-  product. This video may later appear inside NiaMALL storefront
-  listings.
-</p>
-
-<div className="mt-3 rounded-xl border border-gray-200 bg-gray-50 p-4">
-  <p className="text-xs font-black uppercase tracking-wide text-gray-700">
-    Recommended Promo Video Format
-  </p>
-
-  <ul className="mt-2 space-y-1 text-xs text-gray-600">
-    <li>• Format: .mp4</li>
-    <li>• Video Codec: H.264</li>
-    <li>• Audio Codec: AAC</li>
-    <li>• Resolution: 720p or 1080p</li>
-    <li>• Recommended Length: 15–60 seconds</li>
-    <li>• Recommended Size: Under 100MB</li>
-  </ul>
-</div>
-            </div>
-
-            <div>
-              <label className="text-sm font-bold text-gray-700">
-                Category
-              </label>
-
-              <select
-                value={category}
-                onChange={(e) => setCategory(e.target.value)}
-                className="mt-2 w-full rounded-xl border px-4 py-3 text-sm"
-              >
-                <option>Merchandise</option>
-                <option>Fashion</option>
-                <option>Books</option>
-                <option>Courses</option>
-                <option>Music</option>
-                <option>Digital Products</option>
-                <option>Art</option>
-                <option>Food & Culture</option>
-                <option>Events</option>
-                <option>Services</option>
-                <option>Other</option>
-              </select>
-            </div>
-
-            <div>
-              <label className="text-sm font-bold text-gray-700">
-                Store / Product Description
-              </label>
-
-              <textarea
-                value={description}
-                onChange={(e) => setDescription(e.target.value)}
-                className="mt-2 min-h-[130px] w-full rounded-xl border px-4 py-3 text-sm"
-                placeholder="Describe what you sell and why it fits NiaMALL."
-              />
-            </div>
+            <textarea
+              value={description}
+              onChange={(e) => setDescription(e.target.value)}
+              className="min-h-[130px] w-full rounded-xl border px-4 py-3 text-sm"
+              placeholder="Describe what you sell and why it fits NiaMALL."
+            />
 
             <div className="rounded-2xl border bg-gray-50 p-5">
               <h3 className="text-lg font-black text-gray-900">
                 Agreement Acknowledgement
               </h3>
-
 
               <p className="mt-2 text-sm leading-6 text-gray-700">
                 I understand that submitting this application does not guarantee
@@ -297,17 +248,6 @@ if (!promoVideoUrl.trim().toLowerCase().includes(".mp4")) {
                 I accept the Revenue Partnership Program review terms.
               </label>
             </div>
-            <div className="rounded-2xl border border-blue-200 bg-blue-50 p-5">
-  <h3 className="text-lg font-black text-gray-900">
-    Application Status Updates
-  </h3>
-
-  <p className="mt-2 text-sm leading-6 text-gray-700">
-    After submission, please monitor your Creator Dashboard and notification
-    bell for approval status updates regarding your Revenue Partnership
-    application.
-  </p>
-</div>
 
             <button
               type="submit"

@@ -20,6 +20,7 @@ export default function Navbar({ simple = false }: { simple?: boolean }) {
   const [notificationOpen, setNotificationOpen] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
   const [creatorName, setCreatorName] = useState("");
+  const [isLoggedIn, setIsLoggedIn] = useState(false);
   const [notifications, setNotifications] = useState<NotificationItem[]>([]);
 
   const pathname = usePathname();
@@ -34,12 +35,19 @@ export default function Navbar({ simple = false }: { simple?: boolean }) {
   }, [pathname]);
 
   useEffect(() => {
-    async function loadNotifications() {
+    async function loadUserAndNotifications() {
       const {
         data: { user },
       } = await supabase.auth.getUser();
 
-      if (!user) return;
+      if (!user) {
+        setIsLoggedIn(false);
+        setCreatorName("");
+        setNotifications([]);
+        return;
+      }
+
+      setIsLoggedIn(true);
 
       let activeCreatorName =
         user.user_metadata?.creator_name || user.email?.split("@")[0] || "";
@@ -54,9 +62,9 @@ export default function Navbar({ simple = false }: { simple?: boolean }) {
         activeCreatorName = profileByEmail.creator_name;
       }
 
-      if (!activeCreatorName) return;
-
       setCreatorName(activeCreatorName);
+
+      if (!activeCreatorName) return;
 
       const { data: notificationsData } = await supabase
         .from("notifications")
@@ -68,7 +76,7 @@ export default function Navbar({ simple = false }: { simple?: boolean }) {
       setNotifications((notificationsData || []) as NotificationItem[]);
     }
 
-    loadNotifications();
+    loadUserAndNotifications();
   }, [pathname]);
 
   useEffect(() => {
@@ -96,26 +104,6 @@ export default function Navbar({ simple = false }: { simple?: boolean }) {
 
             return [newNotification, ...prev].slice(0, 5);
           });
-        }
-      )
-      .on(
-        "postgres_changes",
-        {
-          event: "UPDATE",
-          schema: "public",
-          table: "notifications",
-          filter: `creator_name=eq.${creatorName}`,
-        },
-        (payload) => {
-          const updatedNotification = payload.new as NotificationItem;
-
-          setNotifications((prev) =>
-            prev.map((notification) =>
-              notification.id === updatedNotification.id
-                ? updatedNotification
-                : notification
-            )
-          );
         }
       )
       .subscribe();
@@ -177,6 +165,18 @@ export default function Navbar({ simple = false }: { simple?: boolean }) {
     )}`;
   }
 
+  async function handleLogout() {
+    await supabase.auth.signOut();
+
+    setIsLoggedIn(false);
+    setCreatorName("");
+    setNotifications([]);
+    setNotificationOpen(false);
+    setMenuOpen(false);
+
+    window.location.href = "/";
+  }
+
   return (
     <header className="pt-0">
       <div className="w-full px-2">
@@ -231,7 +231,7 @@ export default function Navbar({ simple = false }: { simple?: boolean }) {
               <Link className="block rounded-lg px-4 py-2 text-sm font-bold hover:bg-yellow-50 hover:text-yellow-700" href="/">
                 Home
               </Link>
-              <Link className="block rounded-lg px-4 py-2 text-sm font-medium hover:bg-yellow-50 hover:text-yellow-700" href="/news">
+              <Link className="block rounded-lg px-4 py-2 text-sm font-medium hover:bg-yellow-50 hover:text-yellow-700" href="/category/news">
                 News
               </Link>
               <Link className="block rounded-lg px-4 py-2 text-sm font-medium hover:bg-yellow-50 hover:text-yellow-700" href="/trending">
@@ -243,19 +243,19 @@ export default function Navbar({ simple = false }: { simple?: boolean }) {
               <Link className="block rounded-lg px-4 py-2 text-sm font-medium hover:bg-yellow-50 hover:text-yellow-700" href="/category/culture">
                 Culture
               </Link>
-              <Link className="block rounded-lg px-4 py-2 text-sm font-medium hover:bg-yellow-50 hover:text-yellow-700" href="/category/music">
+              <Link className="block rounded-lg px-4 py-2 text-sm font-medium hover:bg-yellow-50 hover:text-yellow-700" href="/category/afrobeats">
                 Afrobeats
               </Link>
               <Link className="block rounded-lg px-4 py-2 text-sm font-medium hover:bg-yellow-50 hover:text-yellow-700" href="/niamall">
                 NiaMALL
               </Link>
-              <Link className="block rounded-lg px-4 py-2 text-sm font-medium hover:bg-yellow-50 hover:text-yellow-700" href="/shorts">
+              <Link className="block rounded-lg px-4 py-2 text-sm font-medium hover:bg-yellow-50 hover:text-yellow-700" href="/category/shorts">
                 Shorts
               </Link>
               <Link className="block rounded-lg px-4 py-2 text-sm font-medium hover:bg-yellow-50 hover:text-yellow-700" href="/niacircle">
                 NiaCircle
               </Link>
-              <Link className="block rounded-lg px-4 py-2 text-sm font-medium hover:bg-yellow-50 hover:text-yellow-700" href="/history">
+              <Link className="block rounded-lg px-4 py-2 text-sm font-medium hover:bg-yellow-50 hover:text-yellow-700" href="/category/history">
                 History
               </Link>
               <Link className="block rounded-lg px-4 py-2 text-sm font-medium hover:bg-yellow-50 hover:text-yellow-700" href="/language">
@@ -267,18 +267,28 @@ export default function Navbar({ simple = false }: { simple?: boolean }) {
 
               <div className="mt-3 grid grid-cols-2 gap-2 border-t pt-3">
                 <Link
-                  href="/login"
+                  href={isLoggedIn ? "/upload" : "/login"}
                   className="rounded-lg bg-black px-4 py-2 text-center text-sm font-bold text-white hover:bg-gray-800"
                 >
                   Upload
                 </Link>
 
-                <Link
-                  href="/login"
-                  className="rounded-lg border-2 border-green-600 px-4 py-2 text-center text-sm font-bold text-black hover:bg-gray-100"
-                >
-                  Login
-                </Link>
+                {isLoggedIn ? (
+                  <button
+                    type="button"
+                    onClick={handleLogout}
+                    className="rounded-lg border border-red-500 px-4 py-2 text-center text-sm font-bold text-red-600 hover:bg-red-50"
+                  >
+                    Logout
+                  </button>
+                ) : (
+                  <Link
+                    href="/login"
+                    className="rounded-lg border-2 border-green-600 px-4 py-2 text-center text-sm font-bold text-black hover:bg-gray-100"
+                  >
+                    Login
+                  </Link>
+                )}
               </div>
             </div>
           )}
@@ -304,101 +314,122 @@ export default function Navbar({ simple = false }: { simple?: boolean }) {
               <Link href="/category/history">History</Link>
               <Link href="/language">Language</Link>
 
-              <div className="relative">
-                <button
-                  type="button"
-                  onClick={() => setNotificationOpen((prev) => !prev)}
-                  className="relative rounded-full border border-gray-200 bg-white px-3 py-2 text-lg shadow-sm hover:bg-gray-50"
-                  aria-label="Notifications"
-                >
-                  🔔
+              {isLoggedIn && (
+                <div className="relative">
+                  <button
+                    type="button"
+                    onClick={() => setNotificationOpen((prev) => !prev)}
+                    className="relative rounded-full border border-gray-200 bg-white px-3 py-2 text-lg shadow-sm hover:bg-gray-50"
+                    aria-label="Notifications"
+                  >
+                    🔔
 
-                  {unreadCount > 0 && (
-                    <span className="absolute -right-2 -top-2 rounded-full bg-red-600 px-2 py-0.5 text-xs font-black text-white">
-                      {unreadCount}
-                    </span>
-                  )}
-                </button>
-
-                {notificationOpen && (
-                  <div className="absolute right-0 top-12 z-50 w-80 rounded-2xl border border-gray-100 bg-white p-4 shadow-2xl">
-                    <div className="flex items-center justify-between gap-3">
-                      <h3 className="text-sm font-black text-gray-900">
-                        Notifications
-                      </h3>
-
-                      <div className="flex items-center gap-3">
-                        <button
-                          onClick={markNotificationsAsRead}
-                          disabled={unreadCount === 0}
-                          className="text-xs font-bold text-gray-600 hover:text-black disabled:opacity-40"
-                        >
-                          Mark read
-                        </button>
-
-                        <button
-                          onClick={clearReadNotifications}
-                          className="text-xs font-bold text-red-600 hover:text-red-800"
-                        >
-                          Clear read
-                        </button>
-                      </div>
-                    </div>
-
-                    {notifications.length === 0 ? (
-                      <p className="mt-4 rounded-xl bg-gray-50 p-4 text-sm text-gray-500">
-                        No notifications yet.
-                      </p>
-                    ) : (
-                      <div className="mt-4 space-y-3">
-                        {notifications.map((notification) => (
-                          <div
-                            key={notification.id}
-                            className={`rounded-xl border p-3 ${
-                              notification.read
-                                ? "border-gray-200 bg-gray-50"
-                                : "border-yellow-300 bg-yellow-50"
-                            }`}
-                          >
-                            <p className="text-xs font-black uppercase text-gray-500">
-                              {notification.type}
-                            </p>
-
-                            <p className="mt-1 text-sm font-black text-gray-900">
-                              {notification.title}
-                            </p>
-
-                            <p className="mt-1 text-xs text-gray-600">
-                              {notification.message}
-                            </p>
-                          </div>
-                        ))}
-                      </div>
+                    {unreadCount > 0 && (
+                      <span className="absolute -right-2 -top-2 rounded-full bg-red-600 px-2 py-0.5 text-xs font-black text-white">
+                        {unreadCount}
+                      </span>
                     )}
+                  </button>
 
-                    <Link
-                      href="/creator-dashboard"
-                      className="mt-4 block rounded-xl bg-black px-4 py-2 text-center text-sm font-bold text-white hover:bg-gray-800"
-                    >
-                      View dashboard
-                    </Link>
-                  </div>
-                )}
-              </div>
+                  {notificationOpen && (
+                    <div className="absolute right-0 top-12 z-50 w-80 rounded-2xl border border-gray-100 bg-white p-4 shadow-2xl">
+                      <div className="flex items-center justify-between gap-3">
+                        <h3 className="text-sm font-black text-gray-900">
+                          Notifications
+                        </h3>
+
+                        <div className="flex items-center gap-3">
+                          <button
+                            onClick={markNotificationsAsRead}
+                            disabled={unreadCount === 0}
+                            className="text-xs font-bold text-gray-600 hover:text-black disabled:opacity-40"
+                          >
+                            Mark read
+                          </button>
+
+                          <button
+                            onClick={clearReadNotifications}
+                            className="text-xs font-bold text-red-600 hover:text-red-800"
+                          >
+                            Clear read
+                          </button>
+                        </div>
+                      </div>
+
+                      {notifications.length === 0 ? (
+                        <p className="mt-4 rounded-xl bg-gray-50 p-4 text-sm text-gray-500">
+                          No notifications yet.
+                        </p>
+                      ) : (
+                        <div className="mt-4 space-y-3">
+                          {notifications.map((notification) => (
+                            <div
+                              key={notification.id}
+                              className={`rounded-xl border p-3 ${
+                                notification.read
+                                  ? "border-gray-200 bg-gray-50"
+                                  : "border-yellow-300 bg-yellow-50"
+                              }`}
+                            >
+                              <p className="text-xs font-black uppercase text-gray-500">
+                                {notification.type}
+                              </p>
+
+                              <p className="mt-1 text-sm font-black text-gray-900">
+                                {notification.title}
+                              </p>
+
+                              <p className="mt-1 text-xs text-gray-600">
+                                {notification.message}
+                              </p>
+                            </div>
+                          ))}
+                        </div>
+                      )}
+
+                      <Link
+                        href="/creator-dashboard"
+                        className="mt-4 block rounded-xl bg-black px-4 py-2 text-center text-sm font-bold text-white hover:bg-gray-800"
+                      >
+                        View dashboard
+                      </Link>
+                    </div>
+                  )}
+                </div>
+              )}
 
               <Link
-                href="/login"
+                href={isLoggedIn ? "/upload" : "/login"}
                 className="rounded-lg bg-black px-3 py-1.5 text-sm font-semibold text-white hover:bg-gray-800"
               >
                 Upload
               </Link>
 
-              <Link
-                href="/login"
-                className="rounded-lg border-2 border-green-600 px-3 py-1.5 text-sm font-semibold text-black hover:bg-gray-100"
-              >
-                Login
-              </Link>
+              {isLoggedIn ? (
+                <button
+                  type="button"
+                  onClick={handleLogout}
+                  className="rounded-lg border border-red-500 px-3 py-1.5 text-sm font-semibold text-red-600 hover:bg-red-50"
+                >
+                  Logout
+                </button>
+              ) : (
+                <>
+                  <Link
+                    href="/login"
+                    className="rounded-lg border-2 border-green-600 px-3 py-1.5 text-sm font-semibold text-black hover:bg-gray-100"
+                  >
+                    Login
+                  </Link>
+
+                  <Link
+                    href="/signup"
+                    className="rounded-lg bg-yellow-400 px-3 py-1.5 text-sm font-semibold text-black hover:bg-yellow-300"
+                  >
+                    Sign Up
+                  </Link>
+                </>
+              )}
             </nav>
           )}
         </div>
