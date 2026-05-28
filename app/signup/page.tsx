@@ -5,8 +5,49 @@ import Navbar from "@/components/Navbar";
 import { supabase } from "@/lib/supabase-browser";
 import Link from "next/link";
 
+const countries = [
+  "Angola",
+  "Benin",
+  "Botswana",
+  "Burkina Faso",
+  "Burundi",
+  "Cameroon",
+  "Canada",
+  "Cape Verde",
+  "Chad",
+  "Congo, Democratic Republic of the",
+  "Congo, Republic of the",
+  "Côte d'Ivoire",
+  "Egypt",
+  "Ethiopia",
+  "France",
+  "Gambia, The",
+  "Ghana",
+  "Kenya",
+  "Liberia",
+  "Mali",
+  "Morocco",
+  "Mozambique",
+  "Namibia",
+  "Niger",
+  "Nigeria",
+  "Rwanda",
+  "Senegal",
+  "Sierra Leone",
+  "South Africa",
+  "Tanzania",
+  "Togo",
+  "Uganda",
+  "United Kingdom",
+  "United States",
+  "Zambia",
+  "Zimbabwe",
+  "Other",
+];
+
 export default function SignupPage() {
   const [creatorName, setCreatorName] = useState("");
+  const [country, setCountry] = useState("");
   const [email, setEmail] = useState("");
   const [interest, setInterest] = useState("Culture");
   const [password, setPassword] = useState("");
@@ -18,7 +59,7 @@ export default function SignupPage() {
     setMessage("");
     setLoading(true);
 
-    if (!creatorName.trim() || !email.trim() || !password.trim()) {
+    if (!creatorName.trim() || !country.trim() || !email.trim() || !password.trim()) {
       setMessage("Please complete all required fields.");
       setLoading(false);
       return;
@@ -31,6 +72,7 @@ export default function SignupPage() {
         emailRedirectTo: `${window.location.origin}/login/creator`,
         data: {
           creator_name: creatorName.trim(),
+          creator_country: country,
           creator_interest: interest,
         },
       },
@@ -48,6 +90,7 @@ export default function SignupPage() {
         {
           creator_name: creatorName.trim(),
           email: email.trim(),
+          country,
         },
       ]);
 
@@ -59,6 +102,7 @@ export default function SignupPage() {
     }
 
     setCreatorName("");
+    setCountry("");
     setEmail("");
     setPassword("");
     setInterest("Culture");
@@ -94,6 +138,20 @@ export default function SignupPage() {
               onChange={(e) => setCreatorName(e.target.value)}
               className="w-full rounded-xl border px-4 py-3 text-sm"
             />
+
+            <select
+              required
+              value={country}
+              onChange={(e) => setCountry(e.target.value)}
+              className="w-full rounded-xl border px-4 py-3 text-sm"
+            >
+              <option value="">Select creator country</option>
+              {countries.map((item) => (
+                <option key={item} value={item}>
+                  {item}
+                </option>
+              ))}
+            </select>
 
             <input
               type="email"
@@ -138,38 +196,38 @@ export default function SignupPage() {
             </button>
           </form>
 
- <div className="mt-10 border-t pt-8">
-  <p className="text-center text-sm font-bold uppercase tracking-wide text-yellow-700">
-    Already have an audience?
-  </p>
+          <div className="mt-10 border-t pt-8">
+            <p className="text-center text-sm font-bold uppercase tracking-wide text-yellow-700">
+              Already have an audience?
+            </p>
 
-  <h2 className="mt-3 text-center text-2xl font-black text-gray-900">
-    Keep your monetization momentum.
-    <br />
-    Bring your audience to NiaTube.
-  </h2>
+            <h2 className="mt-3 text-center text-2xl font-black text-gray-900">
+              Keep your monetization momentum.
+              <br />
+              Bring your audience to NiaTube.
+            </h2>
 
-  <p className="mx-auto mt-4 max-w-lg text-center text-sm leading-6 text-gray-700">
-    Verified creators can request subscriber migration from platforms like
-    YouTube, TikTok, Instagram, Twitch, and more.
-  </p>
+            <p className="mx-auto mt-4 max-w-lg text-center text-sm leading-6 text-gray-700">
+              Verified creators can request subscriber migration from platforms
+              like YouTube, TikTok, Instagram, Twitch, and more.
+            </p>
 
-  <div className="mx-auto mt-5 max-w-lg rounded-2xl border border-yellow-300 bg-yellow-50 p-4">
-    <p className="text-center text-sm font-bold text-gray-800">
-      Make sure you signed up first and confirmed your email before starting
-      subscribers migration.
-    </p>
-  </div>
+            <div className="mx-auto mt-5 max-w-lg rounded-2xl border border-yellow-300 bg-yellow-50 p-4">
+              <p className="text-center text-sm font-bold text-gray-800">
+                Make sure you signed up first and confirmed your email before
+                starting subscribers migration.
+              </p>
+            </div>
 
-  <div className="mt-6 text-center">
-    <Link
-      href="/creator/migrate"
-      className="inline-block rounded-xl bg-black px-6 py-3 text-sm font-black text-white hover:bg-gray-800"
-    >
-      Start Subscribers Migration
-    </Link>
-  </div>
-</div>
+            <div className="mt-6 text-center">
+              <Link
+                href="/creator/migrate"
+                className="inline-block rounded-xl bg-black px-6 py-3 text-sm font-black text-white hover:bg-gray-800"
+              >
+                Start Subscribers Migration
+              </Link>
+            </div>
+          </div>
 
           {message && (
             <p className="mt-5 rounded-xl bg-green-50 p-4 text-sm font-semibold text-green-800">

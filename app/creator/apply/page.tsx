@@ -4,8 +4,28 @@ import { useState } from "react";
 import { supabase } from "@/lib/supabase-browser";
 import { useRouter } from "next/navigation";
 
+const countries = [
+  "Nigeria",
+  "Ghana",
+  "Kenya",
+  "Rwanda",
+  "South Africa",
+  "United States",
+  "United Kingdom",
+  "Canada",
+  "France",
+  "Germany",
+  "Brazil",
+  "India",
+  "China",
+  "Japan",
+  "Australia",
+  "Other",
+];
+
 export default function CreatorApplyPage() {
   const [creatorName, setCreatorName] = useState("");
+  const [country, setCountry] = useState("");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [agree, setAgree] = useState(false);
@@ -18,6 +38,11 @@ export default function CreatorApplyPage() {
 
     if (!creatorName.trim()) {
       setMessage("Creator name is required.");
+      return;
+    }
+
+    if (!country.trim()) {
+      setMessage("Country is required.");
       return;
     }
 
@@ -42,6 +67,7 @@ export default function CreatorApplyPage() {
       options: {
         data: {
           creator_name: creatorName.trim(),
+          country,
           accepted_terms: true,
           accepted_terms_at: new Date().toISOString(),
         },
@@ -51,11 +77,20 @@ export default function CreatorApplyPage() {
 
     if (error) {
       setMessage(error.message);
-    } else {
-      setMessage(
-        "Account created. Please check your email and confirm your account. After confirming, return here and log in."
-      );
+      return;
     }
+
+    await supabase.from("creator_profiles").upsert([
+      {
+        creator_name: creatorName.trim(),
+        email: email.trim(),
+        country,
+      },
+    ]);
+
+    setMessage(
+      "Account created. Please check your email and confirm your account. After confirming, return here and log in."
+    );
   }
 
   async function handleLogin(e: React.FormEvent) {
@@ -89,8 +124,7 @@ export default function CreatorApplyPage() {
         <h1 className="mb-2 text-xl font-bold">Creator Login</h1>
 
         <p className="mb-5 text-sm text-gray-600">
-          Sign up first, confirm your email if required, then return here to log
-          in.
+          Sign up first, confirm your email if required, then return here to log in.
         </p>
 
         <input
@@ -100,6 +134,19 @@ export default function CreatorApplyPage() {
           value={creatorName}
           onChange={(e) => setCreatorName(e.target.value)}
         />
+
+        <select
+          className="mb-3 w-full rounded border px-3 py-2"
+          value={country}
+          onChange={(e) => setCountry(e.target.value)}
+        >
+          <option value="">Select creator country</option>
+          {countries.map((item) => (
+            <option key={item} value={item}>
+              {item}
+            </option>
+          ))}
+        </select>
 
         <input
           type="email"
@@ -126,26 +173,16 @@ export default function CreatorApplyPage() {
           />
 
           <span>
-  I have read and agree to the{" "}
-  <a
-    href="/terms"
-    target="_blank"
-    rel="noopener noreferrer"
-    className="text-blue-600 underline"
-  >
-    Terms of Service
-  </a>{" "}
-  and{" "}
-  <a
-    href="/privacy"
-    target="_blank"
-    rel="noopener noreferrer"
-    className="text-blue-600 underline"
-  >
-    Privacy Policy
-  </a>
-  .
-</span>
+            I have read and agree to the{" "}
+            <a href="/terms" target="_blank" rel="noopener noreferrer" className="text-blue-600 underline">
+              Terms of Service
+            </a>{" "}
+            and{" "}
+            <a href="/privacy" target="_blank" rel="noopener noreferrer" className="text-blue-600 underline">
+              Privacy Policy
+            </a>
+            .
+          </span>
         </label>
 
         <div className="flex gap-2">
