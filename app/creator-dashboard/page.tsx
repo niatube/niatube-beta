@@ -118,7 +118,13 @@ const [creatorCurrency, setCreatorCurrency] = useState("Not set");
 
       setCreatorName(activeCreatorName);
       setCreatorCountry(profileByEmail?.country || "Not set");
-setCreatorCurrency(profileByEmail?.currency_code || "Not set");
+const profileCurrency = profileByEmail?.currency_code || "Not set";
+
+setCreatorCurrency(profileCurrency);
+
+if (profileCurrency !== "Not set") {
+  setSelectedPayoutCurrency(profileCurrency);
+}
 
       const { data: uploadsData } = await supabase
         .from("uploads")
