@@ -5,45 +5,66 @@ import Navbar from "@/components/Navbar";
 import { supabase } from "@/lib/supabase-browser";
 import Link from "next/link";
 
-const countries = [
-  "Angola",
-  "Benin",
-  "Botswana",
-  "Burkina Faso",
-  "Burundi",
-  "Cameroon",
-  "Canada",
-  "Cape Verde",
-  "Chad",
-  "Congo, Democratic Republic of the",
-  "Congo, Republic of the",
-  "Côte d'Ivoire",
-  "Egypt",
-  "Ethiopia",
-  "France",
-  "Gambia, The",
-  "Ghana",
-  "Kenya",
-  "Liberia",
-  "Mali",
-  "Morocco",
-  "Mozambique",
-  "Namibia",
-  "Niger",
-  "Nigeria",
-  "Rwanda",
-  "Senegal",
-  "Sierra Leone",
-  "South Africa",
-  "Tanzania",
-  "Togo",
-  "Uganda",
-  "United Kingdom",
-  "United States",
-  "Zambia",
-  "Zimbabwe",
-  "Other",
-];
+const countryCurrencyMap: Record<string, string> = {
+  Algeria: "DZD",
+  Angola: "AOA",
+  Benin: "XOF",
+  Botswana: "BWP",
+  "Burkina Faso": "XOF",
+  Burundi: "BIF",
+  Cameroon: "XAF",
+  "Cape Verde": "CVE",
+  "Central African Republic": "XAF",
+  Chad: "XAF",
+  Comoros: "KMF",
+  "Congo, Democratic Republic of the": "CDF",
+  "Congo, Republic of the": "XAF",
+  "Côte d'Ivoire": "XOF",
+  Djibouti: "DJF",
+  Egypt: "EGP",
+  "Equatorial Guinea": "XAF",
+  Eritrea: "ERN",
+  Eswatini: "SZL",
+  Ethiopia: "ETB",
+  Gabon: "XAF",
+  "Gambia, The": "GMD",
+  Ghana: "GHS",
+  Guinea: "GNF",
+  "Guinea-Bissau": "XOF",
+  Kenya: "KES",
+  Lesotho: "LSL",
+  Liberia: "LRD",
+  Libya: "LYD",
+  Madagascar: "MGA",
+  Malawi: "MWK",
+  Mali: "XOF",
+  Mauritania: "MRU",
+  Mauritius: "MUR",
+  Morocco: "MAD",
+  Mozambique: "MZN",
+  Namibia: "NAD",
+  Niger: "XOF",
+  Nigeria: "NGN",
+  Rwanda: "RWF",
+  "São Tomé and Príncipe": "STN",
+  Senegal: "XOF",
+  Seychelles: "SCR",
+  "Sierra Leone": "SLE",
+  Somalia: "SOS",
+  "South Africa": "ZAR",
+  "South Sudan": "SSP",
+  Sudan: "SDG",
+  Tanzania: "TZS",
+  Togo: "XOF",
+  Tunisia: "TND",
+  Uganda: "UGX",
+  Zambia: "ZMW",
+  Zimbabwe: "ZWL",
+  Europe: "EUR",
+  "United States": "USD",
+};
+
+const countries = Object.keys(countryCurrencyMap);
 
 export default function SignupPage() {
   const [creatorName, setCreatorName] = useState("");
@@ -59,7 +80,9 @@ export default function SignupPage() {
     setMessage("");
     setLoading(true);
 
-    if (!creatorName.trim() || !country.trim() || !email.trim() || !password.trim()) {
+    const currencyCode = countryCurrencyMap[country];
+
+    if (!creatorName.trim() || !country.trim() || !currencyCode || !email.trim() || !password.trim()) {
       setMessage("Please complete all required fields.");
       setLoading(false);
       return;
@@ -73,6 +96,7 @@ export default function SignupPage() {
         data: {
           creator_name: creatorName.trim(),
           creator_country: country,
+          currency_code: currencyCode,
           creator_interest: interest,
         },
       },
@@ -84,15 +108,14 @@ export default function SignupPage() {
       return;
     }
 
-    const { error: profileError } = await supabase
-      .from("creator_profiles")
-      .insert([
-        {
-          creator_name: creatorName.trim(),
-          email: email.trim(),
-          country,
-        },
-      ]);
+    const { error: profileError } = await supabase.from("creator_profiles").insert([
+      {
+        creator_name: creatorName.trim(),
+        email: email.trim(),
+        country,
+        currency_code: currencyCode,
+      },
+    ]);
 
     setLoading(false);
 
@@ -145,10 +168,10 @@ export default function SignupPage() {
               onChange={(e) => setCountry(e.target.value)}
               className="w-full rounded-xl border px-4 py-3 text-sm"
             >
-              <option value="">Select creator country</option>
+              <option value="">Select creator country/region</option>
               {countries.map((item) => (
                 <option key={item} value={item}>
-                  {item}
+                  {item} — {countryCurrencyMap[item]}
                 </option>
               ))}
             </select>

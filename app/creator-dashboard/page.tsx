@@ -72,6 +72,8 @@ const [migratedSubscriberCount, setMigratedSubscriberCount] = useState(0);
 const [subscriberCount, setSubscriberCount] = useState(0);
   const [loading, setLoading] = useState(true);
   const [creatorSince, setCreatorSince] = useState("");
+  const [creatorCountry, setCreatorCountry] = useState("Not set");
+const [creatorCurrency, setCreatorCurrency] = useState("Not set");
   const [currentPage, setCurrentPage] = useState(1);
   const [selectedPayoutCurrency, setSelectedPayoutCurrency] = useState("NGN");
 
@@ -106,15 +108,17 @@ const [subscriberCount, setSubscriberCount] = useState(0);
 
       const { data: profileByEmail } = await supabase
         .from("creator_profiles")
-        .select("creator_name,email")
-        .eq("email", user.email)
-        .maybeSingle();
+       .select("creator_name,email,country,currency_code")
+.ilike("email", user.email || "")
+.maybeSingle();
 
       if (profileByEmail?.creator_name) {
         activeCreatorName = profileByEmail.creator_name;
       }
 
       setCreatorName(activeCreatorName);
+      setCreatorCountry(profileByEmail?.country || "Not set");
+setCreatorCurrency(profileByEmail?.currency_code || "Not set");
 
       const { data: uploadsData } = await supabase
         .from("uploads")
@@ -380,7 +384,28 @@ setSubscriberCount(totalSubscribers);
             Creator Since: {creatorSince}
           </p>
         )}
+           <div className="mt-5 grid gap-4 md:grid-cols-3">
+  <div className="rounded-2xl bg-white p-5 shadow-sm">
+    <p className="text-sm font-bold text-gray-500">Creator Country</p>
+    <p className="mt-2 text-2xl font-black text-gray-900">
+      {creatorCountry}
+    </p>
+  </div>
 
+  <div className="rounded-2xl bg-white p-5 shadow-sm">
+    <p className="text-sm font-bold text-gray-500">Default Currency</p>
+    <p className="mt-2 text-2xl font-black text-gray-900">
+      {creatorCurrency}
+    </p>
+  </div>
+
+  <div className="rounded-2xl bg-white p-5 shadow-sm">
+    <p className="text-sm font-bold text-gray-500">Financial Profile</p>
+    <p className="mt-2 text-sm font-semibold text-gray-700">
+      Country and currency are used for future tips, payouts, and creator wallet routing.
+    </p>
+  </div>
+</div>   
         <div className="mt-4 flex flex-wrap gap-3">
           {creatorBadges.map((badge) => (
             <span
