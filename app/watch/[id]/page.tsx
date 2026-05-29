@@ -556,11 +556,15 @@ const [membershipLoading, setMembershipLoading] = useState(false);
       .from("tips")
       .insert([
         {
-          creator_name: video.creator,
-          amount,
-          currency_code: tipCurrency,
-          message: tipMessage.trim(),
-        },
+  creator_name: video.creator,
+  amount,
+  gross_amount: amount,
+  platform_fee: amount * 0.05,
+  net_amount: amount * 0.95,
+  fee_rate: 0.05,
+  currency_code: tipCurrency,
+  message: tipMessage.trim(),
+},
       ])
       .select()
       .single();
