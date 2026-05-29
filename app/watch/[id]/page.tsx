@@ -42,15 +42,52 @@ type Tip = {
   message?: string;
   created_at?: string;
 };
-
 const currencies = [
-  { code: "NGN", label: "Nigeria Naira", symbol: "₦" },
-  { code: "KES", label: "Kenyan Shilling", symbol: "KSh" },
+  { code: "DZD", label: "Algerian Dinar", symbol: "دج" },
+  { code: "AOA", label: "Angolan Kwanza", symbol: "Kz" },
+  { code: "XOF", label: "West African CFA Franc", symbol: "CFA" },
+  { code: "BWP", label: "Botswana Pula", symbol: "P" },
+  { code: "BIF", label: "Burundian Franc", symbol: "FBu" },
+  { code: "XAF", label: "Central African CFA Franc", symbol: "FCFA" },
+  { code: "CVE", label: "Cape Verde Escudo", symbol: "$" },
+  { code: "KMF", label: "Comorian Franc", symbol: "CF" },
+  { code: "CDF", label: "Congolese Franc", symbol: "FC" },
+  { code: "DJF", label: "Djiboutian Franc", symbol: "Fdj" },
+  { code: "EGP", label: "Egyptian Pound", symbol: "£" },
+  { code: "ERN", label: "Eritrean Nakfa", symbol: "Nfk" },
+  { code: "SZL", label: "Eswatini Lilangeni", symbol: "E" },
+  { code: "ETB", label: "Ethiopian Birr", symbol: "Br" },
+  { code: "GMD", label: "Gambian Dalasi", symbol: "D" },
   { code: "GHS", label: "Ghana Cedi", symbol: "₵" },
-  { code: "ZAR", label: "South African Rand", symbol: "R" },
+  { code: "GNF", label: "Guinean Franc", symbol: "FG" },
+  { code: "KES", label: "Kenyan Shilling", symbol: "KSh" },
+  { code: "LSL", label: "Lesotho Loti", symbol: "L" },
+  { code: "LRD", label: "Liberian Dollar", symbol: "L$" },
+  { code: "LYD", label: "Libyan Dinar", symbol: "LD" },
+  { code: "MGA", label: "Malagasy Ariary", symbol: "Ar" },
+  { code: "MWK", label: "Malawian Kwacha", symbol: "MK" },
+  { code: "MRU", label: "Mauritanian Ouguiya", symbol: "UM" },
+  { code: "MUR", label: "Mauritian Rupee", symbol: "₨" },
+  { code: "MAD", label: "Moroccan Dirham", symbol: "DH" },
+  { code: "MZN", label: "Mozambican Metical", symbol: "MT" },
+  { code: "NAD", label: "Namibian Dollar", symbol: "N$" },
+  { code: "NGN", label: "Nigerian Naira", symbol: "₦" },
   { code: "RWF", label: "Rwandan Franc", symbol: "FRw" },
-  { code: "UGX", label: "Ugandan Shilling", symbol: "USh" },
+  { code: "STN", label: "São Tomé and Príncipe Dobra", symbol: "Db" },
+  { code: "SCR", label: "Seychellois Rupee", symbol: "₨" },
+  { code: "SLE", label: "Sierra Leone Leone", symbol: "Le" },
+  { code: "SOS", label: "Somali Shilling", symbol: "Sh" },
+  { code: "ZAR", label: "South African Rand", symbol: "R" },
+  { code: "SSP", label: "South Sudanese Pound", symbol: "£" },
+  { code: "SDG", label: "Sudanese Pound", symbol: "£" },
   { code: "TZS", label: "Tanzanian Shilling", symbol: "TSh" },
+  { code: "TND", label: "Tunisian Dinar", symbol: "DT" },
+  { code: "UGX", label: "Ugandan Shilling", symbol: "USh" },
+  { code: "ZMW", label: "Zambian Kwacha", symbol: "ZK" },
+  { code: "ZWL", label: "Zimbabwe Gold", symbol: "ZiG" },
+
+  { code: "EUR", label: "Euro", symbol: "€" },
+  { code: "USD", label: "United States Dollar", symbol: "$" },
 ];
 
 const subscriberMilestones = [10, 100, 1000, 10000, 100000];
@@ -89,7 +126,7 @@ const [membershipLoading, setMembershipLoading] = useState(false);
   const [commentText, setCommentText] = useState("");
 
   const [tipAmount, setTipAmount] = useState("");
-  const [tipCurrency, setTipCurrency] = useState("NGN");
+  const [tipCurrency, setTipCurrency] = useState("");
   const [tipMessage, setTipMessage] = useState("");
   const [tips, setTips] = useState<Tip[]>([]);
   const [tipStatus, setTipStatus] = useState("");
@@ -138,16 +175,27 @@ const [membershipLoading, setMembershipLoading] = useState(false);
         .single();
 
       if (data) {
-        const currentViews = data.views || 0;
-        const updatedViews = currentViews + 1;
+  const currentViews = data.views || 0;
+  const updatedViews = currentViews + 1;
 
-        setVideo({ ...data, views: updatedViews });
-        setIsLive(Boolean(data.is_live));
+  setVideo({ ...data, views: updatedViews });
 
-        await supabase
-          .from("uploads")
-          .update({ views: updatedViews })
-          .eq("id", id);
+  const { data: creatorProfile } = await supabase
+    .from("creator_profiles")
+    .select("currency_code")
+    .eq("creator_name", data.creator)
+    .maybeSingle();
+
+  if (creatorProfile?.currency_code) {
+    setTipCurrency(creatorProfile.currency_code);
+  }
+
+  setIsLive(Boolean(data.is_live));
+
+  await supabase
+    .from("uploads")
+    .update({ views: updatedViews })
+    .eq("id", id);
 
         const {
           data: { user },

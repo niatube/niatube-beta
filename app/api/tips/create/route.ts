@@ -19,7 +19,7 @@ export async function POST(req: Request) {
     const supabaseAdmin = createClient(supabaseUrl, serviceRoleKey);
 
     const body = await req.json();
-    const { creator_name, video_id, amount } = body;
+    const { creator_name, video_id, amount, currency_code } = body;
 
     if (!creator_name || !amount) {
       return NextResponse.json(
@@ -31,11 +31,12 @@ export async function POST(req: Request) {
     const { data, error } = await supabaseAdmin
       .from("tips")
       .insert({
-        creator_name,
-        video_id: video_id || null,
-        amount: Number(amount),
-        from_user: "Anonymous",
-      })
+  creator_name,
+  video_id: video_id || null,
+  amount: Number(amount),
+  currency_code: currency_code || "USD",
+  from_user: "Anonymous",
+})
       .select()
       .single();
 
