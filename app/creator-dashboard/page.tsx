@@ -230,9 +230,12 @@ setSubscriberCount(totalSubscribers);
     const totals: Record<string, number> = {};
 
     tips.forEach((tip) => {
-      const currency = tip.currency_code || "UNKNOWN";
-      totals[currency] = (totals[currency] || 0) + Number(tip.amount || 0);
-    });
+  const currency = tip.currency_code || "UNKNOWN";
+
+  totals[currency] =
+    (totals[currency] || 0) +
+    Number(tip.net_amount ?? tip.amount ?? 0);
+});
 
     return Object.entries(totals)
       .map(([currency, amount]) => ({ currency, amount }))
@@ -557,13 +560,11 @@ setSubscriberCount(totalSubscribers);
 
         <div className="mt-8 rounded-3xl bg-white p-6 shadow-sm">
           <h2 className="text-2xl font-black text-gray-900">
-            Tips by Currency
+            Creator Wallet Balances
           </h2>
 
           <p className="mt-1 text-sm text-gray-600">
-            Tips are separated by currency. NiaTube should not combine NGN, GHS,
-            KES, or other currencies without an approved FX/NiaCredit
-            conversion layer.
+            Wallet balances show the creator’s net earnings after NiaTube’s platform fee. Balances remain separated by currency until an approved FX/NiaCredit conversion or local payout is requested.
           </p>
 
           {tipTotalsByCurrency.length === 0 ? (
@@ -584,7 +585,7 @@ setSubscriberCount(totalSubscribers);
                   </p>
 
                   <p className="mt-1 text-xs text-gray-500">
-                    Available before FX conversion
+                  Net wallet balance before FX conversion
                   </p>
                 </div>
               ))}
