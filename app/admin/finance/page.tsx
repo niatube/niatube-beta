@@ -1,0 +1,346 @@
+"use client";
+
+import { useEffect, useMemo, useState } from "react";
+import Navbar from "@/components/Navbar";
+import { supabase } from "@/lib/supabase-browser";
+
+type Tip = {
+  id: string;
+  creator_name: string;
+  amount: number;
+  currency_code?: string;
+  gross_amount?: number;
+  platform_fee?: number;
+  net_amount?: number;
+  fee_rate?: number;
+  message?: string;
+  created_at?: string;
+};
+
+type PayoutRequest = {
+  id: string;
+  creator_name: string;
+  amount: number;
+  currency_code?: string;
+  status?: string;
+  created_at?: string;
+  requested_at?: string;
+};
+
+type CurrencyTotals = {
+  currency: string;
+  gross: number;
+  fees: number;
+  net: number;
+  count: number;
+};
+
+function formatAmount(value: number) {
+  return Number(value || 0).toLocaleString(undefined, {
+    maximumFractionDigits: 2,
+  });
+}
+
+export default function AdminFinancePage() {
+  const [tips, setTips] = useState<Tip[]>([]);
+  const [payouts, setPayouts] = useState<PayoutRequest[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [message, setMessage] = useState("");
+
+  async function loadFinanceData() {
+    setLoading(true);
+    setMessage("");
+
+    const { data: tipsData, error: tipsError } = await supabase
+      .from("tips")
+      .select("*")
+      .order("created_at", { ascending: false });
+
+    if (tipsError) {
+      console.error(tipsError);
+      setMessage("Could not load tips finance data.");
+      setLoading(false);
+      return;
+    }
+
+    const { data: payoutData, error: payoutError } = await supabase
+      .from("payout_requests")
+      .select("*")
+      .order("created_at", { ascending: false });
+
+    if (payoutError) {
+      console.error(payoutError);
+      setMessage("Could not load payout request data.");
+      setLoading(false);
+      return;
+    }
+
+    setTips((tipsData || []) as Tip[]);
+    setPayouts((payoutData || []) as PayoutRequest[]);
+    setLoading(false);
+  }
+
+  useEffect(() => {
+    loadFinanceData();
+  }, []);
+
+  const totalsByCurrency = useMemo(() => {
+    const totals: Record<string, CurrencyTotals> = {};
+
+    tips.forEach((tip) => {
+      const currency = tip.currency_code || "UNKNOWN";
+      const gross = Number(tip.gross_amount ?? tip.amount ?? 0);
+      const fees = Number(tip.platform_fee ?? 0);
+      const net = Number(tip.net_amount ?? tip.amount ?? 0);
+
+      if (!totals[currency]) {
+        totals[currency] = {
+          currency,
+          gross: 0,
+          fees: 0,
+          net: 0,
+          count: 0,
+        };
+      }
+
+      totals[currency].gross += gross;
+      totals[currency].fees += fees;
+      totals[currency].net += net;
+      totals[currency].count += 1;
+    });
+
+    return Object.values(totals).sort((a, b) =>
+      a.currency.localeCompare(b.currency)
+    );
+  }, [tips]);
+
+  const pendingPayouts = payouts.filter(
+    (payout) => (payout.status || "pending") === "pending"
+  );
+
+  const pendingPayoutsByCurrency = useMemo(() => {
+    const totals: Record<string, number> = {};
+
+    pendingPayouts.forEach((payout) => {
+      const currency = payout.currency_code || "UNKNOWN";
+      totals[currency] =
+        (totals[currency] || 0) + Number(payout.amount || 0);
+    });
+
+    return Object.entries(totals)
+      .map(([currency, amount]) => ({ currency, amount }))
+      .sort((a, b) => a.currency.localeCompare(b.currency));
+  }, [pendingPayouts]);
+
+  return (
+    <main className="min-h-screen bg-gray-50">
+      <Navbar />
+
+      <section className="mx-auto max-w-7xl px-6 py-10">
+        <p className="text-sm font-black uppercase tracking-wide text-yellow-600">
+          Admin Finance
+        </p>
+
+        <h1 className="mt-2 text-4xl font-black text-gray-900">
+          NiaTube Finance Report v1
+        </h1>
+
+        <p className="mt-3 max-w-4xl text-gray-600">
+          Platform finance overview for multi-currency tips, NiaTube platform
+          fees, creator net earnings, and pending payout obligations.
+        </p>
+
+        {message && (
+          <p className="mt-6 rounded-xl bg-red-50 p-4 text-sm font-bold text-red-700">
+            {message}
+          </p>
+        )}
+
+        {loading ? (
+          <div className="mt-8 rounded-3xl bg-white p-8 shadow-sm">
+            Loading finance report...
+          </div>
+        ) : (
+          <>
+            <div className="mt-8 grid gap-5 md:grid-cols-2 xl:grid-cols-4">
+              <div className="rounded-2xl bg-white p-5 shadow-sm">
+                <p className="text-sm font-bold text-gray-500">
+                  Total Tip Transactions
+                </p>
+                <p className="mt-2 text-3xl font-black">{tips.length}</p>
+              </div>
+
+              <div className="rounded-2xl bg-white p-5 shadow-sm">
+                <p className="text-sm font-bold text-gray-500">
+                  Currencies Active
+                </p>
+                <p className="mt-2 text-3xl font-black">
+                  {totalsByCurrency.length}
+                </p>
+              </div>
+
+              <div className="rounded-2xl bg-white p-5 shadow-sm">
+                <p className="text-sm font-bold text-gray-500">
+                  Pending Payout Requests
+                </p>
+                <p className="mt-2 text-3xl font-black">
+                  {pendingPayouts.length}
+                </p>
+              </div>
+
+              <div className="rounded-2xl bg-white p-5 shadow-sm">
+                <p className="text-sm font-bold text-gray-500">
+                  Report Version
+                </p>
+                <p className="mt-2 text-3xl font-black">v1</p>
+              </div>
+            </div>
+
+            <div className="mt-8 rounded-3xl bg-white p-6 shadow-sm">
+              <h2 className="text-2xl font-black text-gray-900">
+                Tip Revenue by Currency
+              </h2>
+
+              <p className="mt-1 text-sm text-gray-600">
+                Amounts are grouped by currency. NiaTube does not combine
+                currencies until an approved FX/NiaCredit conversion is applied.
+              </p>
+
+              {totalsByCurrency.length === 0 ? (
+                <p className="mt-4 text-gray-500">
+                  No tip transactions recorded yet.
+                </p>
+              ) : (
+                <div className="mt-5 overflow-x-auto">
+                  <table className="w-full border-collapse text-left text-sm">
+                    <thead>
+                      <tr className="border-b bg-gray-50">
+                        <th className="px-4 py-3">Currency</th>
+                        <th className="px-4 py-3">Transactions</th>
+                        <th className="px-4 py-3">Gross Tips</th>
+                        <th className="px-4 py-3">NiaTube Fees</th>
+                        <th className="px-4 py-3">Creator Net Earnings</th>
+                      </tr>
+                    </thead>
+
+                    <tbody>
+                      {totalsByCurrency.map((item) => (
+                        <tr key={item.currency} className="border-b">
+                          <td className="px-4 py-3 font-black">
+                            {item.currency}
+                          </td>
+                          <td className="px-4 py-3">{item.count}</td>
+                          <td className="px-4 py-3">
+                            {formatAmount(item.gross)}
+                          </td>
+                          <td className="px-4 py-3 font-bold text-green-700">
+                            {formatAmount(item.fees)}
+                          </td>
+                          <td className="px-4 py-3 font-bold text-gray-900">
+                            {formatAmount(item.net)}
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              )}
+            </div>
+
+            <div className="mt-8 rounded-3xl bg-white p-6 shadow-sm">
+              <h2 className="text-2xl font-black text-gray-900">
+                Pending Payout Obligations
+              </h2>
+
+              <p className="mt-1 text-sm text-gray-600">
+                These are pending payout requests grouped by currency. They
+                represent creator liabilities awaiting review or settlement.
+              </p>
+
+              {pendingPayoutsByCurrency.length === 0 ? (
+                <p className="mt-4 text-gray-500">
+                  No pending payout obligations.
+                </p>
+              ) : (
+                <div className="mt-5 grid gap-4 md:grid-cols-3">
+                  {pendingPayoutsByCurrency.map((item) => (
+                    <div
+                      key={item.currency}
+                      className="rounded-2xl border bg-gray-50 p-5"
+                    >
+                      <p className="text-sm font-bold text-gray-500">
+                        {item.currency}
+                      </p>
+                      <p className="mt-2 text-3xl font-black text-gray-900">
+                        {formatAmount(item.amount)}
+                      </p>
+                      <p className="mt-1 text-xs text-gray-500">
+                        Pending payout balance
+                      </p>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+
+            <div className="mt-8 rounded-3xl bg-white p-6 shadow-sm">
+              <h2 className="text-2xl font-black text-gray-900">
+                Recent Tip Transactions
+              </h2>
+
+              {tips.length === 0 ? (
+                <p className="mt-4 text-gray-500">No recent tips.</p>
+              ) : (
+                <div className="mt-5 overflow-x-auto">
+                  <table className="w-full border-collapse text-left text-sm">
+                    <thead>
+                      <tr className="border-b bg-gray-50">
+                        <th className="px-4 py-3">Date</th>
+                        <th className="px-4 py-3">Creator</th>
+                        <th className="px-4 py-3">Currency</th>
+                        <th className="px-4 py-3">Gross</th>
+                        <th className="px-4 py-3">Fee</th>
+                        <th className="px-4 py-3">Net</th>
+                      </tr>
+                    </thead>
+
+                    <tbody>
+                      {tips.slice(0, 25).map((tip) => (
+                        <tr key={tip.id} className="border-b">
+                          <td className="px-4 py-3 text-gray-500">
+                            {tip.created_at
+                              ? new Date(tip.created_at).toLocaleString()
+                              : "Not available"}
+                          </td>
+                          <td className="px-4 py-3 font-bold">
+                            {tip.creator_name}
+                          </td>
+                          <td className="px-4 py-3">
+                            {tip.currency_code || "UNKNOWN"}
+                          </td>
+                          <td className="px-4 py-3">
+                            {formatAmount(
+                              Number(tip.gross_amount ?? tip.amount ?? 0)
+                            )}
+                          </td>
+                          <td className="px-4 py-3 font-bold text-green-700">
+                            {formatAmount(Number(tip.platform_fee ?? 0))}
+                          </td>
+                          <td className="px-4 py-3 font-bold text-gray-900">
+                            {formatAmount(
+                              Number(tip.net_amount ?? tip.amount ?? 0)
+                            )}
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              )}
+            </div>
+          </>
+        )}
+      </section>
+    </main>
+  );
+}
