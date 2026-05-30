@@ -23,6 +23,9 @@ export default function AdminFinancePayoutsPage() {
   const [payouts, setPayouts] = useState<PayoutRequest[]>([]);
   const [loading, setLoading] = useState(true);
   const [message, setMessage] = useState("");
+  const [reportPeriod, setReportPeriod] = useState<
+  "all" | "monthly" | "quarterly" | "semiannual" | "annual"
+>("all");
 
   async function loadPayouts() {
     setLoading(true);
@@ -46,20 +49,67 @@ export default function AdminFinancePayoutsPage() {
   useEffect(() => {
     loadPayouts();
   }, []);
+  const filteredPayouts = useMemo(() => {
+  const now = new Date();
 
-  const pendingPayouts = payouts.filter(
+  return payouts.filter((payout) => {
+    if (!payout.created_at) return false;
+
+    const payoutDate = new Date(payout.created_at);
+
+    switch (reportPeriod) {
+      case "monthly":
+        return (
+          payoutDate.getMonth() === now.getMonth() &&
+          payoutDate.getFullYear() === now.getFullYear()
+        );
+
+      case "quarterly": {
+        const currentQuarter = Math.floor(now.getMonth() / 3);
+        const payoutQuarter = Math.floor(
+          payoutDate.getMonth() / 3
+        );
+
+        return (
+          payoutQuarter === currentQuarter &&
+          payoutDate.getFullYear() === now.getFullYear()
+        );
+      }
+
+      case "semiannual": {
+        const currentHalf = now.getMonth() < 6 ? 1 : 2;
+        const payoutHalf = payoutDate.getMonth() < 6 ? 1 : 2;
+
+        return (
+          currentHalf === payoutHalf &&
+          payoutDate.getFullYear() === now.getFullYear()
+        );
+      }
+
+      case "annual":
+        return (
+          payoutDate.getFullYear() === now.getFullYear()
+        );
+
+      default:
+        return true;
+    }
+  });
+}, [payouts, reportPeriod]);
+
+  const pendingPayouts = filteredPayouts.filter(
     (p) => (p.status || "pending") === "pending"
   );
 
-  const approvedPayouts = payouts.filter(
+  const approvedPayouts = filteredPayouts.filter(
     (p) => p.status === "approved"
   );
 
-  const paidPayouts = payouts.filter(
+  const paidPayouts = filteredPayouts.filter(
     (p) => p.status === "paid"
   );
 
-  const rejectedPayouts = payouts.filter(
+  const rejectedPayouts = filteredPayouts.filter(
     (p) => p.status === "rejected"
   );
 
@@ -118,6 +168,33 @@ export default function AdminFinancePayoutsPage() {
           Monitor creator payout obligations, approved requests,
           completed disbursements, and settlement liabilities.
         </p>
+
+        <div className="mt-6 flex flex-col gap-2 sm:flex-row sm:items-center">
+  <label className="text-sm font-bold text-gray-700">
+    Report Period
+  </label>
+
+  <select
+    value={reportPeriod}
+    onChange={(e) =>
+      setReportPeriod(
+        e.target.value as
+          | "all"
+          | "monthly"
+          | "quarterly"
+          | "semiannual"
+          | "annual"
+      )
+    }
+    className="rounded-xl border px-4 py-2 text-sm font-bold"
+  >
+    <option value="all">All Time</option>
+    <option value="monthly">Monthly</option>
+    <option value="quarterly">Quarterly</option>
+    <option value="semiannual">Semi-Annual</option>
+    <option value="annual">Annual</option>
+  </select>
+</div>
 
         {message && (
           <p className="mt-5 rounded-xl bg-red-50 p-4 text-sm font-bold text-red-700">

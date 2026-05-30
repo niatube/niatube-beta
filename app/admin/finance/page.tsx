@@ -46,6 +46,9 @@ export default function AdminFinancePage() {
   const [payouts, setPayouts] = useState<PayoutRequest[]>([]);
   const [loading, setLoading] = useState(true);
   const [message, setMessage] = useState("");
+  const [reportPeriod, setReportPeriod] = useState<
+  "all" | "monthly" | "quarterly" | "semiannual" | "annual"
+>("all");
 
   async function loadFinanceData() {
     setLoading(true);
@@ -83,11 +86,54 @@ export default function AdminFinancePage() {
   useEffect(() => {
     loadFinanceData();
   }, []);
+  const filteredTips = useMemo(() => {
+  const now = new Date();
+
+  return tips.filter((tip) => {
+    if (!tip.created_at) return false;
+
+    const tipDate = new Date(tip.created_at);
+
+    switch (reportPeriod) {
+      case "monthly":
+        return (
+          tipDate.getMonth() === now.getMonth() &&
+          tipDate.getFullYear() === now.getFullYear()
+        );
+
+      case "quarterly": {
+        const currentQuarter = Math.floor(now.getMonth() / 3);
+        const tipQuarter = Math.floor(tipDate.getMonth() / 3);
+
+        return (
+          tipQuarter === currentQuarter &&
+          tipDate.getFullYear() === now.getFullYear()
+        );
+      }
+
+      case "semiannual": {
+        const currentHalf = now.getMonth() < 6 ? 1 : 2;
+        const tipHalf = tipDate.getMonth() < 6 ? 1 : 2;
+
+        return (
+          currentHalf === tipHalf &&
+          tipDate.getFullYear() === now.getFullYear()
+        );
+      }
+
+      case "annual":
+        return tipDate.getFullYear() === now.getFullYear();
+
+      default:
+        return true;
+    }
+  });
+}, [tips, reportPeriod]);
 
   const totalsByCurrency = useMemo(() => {
     const totals: Record<string, CurrencyTotals> = {};
 
-    tips.forEach((tip) => {
+    filteredTips.forEach((tip) => {
       const currency = tip.currency_code || "UNKNOWN";
       const gross = Number(tip.gross_amount ?? tip.amount ?? 0);
       const fees = Number(tip.platform_fee ?? 0);
@@ -112,7 +158,7 @@ export default function AdminFinancePage() {
     return Object.values(totals).sort((a, b) =>
       a.currency.localeCompare(b.currency)
     );
-  }, [tips]);
+  }, [filteredTips]);
 
   const pendingPayouts = payouts.filter(
     (payout) => (payout.status || "pending") === "pending"
@@ -149,6 +195,32 @@ export default function AdminFinancePage() {
           Platform finance overview for multi-currency tips, NiaTube platform
           fees, creator net earnings, and pending payout obligations.
         </p>
+        <div className="mt-6 flex flex-col gap-2 sm:flex-row sm:items-center">
+  <label className="text-sm font-bold text-gray-700">
+    Report Period
+  </label>
+
+  <select
+    value={reportPeriod}
+    onChange={(e) =>
+      setReportPeriod(
+        e.target.value as
+          | "all"
+          | "monthly"
+          | "quarterly"
+          | "semiannual"
+          | "annual"
+      )
+    }
+    className="rounded-xl border px-4 py-2 text-sm font-bold"
+  >
+    <option value="all">All Time</option>
+    <option value="monthly">Monthly</option>
+    <option value="quarterly">Quarterly</option>
+    <option value="semiannual">Semi-Annual</option>
+    <option value="annual">Annual</option>
+  </select>
+</div>
 
         {message && (
           <p className="mt-6 rounded-xl bg-red-50 p-4 text-sm font-bold text-red-700">
@@ -167,7 +239,7 @@ export default function AdminFinancePage() {
                 <p className="text-sm font-bold text-gray-500">
                   Total Tip Transactions
                 </p>
-                <p className="mt-2 text-3xl font-black">{tips.length}</p>
+                <p className="mt-2 text-3xl font-black">{filteredTips.length}</p>
               </div>
 
               <div className="rounded-2xl bg-white p-5 shadow-sm">
