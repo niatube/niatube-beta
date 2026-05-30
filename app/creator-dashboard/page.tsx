@@ -553,13 +553,51 @@ setSubscriberCount(totalSubscribers);
             <p className="mt-2 text-3xl font-black">{tips.length}</p>
           </div>
 
-          <div className="rounded-2xl bg-white p-5 shadow-sm">
-            <p className="text-sm font-bold text-gray-500">Currencies</p>
-            <p className="mt-2 text-3xl font-black">
-              {tipTotalsByCurrency.length}
-            </p>
-          </div>
+         <div className="rounded-2xl bg-white p-5 shadow-sm">
+           <p className="text-sm font-bold text-gray-500">Currencies Held</p>
+           <p className="mt-2 text-3xl font-black">
+  {tipTotalsByCurrency.length}
+</p>
+         <p className="mt-2 text-xs text-gray-500">
+          Net wallet currencies
+        </p>
         </div>
+        </div>
+          <div className="mt-8 rounded-3xl border border-yellow-200 bg-yellow-50 p-6 shadow-sm">
+  <h2 className="text-2xl font-black text-gray-900">
+    Wallet Summary
+  </h2>
+
+  <p className="mt-2 text-sm text-gray-700">
+    This summary shows net creator wallet activity after NiaTube’s platform fee.
+    FX conversion happens only when a payout or NiaCredit conversion is requested.
+  </p>
+
+  <div className="mt-5 grid gap-4 md:grid-cols-3">
+    <div className="rounded-2xl bg-white p-5 shadow-sm">
+      <p className="text-sm font-bold text-gray-500">Currencies Held</p>
+      <p className="mt-2 text-3xl font-black text-gray-900">
+        {tipTotalsByCurrency.length}
+      </p>
+    </div>
+
+    <div className="rounded-2xl bg-white p-5 shadow-sm">
+      <p className="text-sm font-bold text-gray-500">Lifetime Tips</p>
+      <p className="mt-2 text-3xl font-black text-gray-900">
+        {tips.length}
+      </p>
+    </div>
+
+    <div className="rounded-2xl bg-white p-5 shadow-sm">
+      <p className="text-sm font-bold text-gray-500">
+        Pending Payout Requests
+      </p>
+      <p className="mt-2 text-3xl font-black text-gray-900">
+        {payouts.filter((payout) => payout.status === "pending").length}
+      </p>
+    </div>
+  </div>
+</div>
 
         <div className="mt-8 rounded-3xl bg-white p-6 shadow-sm">
           <h2 className="text-2xl font-black text-gray-900">
