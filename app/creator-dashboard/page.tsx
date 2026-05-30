@@ -38,6 +38,9 @@ type Tip = {
   currency_code?: string;
   message?: string;
   created_at?: string;
+  gross_amount?: number;
+platform_fee?: number;
+net_amount?: number;
 };
 
 type PayoutRequest = {
