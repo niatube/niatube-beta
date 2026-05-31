@@ -40,19 +40,45 @@ function formatAmount(value: number) {
     maximumFractionDigits: 2,
   });
 }
+function convertAmount(
+  amount: number,
+  fromCurrency: string,
+  toCurrency: string
+) {
+  if (fromCurrency === toCurrency) return amount;
+
+  const rateRow = fxRates.find(
+    (rate) =>
+      rate.base_currency === fromCurrency &&
+      rate.target_currency === toCurrency
+  );
+
+  if (!rateRow) return 0;
+
+  return amount * Number(rateRow.rate || 0);
+}
 
 export default function AdminFinancePage() {
   const [tips, setTips] = useState<Tip[]>([]);
   const [payouts, setPayouts] = useState<PayoutRequest[]>([]);
   const [loading, setLoading] = useState(true);
   const [message, setMessage] = useState("");
+
   const [reportPeriod, setReportPeriod] = useState<
   "all" | "monthly" | "quarterly" | "semiannual" | "annual"
 >("all");
+const [reportingCurrency, setReportingCurrency] =
+  useState<"USD" | "EUR">("USD");
+  const [fxRates, setFxRates] = useState<any[]>([]);
 
   async function loadFinanceData() {
     setLoading(true);
     setMessage("");
+
+    const { data: fxData } = await supabase
+  .from("fx_rates")
+  .select("*");
+  setFxRates(fxData || []);
 
     const { data: tipsData, error: tipsError } = await supabase
       .from("tips")
