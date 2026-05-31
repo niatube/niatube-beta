@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import { supabaseAdmin } from "../../../lib/supabase-server";
+import { getSupabaseAdmin } from "@/lib/supabase-server";
 
 export const dynamic = "force-dynamic";
 
@@ -23,6 +23,7 @@ function calculateTrendingScore(upload: any) {
 
 export async function GET(req: Request) {
   try {
+    const supabaseAdmin = getSupabaseAdmin();
     const { searchParams } = new URL(req.url);
     const showAll = searchParams.get("all") === "true";
 
@@ -73,6 +74,7 @@ export async function GET(req: Request) {
 
 export async function POST(req: Request) {
   try {
+    const supabaseAdmin = getSupabaseAdmin();
     const body = await req.json();
 
     const {
