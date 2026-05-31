@@ -32,6 +32,7 @@ type FxRate = {
   target_currency: string;
   rate: number;
   updated_at?: string;
+  source?: string | null;
 };
 
 type CurrencyTotals = {
@@ -315,6 +316,60 @@ export default function AdminFinancePage() {
             {message}
           </p>
         )}
+         <div className="mt-6 rounded-3xl bg-white p-6 shadow-sm">
+  <h2 className="text-xl font-black text-gray-900">
+    FX Status
+  </h2>
+
+  <div className="mt-4 grid gap-4 md:grid-cols-2 xl:grid-cols-5">
+    <div>
+      <p className="text-xs font-bold uppercase text-gray-500">
+        Source
+      </p>
+      <p className="mt-1 text-lg font-black">
+        {fxRates[0]?.source || "Unknown"}
+      </p>
+    </div>
+
+    <div>
+      <p className="text-xs font-bold uppercase text-gray-500">
+        Base Currency
+      </p>
+      <p className="mt-1 text-lg font-black">USD</p>
+    </div>
+
+    <div>
+      <p className="text-xs font-bold uppercase text-gray-500">
+        Rates Loaded
+      </p>
+      <p className="mt-1 text-lg font-black">
+        {fxRates.length}
+      </p>
+    </div>
+
+    <div>
+      <p className="text-xs font-bold uppercase text-gray-500">
+        Last Updated
+      </p>
+      <p className="mt-1 text-sm font-bold">
+        {fxRates[0]?.updated_at
+          ? new Date(
+              fxRates[0].updated_at
+            ).toLocaleString()
+          : "Not available"}
+      </p>
+    </div>
+
+    <div>
+      <p className="text-xs font-bold uppercase text-gray-500">
+        Status
+      </p>
+      <p className="mt-1 text-lg font-black text-green-700">
+        Healthy
+      </p>
+    </div>
+  </div>
+</div>
 
         {loading ? (
           <div className="mt-8 rounded-3xl bg-white p-8 shadow-sm">

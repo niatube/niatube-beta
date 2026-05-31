@@ -542,56 +542,82 @@ const [membershipLoading, setMembershipLoading] = useState(false);
   ]);
 }
 
-  async function sendTip() {
-    if (!video?.creator) return;
+ async function sendTip() {
+  if (!video?.creator) return;
 
-    const amount = Number(tipAmount);
+  const amount = Number(tipAmount);
 
-    if (!amount || amount <= 0) {
-      setTipStatus("Please enter a valid tip amount.");
-      return;
-    }
+  if (!amount || amount <= 0) {
+    setTipStatus("Please enter a valid tip amount.");
+    return;
+  }
 
-    const { data, error } = await supabase
-      .from("tips")
-      .insert([
-        {
-  creator_name: video.creator,
-  amount,
-  gross_amount: amount,
-  platform_fee: amount * 0.05,
-  net_amount: amount * 0.95,
-  fee_rate: 0.05,
-  currency_code: tipCurrency,
-  message: tipMessage.trim(),
-},
-      ])
-      .select()
+  const reportingCurrency = "USD";
+  let fxRateUsed = 1;
+  let convertedAmount = amount;
+
+  if (tipCurrency !== reportingCurrency) {
+    const { data: fxRateData, error: fxRateError } = await supabase
+      .from("fx_rates")
+      .select("rate")
+      .eq("base_currency", reportingCurrency)
+      .eq("target_currency", tipCurrency)
       .single();
 
-    if (error) {
-      console.error("Tip error:", error);
-      setTipStatus("Tip failed. Please check Supabase policies.");
+    if (fxRateError || !fxRateData?.rate) {
+      console.error("FX rate error:", fxRateError);
+      setTipStatus("Tip failed. FX rate is not available for this currency.");
       return;
     }
 
-    if (data) {
-      setTips((prev) => [data as Tip, ...prev].slice(0, 5));
+    fxRateUsed = 1 / Number(fxRateData.rate);
+    convertedAmount = amount * fxRateUsed;
+  }
 
-      await supabase.from("notifications").insert([
-        {
-          creator_name: video.creator,
-          type: "tip",
-          title: "New tip received",
-          message: `You received a tip of ${tipCurrency} ${amount}.`,
-        },
-      ]);
-    }
+  const { data, error } = await supabase
+    .from("tips")
+    .insert([
+      {
+        creator_name: video.creator,
+        amount,
+        gross_amount: amount,
+        platform_fee: amount * 0.05,
+        net_amount: amount * 0.95,
+        fee_rate: 0.05,
+        currency_code: tipCurrency,
+        currency: tipCurrency,
+        message: tipMessage.trim(),
+        fx_rate_used: fxRateUsed,
+        reporting_currency: reportingCurrency,
+        converted_amount: convertedAmount,
+      },
+    ])
+    .select()
+    .single();
+
+  if (error) {
+    console.error("Tip error:", error);
+    setTipStatus("Tip failed. Please check Supabase policies.");
+    return;
+  }
+
+  if (data) {
+    setTips((prev) => [data as Tip, ...prev].slice(0, 5));
+
+    await supabase.from("notifications").insert([
+      {
+        creator_name: video.creator,
+        type: "tip",
+        title: "New tip received",
+        message: `You received a tip of ${tipCurrency} ${amount}.`,
+      },
+    ]);
 
     setTipAmount("");
     setTipMessage("");
-    setTipStatus(`Tip sent in ${tipCurrency}.`);
+    setTipStatus("Tip sent successfully.");
   }
+}
 
   async function sendComment() {
     const finalComment = commentText.trim();
