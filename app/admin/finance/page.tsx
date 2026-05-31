@@ -24,7 +24,14 @@ type PayoutRequest = {
   currency_code?: string;
   status?: string;
   created_at?: string;
-  requested_at?: string;
+};
+
+type FxRate = {
+  id: string;
+  base_currency: string;
+  target_currency: string;
+  rate: number;
+  updated_at?: string;
 };
 
 type CurrencyTotals = {
@@ -40,10 +47,12 @@ function formatAmount(value: number) {
     maximumFractionDigits: 2,
   });
 }
+
 function convertAmount(
   amount: number,
   fromCurrency: string,
-  toCurrency: string
+  toCurrency: string,
+  fxRates: FxRate[]
 ) {
   if (fromCurrency === toCurrency) return amount;
 
@@ -61,24 +70,20 @@ function convertAmount(
 export default function AdminFinancePage() {
   const [tips, setTips] = useState<Tip[]>([]);
   const [payouts, setPayouts] = useState<PayoutRequest[]>([]);
+  const [fxRates, setFxRates] = useState<FxRate[]>([]);
   const [loading, setLoading] = useState(true);
   const [message, setMessage] = useState("");
 
   const [reportPeriod, setReportPeriod] = useState<
-  "all" | "monthly" | "quarterly" | "semiannual" | "annual"
->("all");
-const [reportingCurrency, setReportingCurrency] =
-  useState<"USD" | "EUR">("USD");
-  const [fxRates, setFxRates] = useState<any[]>([]);
+    "all" | "monthly" | "quarterly" | "semiannual" | "annual"
+  >("all");
+
+  const [reportingCurrency, setReportingCurrency] =
+    useState<"USD" | "EUR">("USD");
 
   async function loadFinanceData() {
     setLoading(true);
     setMessage("");
-
-    const { data: fxData } = await supabase
-  .from("fx_rates")
-  .select("*");
-  setFxRates(fxData || []);
 
     const { data: tipsData, error: tipsError } = await supabase
       .from("tips")
@@ -104,57 +109,69 @@ const [reportingCurrency, setReportingCurrency] =
       return;
     }
 
+    const { data: fxData, error: fxError } = await supabase
+      .from("fx_rates")
+      .select("*");
+
+    if (fxError) {
+      console.error(fxError);
+      setMessage("Finance loaded, but FX rates could not be loaded.");
+    }
+
     setTips((tipsData || []) as Tip[]);
     setPayouts((payoutData || []) as PayoutRequest[]);
+    setFxRates((fxData || []) as FxRate[]);
     setLoading(false);
   }
 
   useEffect(() => {
     loadFinanceData();
   }, []);
+
   const filteredTips = useMemo(() => {
-  const now = new Date();
+    const now = new Date();
 
-  return tips.filter((tip) => {
-    if (!tip.created_at) return false;
+    return tips.filter((tip) => {
+      if (reportPeriod === "all") return true;
+      if (!tip.created_at) return false;
 
-    const tipDate = new Date(tip.created_at);
+      const tipDate = new Date(tip.created_at);
 
-    switch (reportPeriod) {
-      case "monthly":
-        return (
-          tipDate.getMonth() === now.getMonth() &&
-          tipDate.getFullYear() === now.getFullYear()
-        );
+      switch (reportPeriod) {
+        case "monthly":
+          return (
+            tipDate.getMonth() === now.getMonth() &&
+            tipDate.getFullYear() === now.getFullYear()
+          );
 
-      case "quarterly": {
-        const currentQuarter = Math.floor(now.getMonth() / 3);
-        const tipQuarter = Math.floor(tipDate.getMonth() / 3);
+        case "quarterly": {
+          const currentQuarter = Math.floor(now.getMonth() / 3);
+          const tipQuarter = Math.floor(tipDate.getMonth() / 3);
 
-        return (
-          tipQuarter === currentQuarter &&
-          tipDate.getFullYear() === now.getFullYear()
-        );
+          return (
+            tipQuarter === currentQuarter &&
+            tipDate.getFullYear() === now.getFullYear()
+          );
+        }
+
+        case "semiannual": {
+          const currentHalf = now.getMonth() < 6 ? 1 : 2;
+          const tipHalf = tipDate.getMonth() < 6 ? 1 : 2;
+
+          return (
+            currentHalf === tipHalf &&
+            tipDate.getFullYear() === now.getFullYear()
+          );
+        }
+
+        case "annual":
+          return tipDate.getFullYear() === now.getFullYear();
+
+        default:
+          return true;
       }
-
-      case "semiannual": {
-        const currentHalf = now.getMonth() < 6 ? 1 : 2;
-        const tipHalf = tipDate.getMonth() < 6 ? 1 : 2;
-
-        return (
-          currentHalf === tipHalf &&
-          tipDate.getFullYear() === now.getFullYear()
-        );
-      }
-
-      case "annual":
-        return tipDate.getFullYear() === now.getFullYear();
-
-      default:
-        return true;
-    }
-  });
-}, [tips, reportPeriod]);
+    });
+  }, [tips, reportPeriod]);
 
   const totalsByCurrency = useMemo(() => {
     const totals: Record<string, CurrencyTotals> = {};
@@ -185,6 +202,35 @@ const [reportingCurrency, setReportingCurrency] =
       a.currency.localeCompare(b.currency)
     );
   }, [filteredTips]);
+
+  const unifiedTotals = useMemo(() => {
+    return totalsByCurrency.reduce(
+      (sum, item) => {
+        return {
+          gross:
+            sum.gross +
+            convertAmount(
+              item.gross,
+              item.currency,
+              reportingCurrency,
+              fxRates
+            ),
+          fees:
+            sum.fees +
+            convertAmount(
+              item.fees,
+              item.currency,
+              reportingCurrency,
+              fxRates
+            ),
+          net:
+            sum.net +
+            convertAmount(item.net, item.currency, reportingCurrency, fxRates),
+        };
+      },
+      { gross: 0, fees: 0, net: 0 }
+    );
+  }, [totalsByCurrency, reportingCurrency, fxRates]);
 
   const pendingPayouts = payouts.filter(
     (payout) => (payout.status || "pending") === "pending"
@@ -221,35 +267,51 @@ const [reportingCurrency, setReportingCurrency] =
           Platform finance overview for multi-currency tips, NiaTube platform
           fees, creator net earnings, and pending payout obligations.
         </p>
-        <div className="mt-6 flex flex-col gap-2 sm:flex-row sm:items-center">
-  <label className="text-sm font-bold text-gray-700">
-    Report Period
-  </label>
 
-  <select
-    value={reportPeriod}
-    onChange={(e) =>
-      setReportPeriod(
-        e.target.value as
-          | "all"
-          | "monthly"
-          | "quarterly"
-          | "semiannual"
-          | "annual"
-      )
-    }
-    className="rounded-xl border px-4 py-2 text-sm font-bold"
-  >
-    <option value="all">All Time</option>
-    <option value="monthly">Monthly</option>
-    <option value="quarterly">Quarterly</option>
-    <option value="semiannual">Semi-Annual</option>
-    <option value="annual">Annual</option>
-  </select>
-</div>
+        <div className="mt-6 flex flex-col gap-3 sm:flex-row sm:items-center">
+          <label className="text-sm font-bold text-gray-700">
+            Report Period
+          </label>
+
+          <select
+            value={reportPeriod}
+            onChange={(e) =>
+              setReportPeriod(
+                e.target.value as
+                  | "all"
+                  | "monthly"
+                  | "quarterly"
+                  | "semiannual"
+                  | "annual"
+              )
+            }
+            className="rounded-xl border px-4 py-2 text-sm font-bold"
+          >
+            <option value="all">All Time</option>
+            <option value="monthly">Monthly</option>
+            <option value="quarterly">Quarterly</option>
+            <option value="semiannual">Semi-Annual</option>
+            <option value="annual">Annual</option>
+          </select>
+
+          <label className="text-sm font-bold text-gray-700">
+            Reporting Currency
+          </label>
+
+          <select
+            value={reportingCurrency}
+            onChange={(e) =>
+              setReportingCurrency(e.target.value as "USD" | "EUR")
+            }
+            className="rounded-xl border px-4 py-2 text-sm font-bold"
+          >
+            <option value="USD">USD</option>
+            <option value="EUR">EUR</option>
+          </select>
+        </div>
 
         {message && (
-          <p className="mt-6 rounded-xl bg-red-50 p-4 text-sm font-bold text-red-700">
+          <p className="mt-6 rounded-xl bg-yellow-50 p-4 text-sm font-bold text-yellow-800">
             {message}
           </p>
         )}
@@ -265,7 +327,9 @@ const [reportingCurrency, setReportingCurrency] =
                 <p className="text-sm font-bold text-gray-500">
                   Total Tip Transactions
                 </p>
-                <p className="mt-2 text-3xl font-black">{filteredTips.length}</p>
+                <p className="mt-2 text-3xl font-black">
+                  {filteredTips.length}
+                </p>
               </div>
 
               <div className="rounded-2xl bg-white p-5 shadow-sm">
@@ -288,10 +352,58 @@ const [reportingCurrency, setReportingCurrency] =
 
               <div className="rounded-2xl bg-white p-5 shadow-sm">
                 <p className="text-sm font-bold text-gray-500">
-                  Report Version
+                  Reporting Currency
                 </p>
-                <p className="mt-2 text-3xl font-black">v1</p>
+                <p className="mt-2 text-3xl font-black">
+                  {reportingCurrency}
+                </p>
               </div>
+            </div>
+
+            <div className="mt-8 rounded-3xl border border-yellow-200 bg-yellow-50 p-6 shadow-sm">
+              <h2 className="text-2xl font-black text-gray-900">
+                Unified Reporting View
+              </h2>
+
+              <p className="mt-1 text-sm text-gray-700">
+                This converts multi-currency finance activity into{" "}
+                {reportingCurrency} for investor, board, audit, and grant
+                reporting. Creator wallets remain in local currencies.
+              </p>
+
+              <div className="mt-5 grid gap-4 md:grid-cols-3">
+                <div className="rounded-2xl bg-white p-5 shadow-sm">
+                  <p className="text-sm font-bold text-gray-500">
+                    Gross Tips
+                  </p>
+                  <p className="mt-2 text-3xl font-black text-gray-900">
+                    {reportingCurrency} {formatAmount(unifiedTotals.gross)}
+                  </p>
+                </div>
+
+                <div className="rounded-2xl bg-white p-5 shadow-sm">
+                  <p className="text-sm font-bold text-gray-500">
+                    NiaTube Fees
+                  </p>
+                  <p className="mt-2 text-3xl font-black text-green-700">
+                    {reportingCurrency} {formatAmount(unifiedTotals.fees)}
+                  </p>
+                </div>
+
+                <div className="rounded-2xl bg-white p-5 shadow-sm">
+                  <p className="text-sm font-bold text-gray-500">
+                    Creator Net Earnings
+                  </p>
+                  <p className="mt-2 text-3xl font-black text-gray-900">
+                    {reportingCurrency} {formatAmount(unifiedTotals.net)}
+                  </p>
+                </div>
+              </div>
+
+              <p className="mt-4 text-xs font-semibold text-gray-600">
+                Missing FX rates are treated as zero until added in the FX
+                manager.
+              </p>
             </div>
 
             <div className="mt-8 rounded-3xl bg-white p-6 shadow-sm">
@@ -300,8 +412,9 @@ const [reportingCurrency, setReportingCurrency] =
               </h2>
 
               <p className="mt-1 text-sm text-gray-600">
-                Amounts are grouped by currency. NiaTube does not combine
-                currencies until an approved FX/NiaCredit conversion is applied.
+                Amounts are grouped by original currency. NiaTube does not
+                combine currencies until an approved FX/NiaCredit conversion is
+                applied.
               </p>
 
               {totalsByCurrency.length === 0 ? (
@@ -351,8 +464,7 @@ const [reportingCurrency, setReportingCurrency] =
               </h2>
 
               <p className="mt-1 text-sm text-gray-600">
-                These are pending payout requests grouped by currency. They
-                represent creator liabilities awaiting review or settlement.
+                These are pending payout requests grouped by currency.
               </p>
 
               {pendingPayoutsByCurrency.length === 0 ? (
@@ -386,7 +498,7 @@ const [reportingCurrency, setReportingCurrency] =
                 Recent Tip Transactions
               </h2>
 
-              {tips.length === 0 ? (
+              {filteredTips.length === 0 ? (
                 <p className="mt-4 text-gray-500">No recent tips.</p>
               ) : (
                 <div className="mt-5 overflow-x-auto">
@@ -403,7 +515,7 @@ const [reportingCurrency, setReportingCurrency] =
                     </thead>
 
                     <tbody>
-                      {tips.slice(0, 25).map((tip) => (
+                      {filteredTips.slice(0, 25).map((tip) => (
                         <tr key={tip.id} className="border-b">
                           <td className="px-4 py-3 text-gray-500">
                             {tip.created_at
