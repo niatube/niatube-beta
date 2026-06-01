@@ -9,6 +9,7 @@ type Tip = {
   creator_name: string;
   amount: number;
   currency_code?: string;
+currency?: string;
   gross_amount?: number;
   platform_fee?: number;
   net_amount?: number;
@@ -55,17 +56,46 @@ function convertAmount(
   toCurrency: string,
   fxRates: FxRate[]
 ) {
+  if (!amount) return 0;
   if (fromCurrency === toCurrency) return amount;
 
-  const rateRow = fxRates.find(
+  const directRate = fxRates.find(
     (rate) =>
       rate.base_currency === fromCurrency &&
       rate.target_currency === toCurrency
   );
 
-  if (!rateRow) return 0;
+  if (directRate) {
+    return amount * Number(directRate.rate || 0);
+  }
 
-  return amount * Number(rateRow.rate || 0);
+  const inverseRate = fxRates.find(
+    (rate) =>
+      rate.base_currency === toCurrency &&
+      rate.target_currency === fromCurrency
+  );
+
+  if (inverseRate) {
+    return amount / Number(inverseRate.rate || 1);
+  }
+
+  if (fromCurrency !== "USD" && toCurrency !== "USD") {
+    const toUsd = convertAmount(
+      amount,
+      fromCurrency,
+      "USD",
+      fxRates
+    );
+
+    return convertAmount(
+      toUsd,
+      "USD",
+      toCurrency,
+      fxRates
+    );
+  }
+
+  return 0;
 }
 
 export default function AdminFinancePage() {
