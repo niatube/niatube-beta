@@ -42,6 +42,8 @@ type CurrencyTotals = {
   fees: number;
   net: number;
   count: number;
+  fxToUsd: number;
+  convertedGrossUsd: number;
 };
 
 function formatAmount(value: number) {
@@ -214,16 +216,30 @@ export default function AdminFinancePage() {
       const net = Number(tip.net_amount ?? tip.amount ?? 0);
 
       if (!totals[currency]) {
-        totals[currency] = {
-          currency,
-          gross: 0,
-          fees: 0,
-          net: 0,
-          count: 0,
-        };
+   
+const fxToUsd =
+  currency === "USD"
+    ? 1
+    : convertAmount(1, currency, "USD", fxRates);
+
+totals[currency] = {
+  currency,
+  gross: 0,
+  fees: 0,
+  net: 0,
+  count: 0,
+  fxToUsd,
+  convertedGrossUsd: 0,
+};
       }
 
       totals[currency].gross += gross;
+      totals[currency].convertedGrossUsd += convertAmount(
+  gross,
+  currency,
+  "USD",
+  fxRates
+);
       totals[currency].fees += fees;
       totals[currency].net += net;
       totals[currency].count += 1;
@@ -232,7 +248,7 @@ export default function AdminFinancePage() {
     return Object.values(totals).sort((a, b) =>
       a.currency.localeCompare(b.currency)
     );
-  }, [filteredTips]);
+  }, [filteredTips, fxRates]);
 
   const unifiedTotals = useMemo(() => {
     return totalsByCurrency.reduce(
@@ -514,6 +530,13 @@ export default function AdminFinancePage() {
                         <th className="px-4 py-3">Currency</th>
                         <th className="px-4 py-3">Transactions</th>
                         <th className="px-4 py-3">Gross Tips</th>
+                        <th className="px-4 py-3 text-right">
+                            FX to USD
+                        </th>
+
+                        <th className="px-4 py-3 text-right">
+                           Converted Amount (USD)
+                        </th>
                         <th className="px-4 py-3">NiaTube Fees</th>
                         <th className="px-4 py-3">Creator Net Earnings</th>
                       </tr>
@@ -529,6 +552,13 @@ export default function AdminFinancePage() {
                           <td className="px-4 py-3">
                             {formatAmount(item.gross)}
                           </td>
+                          <td className="px-4 py-3 text-right font-bold">
+  {item.fxToUsd.toFixed(8)}
+</td>
+
+<td className="px-4 py-3 text-right font-bold">
+  USD {formatAmount(item.convertedGrossUsd)}
+</td>
                           <td className="px-4 py-3 font-bold text-green-700">
                             {formatAmount(item.fees)}
                           </td>
