@@ -43,13 +43,16 @@ type CurrencyTotals = {
   net: number;
   count: number;
   fxToUsd: number;
-  convertedGrossUsd: number;
+  convertedCreatorNetUsd: number;
+  convertedFeesUsd: number;
 };
-
 function formatAmount(value: number) {
   return Number(value || 0).toLocaleString(undefined, {
     maximumFractionDigits: 2,
   });
+}
+function roundMoney(value: number) {
+  return Math.round((Number(value || 0) + Number.EPSILON) * 100) / 100;
 }
 
 function convertAmount(
@@ -229,20 +232,29 @@ totals[currency] = {
   net: 0,
   count: 0,
   fxToUsd,
-  convertedGrossUsd: 0,
+  convertedCreatorNetUsd: 0,
+  convertedFeesUsd: 0,
 };
       }
 
-      totals[currency].gross += gross;
-      totals[currency].convertedGrossUsd += convertAmount(
-  gross,
+totals[currency].gross += gross;
+totals[currency].fees += fees;
+totals[currency].net += net;
+totals[currency].count += 1;
+
+totals[currency].convertedCreatorNetUsd += convertAmount(
+  net,
   currency,
   "USD",
   fxRates
 );
-      totals[currency].fees += fees;
-      totals[currency].net += net;
-      totals[currency].count += 1;
+
+totals[currency].convertedFeesUsd += convertAmount(
+  fees,
+  currency,
+  "USD",
+  fxRates
+);
     });
 
     return Object.values(totals).sort((a, b) =>
@@ -251,33 +263,25 @@ totals[currency] = {
   }, [filteredTips, fxRates]);
 
   const unifiedTotals = useMemo(() => {
-    return totalsByCurrency.reduce(
-      (sum, item) => {
-        return {
-          gross:
-            sum.gross +
-            convertAmount(
-              item.gross,
-              item.currency,
-              reportingCurrency,
-              fxRates
-            ),
-          fees:
-            sum.fees +
-            convertAmount(
-              item.fees,
-              item.currency,
-              reportingCurrency,
-              fxRates
-            ),
-          net:
-            sum.net +
-            convertAmount(item.net, item.currency, reportingCurrency, fxRates),
-        };
-      },
-      { gross: 0, fees: 0, net: 0 }
-    );
-  }, [totalsByCurrency, reportingCurrency, fxRates]);
+  return totalsByCurrency.reduce(
+    (sum, item) => {
+      const feesUsd = roundMoney(item.convertedFeesUsd);
+      const netUsd = roundMoney(item.convertedCreatorNetUsd);
+      const grossUsd = roundMoney(feesUsd + netUsd);
+
+      const fees = convertAmount(feesUsd, "USD", reportingCurrency, fxRates);
+      const net = convertAmount(netUsd, "USD", reportingCurrency, fxRates);
+      const gross = convertAmount(grossUsd, "USD", reportingCurrency, fxRates);
+
+      return {
+        gross: roundMoney(sum.gross + gross),
+        fees: roundMoney(sum.fees + fees),
+        net: roundMoney(sum.net + net),
+      };
+    },
+    { gross: 0, fees: 0, net: 0 }
+  );
+}, [totalsByCurrency, reportingCurrency, fxRates]);
 
   const pendingPayouts = payouts.filter(
     (payout) => (payout.status || "pending") === "pending"
@@ -530,15 +534,22 @@ totals[currency] = {
                         <th className="px-4 py-3">Currency</th>
                         <th className="px-4 py-3">Transactions</th>
                         <th className="px-4 py-3">Gross Tips</th>
-                        <th className="px-4 py-3 text-right">
-                            FX to USD
-                        </th>
 
-                        <th className="px-4 py-3 text-right">
-                           Converted Amount (USD)
-                        </th>
-                        <th className="px-4 py-3">NiaTube Fees</th>
-                        <th className="px-4 py-3">Creator Net Earnings</th>
+<th className="px-4 py-3">NiaTube Fees</th>
+
+<th className="px-4 py-3">Creator Net Earnings</th>
+
+<th className="px-4 py-3 text-right">
+  FX to USD
+</th>
+
+<th className="px-4 py-3 text-right">
+  Converted Creator Net (USD)
+</th>
+
+<th className="px-4 py-3 text-right">
+  Converted Fees (USD)
+</th>
                       </tr>
                     </thead>
 
@@ -549,22 +560,31 @@ totals[currency] = {
                             {item.currency}
                           </td>
                           <td className="px-4 py-3">{item.count}</td>
+
                           <td className="px-4 py-3">
-                            {formatAmount(item.gross)}
-                          </td>
-                          <td className="px-4 py-3 text-right font-bold">
+  {formatAmount(item.gross)}
+</td>
+
+<td className="px-4 py-3 font-bold text-green-700">
+  {formatAmount(item.fees)}
+</td>
+
+<td className="px-4 py-3 font-bold text-gray-900">
+  {formatAmount(item.net)}
+</td>
+
+<td className="px-4 py-3 text-right font-bold">
   {item.fxToUsd.toFixed(8)}
 </td>
 
 <td className="px-4 py-3 text-right font-bold">
-  USD {formatAmount(item.convertedGrossUsd)}
+  USD {formatAmount(item.convertedCreatorNetUsd)}
 </td>
-                          <td className="px-4 py-3 font-bold text-green-700">
-                            {formatAmount(item.fees)}
-                          </td>
-                          <td className="px-4 py-3 font-bold text-gray-900">
-                            {formatAmount(item.net)}
-                          </td>
+
+<td className="px-4 py-3 text-right font-bold text-green-700">
+  USD {formatAmount(item.convertedFeesUsd)}
+</td>
+
                         </tr>
                       ))}
                     </tbody>
