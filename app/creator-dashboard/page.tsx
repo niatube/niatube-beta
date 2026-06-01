@@ -36,13 +36,21 @@ type Tip = {
   creator_name: string;
   amount: number;
   currency_code?: string;
+  currency?: string;
   message?: string;
   created_at?: string;
   gross_amount?: number;
-platform_fee?: number;
-net_amount?: number;
+  platform_fee?: number;
+  net_amount?: number;
 };
-
+type FxRate = {
+  id?: string;
+  base_currency: string;
+  target_currency: string;
+  rate: number;
+  updated_at?: string;
+  source?: string | null;
+};
 type PayoutRequest = {
   id: string;
   creator_name: string;
@@ -61,10 +69,51 @@ type NotificationItem = {
   read?: boolean;
   created_at?: string;
 };
+function convertAmount(
+  amount: number,
+  fromCurrency: string,
+  toCurrency: string,
+  fxRates: FxRate[]
+) {
+  if (!amount) return 0;
+  if (fromCurrency === toCurrency) return amount;
 
+  const directRate = fxRates.find(
+    (rate) =>
+      rate.base_currency === fromCurrency &&
+      rate.target_currency === toCurrency
+  );
+
+  if (directRate) {
+    return amount * Number(directRate.rate || 0);
+  }
+
+  const inverseRate = fxRates.find(
+    (rate) =>
+      rate.base_currency === toCurrency &&
+      rate.target_currency === fromCurrency
+  );
+
+  if (inverseRate) {
+    return amount / Number(inverseRate.rate || 1);
+  }
+
+  if (fromCurrency !== "USD" && toCurrency !== "USD") {
+    const toUsd = convertAmount(amount, fromCurrency, "USD", fxRates);
+    return convertAmount(toUsd, "USD", toCurrency, fxRates);
+  }
+
+  return 0;
+}
+
+function formatAmount(value: number) {
+  return Number(value || 0).toLocaleString(undefined, {
+    maximumFractionDigits: 2,
+  });
+}
 export default function CreatorDashboardPage() {
   const router = useRouter();
-
+   const [fxRates, setFxRates] = useState<FxRate[]>([]);
   const [creatorName, setCreatorName] = useState("Creator");
   const [uploads, setUploads] = useState<Upload[]>([]);
   const [tips, setTips] = useState<Tip[]>([]);
@@ -167,6 +216,11 @@ const migratedSubscribers =
         .eq("creator_name", activeCreatorName)
         .order("created_at", { ascending: false })
         .limit(8);
+      const { data: fxData } = await supabase
+  .from("fx_rates")
+  .select("*");
+
+setFxRates((fxData || []) as FxRate[]);
 
       setUploads((uploadsData || []) as Upload[]);
       setTips((tipsData || []) as Tip[]);
@@ -230,20 +284,21 @@ setSubscriberCount(totalSubscribers);
   }, 0);
 
   const tipTotalsByCurrency = useMemo(() => {
-    const totals: Record<string, number> = {};
+  const totals: Record<string, number> = {};
 
-    tips.forEach((tip) => {
-  const currency = tip.currency_code || "UNKNOWN";
+  tips.forEach((tip) => {
+    const currency = tip.currency_code || tip.currency || "UNKNOWN";
+    const gross = Number(tip.gross_amount ?? tip.amount ?? 0);
+    const fee = Number(tip.platform_fee ?? gross * 0.05);
+    const net = Number(tip.net_amount ?? gross - fee);
 
-  totals[currency] =
-    (totals[currency] || 0) +
-    Number(tip.net_amount ?? tip.amount ?? 0);
-});
+    totals[currency] = (totals[currency] || 0) + net;
+  });
 
-    return Object.entries(totals)
-      .map(([currency, amount]) => ({ currency, amount }))
-      .sort((a, b) => a.currency.localeCompare(b.currency));
-  }, [tips]);
+  return Object.entries(totals)
+    .map(([currency, amount]) => ({ currency, amount }))
+    .sort((a, b) => a.currency.localeCompare(b.currency));
+}, [tips]);
 
   const selectedCurrencyTotal =
     tipTotalsByCurrency.find(
