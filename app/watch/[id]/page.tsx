@@ -114,8 +114,10 @@ export default function WatchPage() {
 
   const [likeCount, setLikeCount] = useState(0);
   const [liked, setLiked] = useState(false);
+  const [subscriberGrowth30Days, setSubscriberGrowth30Days] = useState(0);
 
   const [subscriberCount, setSubscriberCount] = useState(0);
+ 
   const [subscribed, setSubscribed] = useState(false);
   const [member, setMember] = useState(false);
 const [membershipLoading, setMembershipLoading] = useState(false);

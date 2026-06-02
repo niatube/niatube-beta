@@ -121,8 +121,12 @@ export default function CreatorDashboardPage() {
   const [notifications, setNotifications] = useState<NotificationItem[]>([]);
   const [nativeSubscriberCount, setNativeSubscriberCount] = useState(0);
 const [migratedSubscriberCount, setMigratedSubscriberCount] = useState(0);
+
 const [subscriberCount, setSubscriberCount] = useState(0);
+
 const [subscriberGrowth30Days, setSubscriberGrowth30Days] = useState(0);
+
+const [subscriberRows, setSubscriberRows] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [creatorSince, setCreatorSince] = useState("");
   const [creatorCountry, setCreatorCountry] = useState("Not set");
@@ -239,11 +243,14 @@ const subscribersLast30Days =
     return new Date(subscriber.created_at) >= thirtyDaysAgo;
   }).length || 0;
 
+setSubscriberRows(subscriberData || []);
+
 setNativeSubscriberCount(nativeSubscribers);
 setMigratedSubscriberCount(migratedSubscribers);
 setSubscriberCount(totalSubscribers);
 setSubscriberGrowth30Days(subscribersLast30Days);
-      setLoading(false);
+
+setLoading(false);
     }
 
     loadDashboard();
