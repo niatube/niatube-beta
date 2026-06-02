@@ -4,17 +4,29 @@ import { useEffect, useMemo, useState } from "react";
 import Navbar from "@/components/Navbar";
 import { supabase } from "@/lib/supabase-browser";
 import * as XLSX from "xlsx";
-
 type Tip = {
   id: string;
   creator_name: string;
   amount: number;
+
   currency_code?: string;
   currency?: string;
+
   gross_amount?: number;
   platform_fee?: number;
   net_amount?: number;
   fee_rate?: number;
+
+  original_amount?: number;
+  original_currency?: string;
+
+  reporting_currency?: string;
+  fx_rate_used?: number;
+  converted_amount?: number;
+
+  fx_source?: string;
+  fx_timestamp?: string;
+
   message?: string;
   created_at?: string;
 };
@@ -801,14 +813,15 @@ export default function AdminFinancePage() {
                 <div className="mt-5 overflow-x-auto">
                   <table className="w-full border-collapse text-left text-sm">
                     <thead>
-                      <tr className="border-b bg-gray-50">
-                        <th className="px-4 py-3">Date</th>
-                        <th className="px-4 py-3">Creator</th>
-                        <th className="px-4 py-3">Currency</th>
-                        <th className="px-4 py-3">Gross</th>
-                        <th className="px-4 py-3">Fee</th>
-                        <th className="px-4 py-3">Net</th>
-                      </tr>
+                     <tr className="border-b bg-gray-50">
+  <th className="px-4 py-3">Date</th>
+  <th className="px-4 py-3">Creator</th>
+  <th className="px-4 py-3">Original</th>
+  <th className="px-4 py-3">Reporting</th>
+  <th className="px-4 py-3">FX Rate</th>
+  <th className="px-4 py-3">Source</th>
+  <th className="px-4 py-3">FX Timestamp</th>
+</tr>
                     </thead>
 
                     <tbody>
@@ -830,17 +843,36 @@ export default function AdminFinancePage() {
                               {tip.creator_name}
                             </td>
                             <td className="px-4 py-3">
-                              {tip.currency_code || tip.currency || "UNKNOWN"}
-                            </td>
-                            <td className="px-4 py-3">
-                              {formatAmount(gross)}
-                            </td>
-                            <td className="px-4 py-3 font-bold text-green-700">
-                              {formatAmount(fee)}
-                            </td>
-                            <td className="px-4 py-3 font-bold text-gray-900">
-                              {formatAmount(net)}
-                            </td>
+  {formatAmount(
+    Number(tip.original_amount ?? gross)
+  )}{" "}
+  {tip.original_currency ||
+    tip.currency_code ||
+    tip.currency}
+</td>
+
+<td className="px-4 py-3 font-bold">
+  {formatAmount(
+    Number(tip.converted_amount ?? net)
+  )}{" "}
+  {tip.reporting_currency || "USD"}
+</td>
+
+<td className="px-4 py-3">
+  {tip.fx_rate_used
+    ? Number(tip.fx_rate_used).toFixed(4)
+    : "-"}
+</td>
+
+<td className="px-4 py-3">
+  {tip.fx_source || "-"}
+</td>
+
+<td className="px-4 py-3 text-gray-500">
+  {tip.fx_timestamp
+    ? new Date(tip.fx_timestamp).toLocaleString()
+    : "-"}
+</td>
                           </tr>
                         );
                       })}
