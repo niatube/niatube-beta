@@ -9,7 +9,7 @@ type Tip = {
   creator_name: string;
   amount: number;
   currency_code?: string;
-currency?: string;
+  currency?: string;
   gross_amount?: number;
   platform_fee?: number;
   net_amount?: number;
@@ -28,7 +28,7 @@ type PayoutRequest = {
 };
 
 type FxRate = {
-  id: string;
+  id?: string;
   base_currency: string;
   target_currency: string;
   rate: number;
@@ -46,11 +46,13 @@ type CurrencyTotals = {
   convertedCreatorNetUsd: number;
   convertedFeesUsd: number;
 };
+
 function formatAmount(value: number) {
   return Number(value || 0).toLocaleString(undefined, {
     maximumFractionDigits: 2,
   });
 }
+
 function roundMoney(value: number) {
   return Math.round((Number(value || 0) + Number.EPSILON) * 100) / 100;
 }
@@ -85,19 +87,8 @@ function convertAmount(
   }
 
   if (fromCurrency !== "USD" && toCurrency !== "USD") {
-    const toUsd = convertAmount(
-      amount,
-      fromCurrency,
-      "USD",
-      fxRates
-    );
-
-    return convertAmount(
-      toUsd,
-      "USD",
-      toCurrency,
-      fxRates
-    );
+    const toUsd = convertAmount(amount, fromCurrency, "USD", fxRates);
+    return convertAmount(toUsd, "USD", toCurrency, fxRates);
   }
 
   return 0;
@@ -116,54 +107,61 @@ export default function AdminFinancePage() {
 
   const [reportingCurrency, setReportingCurrency] =
     useState<"USD" | "EUR">("USD");
-    function exportCurrencyReportCsv() {
-  const rows = [
-    [
-      "Currency",
-      "Transactions",
-      "Gross Tips",
-      "NiaTube Fees",
-      "Creator Net",
-      "FX to USD",
-      "Converted Creator Net (USD)",
-      "Converted Fees (USD)",
-    ],
 
-    ...totalsByCurrency.map((item) => [
-      item.currency,
-      item.count,
-      item.gross,
-      item.fees,
-      item.net,
-      item.fxToUsd,
-      item.convertedCreatorNetUsd,
-      item.convertedFeesUsd,
-    ]),
-  ];
+  async function exportCurrencyReportCsv() {
+    const rows = [
+      [
+        "Currency",
+        "Transactions",
+        "Gross Tips",
+        "NiaTube Fees",
+        "Creator Net",
+        "FX to USD",
+        "Converted Creator Net (USD)",
+        "Converted Fees (USD)",
+      ],
 
-  const csv = rows
-    .map((row) => row.join(","))
-    .join("\n");
+      ...totalsByCurrency.map((item) => [
+        item.currency,
+        item.count,
+        item.gross,
+        item.fees,
+        item.net,
+        item.fxToUsd,
+        item.convertedCreatorNetUsd,
+        item.convertedFeesUsd,
+      ]),
+    ];
 
-  const blob = new Blob([csv], {
-    type: "text/csv;charset=utf-8;",
-  });
+    const csv = rows.map((row) => row.join(",")).join("\n");
 
-  const url = URL.createObjectURL(blob);
+    const blob = new Blob([csv], {
+      type: "text/csv;charset=utf-8;",
+    });
 
-  const link = document.createElement("a");
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement("a");
 
-  link.href = url;
-  link.download = `finance-report-${Date.now()}.csv`;
+    link.href = url;
+    link.download = `finance-report-${Date.now()}.csv`;
 
-  document.body.appendChild(link);
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
 
-  link.click();
+    URL.revokeObjectURL(url);
 
-  document.body.removeChild(link);
-
-  URL.revokeObjectURL(url);
-}
+    await supabase.from("finance_report_audit_logs").insert([
+      {
+        report_name: "Tip Revenue by Currency CSV",
+        reporting_currency: reportingCurrency,
+        report_period: reportPeriod,
+        fx_source: fxRates[0]?.source || "Unknown",
+        fx_rate_count: fxRates.length,
+        generated_by: "admin",
+      },
+    ]);
+  }
 
   async function loadFinanceData() {
     setLoading(true);
@@ -195,7 +193,8 @@ export default function AdminFinancePage() {
 
     const { data: fxData, error: fxError } = await supabase
       .from("fx_rates")
-      .select("*");
+      .select("*")
+      .order("updated_at", { ascending: false });
 
     if (fxError) {
       console.error(fxError);
@@ -261,48 +260,47 @@ export default function AdminFinancePage() {
     const totals: Record<string, CurrencyTotals> = {};
 
     filteredTips.forEach((tip) => {
-      const currency = tip.currency_code || "UNKNOWN";
+      const currency = tip.currency_code || tip.currency || "UNKNOWN";
       const gross = Number(tip.gross_amount ?? tip.amount ?? 0);
-      const fees = Number(tip.platform_fee ?? 0);
-      const net = Number(tip.net_amount ?? tip.amount ?? 0);
+      const fees = Number(tip.platform_fee ?? gross * 0.05);
+      const net = Number(tip.net_amount ?? gross - fees);
 
       if (!totals[currency]) {
-   
-const fxToUsd =
-  currency === "USD"
-    ? 1
-    : convertAmount(1, currency, "USD", fxRates);
+        const fxToUsd =
+          currency === "USD"
+            ? 1
+            : convertAmount(1, currency, "USD", fxRates);
 
-totals[currency] = {
-  currency,
-  gross: 0,
-  fees: 0,
-  net: 0,
-  count: 0,
-  fxToUsd,
-  convertedCreatorNetUsd: 0,
-  convertedFeesUsd: 0,
-};
+        totals[currency] = {
+          currency,
+          gross: 0,
+          fees: 0,
+          net: 0,
+          count: 0,
+          fxToUsd,
+          convertedCreatorNetUsd: 0,
+          convertedFeesUsd: 0,
+        };
       }
 
-totals[currency].gross += gross;
-totals[currency].fees += fees;
-totals[currency].net += net;
-totals[currency].count += 1;
+      totals[currency].gross += gross;
+      totals[currency].fees += fees;
+      totals[currency].net += net;
+      totals[currency].count += 1;
 
-totals[currency].convertedCreatorNetUsd += convertAmount(
-  net,
-  currency,
-  "USD",
-  fxRates
-);
+      totals[currency].convertedCreatorNetUsd += convertAmount(
+        net,
+        currency,
+        "USD",
+        fxRates
+      );
 
-totals[currency].convertedFeesUsd += convertAmount(
-  fees,
-  currency,
-  "USD",
-  fxRates
-);
+      totals[currency].convertedFeesUsd += convertAmount(
+        fees,
+        currency,
+        "USD",
+        fxRates
+      );
     });
 
     return Object.values(totals).sort((a, b) =>
@@ -311,25 +309,25 @@ totals[currency].convertedFeesUsd += convertAmount(
   }, [filteredTips, fxRates]);
 
   const unifiedTotals = useMemo(() => {
-  return totalsByCurrency.reduce(
-    (sum, item) => {
-      const feesUsd = roundMoney(item.convertedFeesUsd);
-      const netUsd = roundMoney(item.convertedCreatorNetUsd);
-      const grossUsd = roundMoney(feesUsd + netUsd);
+    return totalsByCurrency.reduce(
+      (sum, item) => {
+        const feesUsd = roundMoney(item.convertedFeesUsd);
+        const netUsd = roundMoney(item.convertedCreatorNetUsd);
+        const grossUsd = roundMoney(feesUsd + netUsd);
 
-      const fees = convertAmount(feesUsd, "USD", reportingCurrency, fxRates);
-      const net = convertAmount(netUsd, "USD", reportingCurrency, fxRates);
-      const gross = convertAmount(grossUsd, "USD", reportingCurrency, fxRates);
+        const fees = convertAmount(feesUsd, "USD", reportingCurrency, fxRates);
+        const net = convertAmount(netUsd, "USD", reportingCurrency, fxRates);
+        const gross = convertAmount(grossUsd, "USD", reportingCurrency, fxRates);
 
-      return {
-        gross: roundMoney(sum.gross + gross),
-        fees: roundMoney(sum.fees + fees),
-        net: roundMoney(sum.net + net),
-      };
-    },
-    { gross: 0, fees: 0, net: 0 }
-  );
-}, [totalsByCurrency, reportingCurrency, fxRates]);
+        return {
+          gross: roundMoney(sum.gross + gross),
+          fees: roundMoney(sum.fees + fees),
+          net: roundMoney(sum.net + net),
+        };
+      },
+      { gross: 0, fees: 0, net: 0 }
+    );
+  }, [totalsByCurrency, reportingCurrency, fxRates]);
 
   const pendingPayouts = payouts.filter(
     (payout) => (payout.status || "pending") === "pending"
@@ -340,6 +338,7 @@ totals[currency].convertedFeesUsd += convertAmount(
 
     pendingPayouts.forEach((payout) => {
       const currency = payout.currency_code || "UNKNOWN";
+
       totals[currency] =
         (totals[currency] || 0) + Number(payout.amount || 0);
     });
@@ -349,168 +348,158 @@ totals[currency].convertedFeesUsd += convertAmount(
       .sort((a, b) => a.currency.localeCompare(b.currency));
   }, [pendingPayouts]);
 
- return (
-  <main className="min-h-screen bg-gray-50">
-    <Navbar />
+  return (
+    <main className="min-h-screen bg-gray-50">
+      <Navbar />
 
-    <section className="mx-auto max-w-7xl px-6 py-10">
-      <p className="text-sm font-black uppercase tracking-wide text-yellow-600">
-        Admin Finance
-      </p>
+      <section className="mx-auto max-w-7xl px-6 py-10">
+        <p className="text-sm font-black uppercase tracking-wide text-yellow-600">
+          Admin Finance
+        </p>
 
-      <h1 className="mt-2 text-4xl font-black text-gray-900">
-        NiaTube Finance Report v1
-      </h1>
+        <h1 className="mt-2 text-4xl font-black text-gray-900">
+          NiaTube Finance Report v1
+        </h1>
 
-      <div className="mt-6 rounded-3xl border bg-blue-50 p-5">
-        <h2 className="text-lg font-black text-gray-900">
-          Report Metadata
-        </h2>
+        <p className="mt-3 max-w-4xl text-gray-600">
+          Platform finance overview for multi-currency tips, NiaTube platform
+          fees, creator net earnings, and pending payout obligations.
+        </p>
 
-        <div className="mt-4 grid gap-4 md:grid-cols-4">
-          <div>
-            <p className="text-xs font-bold uppercase text-gray-500">
-              Generated
-            </p>
-            <p className="mt-1 font-bold">
-              Generated on page load
-            </p>
-          </div>
+        <div className="mt-6 rounded-3xl border bg-blue-50 p-5">
+          <h2 className="text-lg font-black text-gray-900">
+            Report Metadata
+          </h2>
 
-          <div>
-            <p className="text-xs font-bold uppercase text-gray-500">
-              Reporting Currency
-            </p>
-            <p className="mt-1 font-bold">
-              {reportingCurrency}
-            </p>
-          </div>
+          <div className="mt-4 grid gap-4 md:grid-cols-4">
+            <div>
+              <p className="text-xs font-bold uppercase text-gray-500">
+                Generated
+              </p>
+              <p className="mt-1 font-bold">Generated on page load</p>
+            </div>
 
-          <div>
-            <p className="text-xs font-bold uppercase text-gray-500">
-              Report Period
-            </p>
-            <p className="mt-1 font-bold">
-              {reportPeriod}
-            </p>
-          </div>
+            <div>
+              <p className="text-xs font-bold uppercase text-gray-500">
+                Reporting Currency
+              </p>
+              <p className="mt-1 font-bold">{reportingCurrency}</p>
+            </div>
 
-          <div>
-            <p className="text-xs font-bold uppercase text-gray-500">
-              FX Source
-            </p>
-            <p className="mt-1 font-bold">
-              {fxRates[0]?.source || "Unknown"}
-            </p>
+            <div>
+              <p className="text-xs font-bold uppercase text-gray-500">
+                Report Period
+              </p>
+              <p className="mt-1 font-bold">{reportPeriod}</p>
+            </div>
+
+            <div>
+              <p className="text-xs font-bold uppercase text-gray-500">
+                FX Source
+              </p>
+              <p className="mt-1 font-bold">
+                {fxRates[0]?.source || "Unknown"}
+              </p>
+            </div>
           </div>
         </div>
-      </div>
 
-      <p className="mt-3 max-w-4xl text-gray-600">
-        Platform finance overview for multi-currency tips, NiaTube platform
-        fees, creator net earnings, and pending payout obligations.
-      </p>
+        <div className="mt-6 flex flex-col gap-3 sm:flex-row sm:items-center">
+          <label className="text-sm font-bold text-gray-700">
+            Report Period
+          </label>
 
-      <div className="mt-6 flex flex-col gap-3 sm:flex-row sm:items-center">
-        <label className="text-sm font-bold text-gray-700">
-          Report Period
-        </label>
+          <select
+            value={reportPeriod}
+            onChange={(e) =>
+              setReportPeriod(
+                e.target.value as
+                  | "all"
+                  | "monthly"
+                  | "quarterly"
+                  | "semiannual"
+                  | "annual"
+              )
+            }
+            className="rounded-xl border px-4 py-2 text-sm font-bold"
+          >
+            <option value="all">All Time</option>
+            <option value="monthly">Monthly</option>
+            <option value="quarterly">Quarterly</option>
+            <option value="semiannual">Semi-Annual</option>
+            <option value="annual">Annual</option>
+          </select>
 
-        <select
-          value={reportPeriod}
-          onChange={(e) =>
-            setReportPeriod(
-              e.target.value as
-                | "all"
-                | "monthly"
-                | "quarterly"
-                | "semiannual"
-                | "annual"
-            )
-          }
-          className="rounded-xl border px-4 py-2 text-sm font-bold"
-        >
-          <option value="all">All Time</option>
-          <option value="monthly">Monthly</option>
-          <option value="quarterly">Quarterly</option>
-          <option value="semiannual">Semi-Annual</option>
-          <option value="annual">Annual</option>
-        </select>
+          <label className="text-sm font-bold text-gray-700">
+            Reporting Currency
+          </label>
 
-        <label className="text-sm font-bold text-gray-700">
-          Reporting Currency
-        </label>
+          <select
+            value={reportingCurrency}
+            onChange={(e) =>
+              setReportingCurrency(e.target.value as "USD" | "EUR")
+            }
+            className="rounded-xl border px-4 py-2 text-sm font-bold"
+          >
+            <option value="USD">USD</option>
+            <option value="EUR">EUR</option>
+          </select>
+        </div>
 
-        <select
-          value={reportingCurrency}
-          onChange={(e) =>
-            setReportingCurrency(e.target.value as "USD" | "EUR")
-          }
-          className="rounded-xl border px-4 py-2 text-sm font-bold"
-        >
-          <option value="USD">USD</option>
-          <option value="EUR">EUR</option>
-        </select>
-      </div>
+        {message && (
+          <p className="mt-6 rounded-xl bg-yellow-50 p-4 text-sm font-bold text-yellow-800">
+            {message}
+          </p>
+        )}
 
-      {message && (
-        <p className="mt-6 rounded-xl bg-yellow-50 p-4 text-sm font-bold text-yellow-800">
-          {message}
-        </p>
-      )}
+        <div className="mt-6 rounded-3xl bg-white p-6 shadow-sm">
+          <h2 className="text-xl font-black text-gray-900">FX Status</h2>
 
-      <div className="mt-6 rounded-3xl bg-white p-6 shadow-sm">
-  <h2 className="text-xl font-black text-gray-900">
-    FX Status
-  </h2>
+          <div className="mt-4 grid gap-4 md:grid-cols-2 xl:grid-cols-5">
+            <div>
+              <p className="text-xs font-bold uppercase text-gray-500">
+                Source
+              </p>
+              <p className="mt-1 text-lg font-black">
+                {fxRates[0]?.source || "Unknown"}
+              </p>
+            </div>
 
-  <div className="mt-4 grid gap-4 md:grid-cols-2 xl:grid-cols-5">
-    <div>
-      <p className="text-xs font-bold uppercase text-gray-500">
-        Source
-      </p>
-      <p className="mt-1 text-lg font-black">
-        {fxRates[0]?.source || "Unknown"}
-      </p>
-    </div>
+            <div>
+              <p className="text-xs font-bold uppercase text-gray-500">
+                Base Currency
+              </p>
+              <p className="mt-1 text-lg font-black">USD</p>
+            </div>
 
-    <div>
-      <p className="text-xs font-bold uppercase text-gray-500">
-        Base Currency
-      </p>
-      <p className="mt-1 text-lg font-black">USD</p>
-    </div>
+            <div>
+              <p className="text-xs font-bold uppercase text-gray-500">
+                Rates Loaded
+              </p>
+              <p className="mt-1 text-lg font-black">{fxRates.length}</p>
+            </div>
 
-    <div>
-      <p className="text-xs font-bold uppercase text-gray-500">
-        Rates Loaded
-      </p>
-      <p className="mt-1 text-lg font-black">
-        {fxRates.length}
-      </p>
-    </div>
+            <div>
+              <p className="text-xs font-bold uppercase text-gray-500">
+                Last Updated
+              </p>
+              <p className="mt-1 text-sm font-bold">
+                {fxRates[0]?.updated_at
+                  ? new Date(fxRates[0].updated_at).toLocaleString()
+                  : "Not available"}
+              </p>
+            </div>
 
-    <div>
-      <p className="text-xs font-bold uppercase text-gray-500">
-        Last Updated
-      </p>
-      <p className="mt-1 text-sm font-bold">
-        {fxRates[0]?.updated_at
-          ? new Date(fxRates[0].updated_at).toLocaleString()
-          : "Not available"}
-      </p>
-    </div>
-
-    <div>
-      <p className="text-xs font-bold uppercase text-gray-500">
-        Status
-      </p>
-      <p className="mt-1 text-lg font-black text-green-700">
-        Healthy
-      </p>
-    </div>
-  </div>
-</div>
+            <div>
+              <p className="text-xs font-bold uppercase text-gray-500">
+                Status
+              </p>
+              <p className="mt-1 text-lg font-black text-green-700">
+                Healthy
+              </p>
+            </div>
+          </div>
+        </div>
 
         {loading ? (
           <div className="mt-8 rounded-3xl bg-white p-8 shadow-sm">
@@ -597,29 +586,28 @@ totals[currency].convertedFeesUsd += convertAmount(
               </div>
 
               <p className="mt-4 text-xs font-semibold text-gray-600">
-                Missing FX rates are treated as zero until added in the FX
-                manager.
+                Unified totals use approved FX rates from the fx_rates table.
               </p>
             </div>
 
             <div className="mt-8 rounded-3xl bg-white p-6 shadow-sm">
               <div className="flex items-center justify-between">
-  <h2 className="text-2xl font-black text-gray-900">
-    Tip Revenue by Currency
-  </h2>
+                <h2 className="text-2xl font-black text-gray-900">
+                  Tip Revenue by Currency
+                </h2>
 
-  <button
-    onClick={exportCurrencyReportCsv}
-    className="rounded-xl bg-blue-600 px-4 py-2 text-sm font-bold text-white hover:bg-blue-700"
-  >
-    Export CSV
-  </button>
-</div>
+                <button
+                  onClick={exportCurrencyReportCsv}
+                  className="rounded-xl bg-blue-600 px-4 py-2 text-sm font-bold text-white hover:bg-blue-700"
+                >
+                  Export CSV
+                </button>
+              </div>
 
               <p className="mt-1 text-sm text-gray-600">
-                Amounts are grouped by original currency. NiaTube does not
-                combine currencies until an approved FX/NiaCredit conversion is
-                applied.
+                Amounts are grouped by original currency. FX to USD is shown for
+                transparency. EUR conversion is handled only in the Unified
+                Reporting View.
               </p>
 
               {totalsByCurrency.length === 0 ? (
@@ -634,22 +622,15 @@ totals[currency].convertedFeesUsd += convertAmount(
                         <th className="px-4 py-3">Currency</th>
                         <th className="px-4 py-3">Transactions</th>
                         <th className="px-4 py-3">Gross Tips</th>
-
-<th className="px-4 py-3">NiaTube Fees</th>
-
-<th className="px-4 py-3">Creator Net Earnings</th>
-
-<th className="px-4 py-3 text-right">
-  FX to USD
-</th>
-
-<th className="px-4 py-3 text-right">
-  Converted Creator Net (USD)
-</th>
-
-<th className="px-4 py-3 text-right">
-  Converted Fees (USD)
-</th>
+                        <th className="px-4 py-3">NiaTube Fees</th>
+                        <th className="px-4 py-3">Creator Net Earnings</th>
+                        <th className="px-4 py-3 text-right">FX to USD</th>
+                        <th className="px-4 py-3 text-right">
+                          Converted Creator Net (USD)
+                        </th>
+                        <th className="px-4 py-3 text-right">
+                          Converted Fees (USD)
+                        </th>
                       </tr>
                     </thead>
 
@@ -660,31 +641,24 @@ totals[currency].convertedFeesUsd += convertAmount(
                             {item.currency}
                           </td>
                           <td className="px-4 py-3">{item.count}</td>
-
                           <td className="px-4 py-3">
-  {formatAmount(item.gross)}
-</td>
-
-<td className="px-4 py-3 font-bold text-green-700">
-  {formatAmount(item.fees)}
-</td>
-
-<td className="px-4 py-3 font-bold text-gray-900">
-  {formatAmount(item.net)}
-</td>
-
-<td className="px-4 py-3 text-right font-bold">
-  {item.fxToUsd.toFixed(8)}
-</td>
-
-<td className="px-4 py-3 text-right font-bold">
-  USD {formatAmount(item.convertedCreatorNetUsd)}
-</td>
-
-<td className="px-4 py-3 text-right font-bold text-green-700">
-  USD {formatAmount(item.convertedFeesUsd)}
-</td>
-
+                            {formatAmount(item.gross)}
+                          </td>
+                          <td className="px-4 py-3 font-bold text-green-700">
+                            {formatAmount(item.fees)}
+                          </td>
+                          <td className="px-4 py-3 font-bold text-gray-900">
+                            {formatAmount(item.net)}
+                          </td>
+                          <td className="px-4 py-3 text-right font-bold">
+                            {item.fxToUsd.toFixed(8)}
+                          </td>
+                          <td className="px-4 py-3 text-right font-bold">
+                            USD {formatAmount(item.convertedCreatorNetUsd)}
+                          </td>
+                          <td className="px-4 py-3 text-right font-bold text-green-700">
+                            USD {formatAmount(item.convertedFeesUsd)}
+                          </td>
                         </tr>
                       ))}
                     </tbody>
@@ -750,34 +724,38 @@ totals[currency].convertedFeesUsd += convertAmount(
                     </thead>
 
                     <tbody>
-                      {filteredTips.slice(0, 25).map((tip) => (
-                        <tr key={tip.id} className="border-b">
-                          <td className="px-4 py-3 text-gray-500">
-                            {tip.created_at
-                              ? new Date(tip.created_at).toLocaleString()
-                              : "Not available"}
-                          </td>
-                          <td className="px-4 py-3 font-bold">
-                            {tip.creator_name}
-                          </td>
-                          <td className="px-4 py-3">
-                            {tip.currency_code || "UNKNOWN"}
-                          </td>
-                          <td className="px-4 py-3">
-                            {formatAmount(
-                              Number(tip.gross_amount ?? tip.amount ?? 0)
-                            )}
-                          </td>
-                          <td className="px-4 py-3 font-bold text-green-700">
-                            {formatAmount(Number(tip.platform_fee ?? 0))}
-                          </td>
-                          <td className="px-4 py-3 font-bold text-gray-900">
-                            {formatAmount(
-                              Number(tip.net_amount ?? tip.amount ?? 0)
-                            )}
-                          </td>
-                        </tr>
-                      ))}
+                      {filteredTips.slice(0, 25).map((tip) => {
+                        const gross = Number(
+                          tip.gross_amount ?? tip.amount ?? 0
+                        );
+                        const fee = Number(tip.platform_fee ?? gross * 0.05);
+                        const net = Number(tip.net_amount ?? gross - fee);
+
+                        return (
+                          <tr key={tip.id} className="border-b">
+                            <td className="px-4 py-3 text-gray-500">
+                              {tip.created_at
+                                ? new Date(tip.created_at).toLocaleString()
+                                : "Not available"}
+                            </td>
+                            <td className="px-4 py-3 font-bold">
+                              {tip.creator_name}
+                            </td>
+                            <td className="px-4 py-3">
+                              {tip.currency_code || tip.currency || "UNKNOWN"}
+                            </td>
+                            <td className="px-4 py-3">
+                              {formatAmount(gross)}
+                            </td>
+                            <td className="px-4 py-3 font-bold text-green-700">
+                              {formatAmount(fee)}
+                            </td>
+                            <td className="px-4 py-3 font-bold text-gray-900">
+                              {formatAmount(net)}
+                            </td>
+                          </tr>
+                        );
+                      })}
                     </tbody>
                   </table>
                 </div>
