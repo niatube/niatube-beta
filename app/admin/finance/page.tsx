@@ -314,6 +314,98 @@ totals[currency].convertedFeesUsd += convertAmount(
           NiaTube Finance Report v1
         </h1>
 
+        <div className="mt-6 rounded-3xl border bg-blue-50 p-5">
+  <h2 className="text-lg font-black text-gray-900">
+    Report Metadata
+  </h2>
+
+  <div className="mt-4 grid gap-4 md:grid-cols-4">
+    <div>
+      <p className="text-xs font-bold uppercase text-gray-500">
+        Generated
+      </p>
+      <p className="mt-1 font-bold">
+        {new Date().toLocaleString()}
+      </p>
+    </div>
+
+    <div>
+      <p className="text-xs font-bold uppercase text-gray-500">
+        Reporting Currency
+      </p>
+      <p className="mt-1 font-bold">
+        {reportingCurrency}
+      </p>
+    </div>
+
+    <div>
+      <p className="text-xs font-bold uppercase text-gray-500">
+        Report Period
+      </p>
+      <p className="mt-1 font-bold">
+        {reportPeriod}
+      </p>
+    </div>
+
+    <div>
+      <p className="text-xs font-bold uppercase text-gray-500">
+        FX Source
+      </p>
+      <p className="mt-1 font-bold">
+        {fxRates[0]?.source || "Unknown"}
+      </p>
+    </div>
+  </div>
+</div>
+
+        <div className="mt-6 rounded-3xl border bg-blue-50 p-5">
+  <h2 className="text-lg font-black text-gray-900">
+    Report Metadata
+  </h2>
+
+  <div className="mt-4 grid gap-4 md:grid-cols-4">
+    <div>
+      <p className="text-xs font-bold uppercase text-gray-500">
+        Generated
+      </p>
+
+      <p className="mt-1 font-bold">
+        {new Date().toLocaleString()}
+      </p>
+    </div>
+
+    <div>
+      <p className="text-xs font-bold uppercase text-gray-500">
+        Reporting Currency
+      </p>
+
+      <p className="mt-1 font-bold">
+        {reportingCurrency}
+      </p>
+    </div>
+
+    <div>
+      <p className="text-xs font-bold uppercase text-gray-500">
+        Report Period
+      </p>
+
+      <p className="mt-1 font-bold">
+        {reportPeriod}
+      </p>
+    </div>
+
+    <div>
+      <p className="text-xs font-bold uppercase text-gray-500">
+        FX Source
+      </p>
+
+      <p className="mt-1 font-bold">
+        {fxRates[0]?.source || "Unknown"}
+      </p>
+    </div>
+  </div>
+</div>
+
         <p className="mt-3 max-w-4xl text-gray-600">
           Platform finance overview for multi-currency tips, NiaTube platform
           fees, creator net earnings, and pending payout obligations.
