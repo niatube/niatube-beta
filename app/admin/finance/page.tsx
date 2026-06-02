@@ -301,164 +301,117 @@ totals[currency].convertedFeesUsd += convertAmount(
       .sort((a, b) => a.currency.localeCompare(b.currency));
   }, [pendingPayouts]);
 
-  return (
-    <main className="min-h-screen bg-gray-50">
-      <Navbar />
+ return (
+  <main className="min-h-screen bg-gray-50">
+    <Navbar />
 
-      <section className="mx-auto max-w-7xl px-6 py-10">
-        <p className="text-sm font-black uppercase tracking-wide text-yellow-600">
-          Admin Finance
-        </p>
-
-        <h1 className="mt-2 text-4xl font-black text-gray-900">
-          NiaTube Finance Report v1
-        </h1>
-
-        <div className="mt-6 rounded-3xl border bg-blue-50 p-5">
-  <h2 className="text-lg font-black text-gray-900">
-    Report Metadata
-  </h2>
-
-  <div className="mt-4 grid gap-4 md:grid-cols-4">
-    <div>
-      <p className="text-xs font-bold uppercase text-gray-500">
-        Generated
-      </p>
-      <p className="mt-1 font-bold">
-  Generated on page load
-</p>
-    </div>
-
-    <div>
-      <p className="text-xs font-bold uppercase text-gray-500">
-        Reporting Currency
-      </p>
-      <p className="mt-1 font-bold">
-        {reportingCurrency}
-      </p>
-    </div>
-
-    <div>
-      <p className="text-xs font-bold uppercase text-gray-500">
-        Report Period
-      </p>
-      <p className="mt-1 font-bold">
-        {reportPeriod}
-      </p>
-    </div>
-
-    <div>
-      <p className="text-xs font-bold uppercase text-gray-500">
-        FX Source
-      </p>
-      <p className="mt-1 font-bold">
-        {fxRates[0]?.source || "Unknown"}
-      </p>
-    </div>
-  </div>
-</div>
-
-        <div className="mt-6 rounded-3xl border bg-blue-50 p-5">
-  <h2 className="text-lg font-black text-gray-900">
-    Report Metadata
-  </h2>
-
-  <div className="mt-4 grid gap-4 md:grid-cols-4">
-    <div>
-      <p className="text-xs font-bold uppercase text-gray-500">
-        Generated
+    <section className="mx-auto max-w-7xl px-6 py-10">
+      <p className="text-sm font-black uppercase tracking-wide text-yellow-600">
+        Admin Finance
       </p>
 
-     <p className="mt-1 font-bold">
-  Generated on page load
-</p>
-    </div>
+      <h1 className="mt-2 text-4xl font-black text-gray-900">
+        NiaTube Finance Report v1
+      </h1>
 
-    <div>
-      <p className="text-xs font-bold uppercase text-gray-500">
-        Reporting Currency
-      </p>
+      <div className="mt-6 rounded-3xl border bg-blue-50 p-5">
+        <h2 className="text-lg font-black text-gray-900">
+          Report Metadata
+        </h2>
 
-      <p className="mt-1 font-bold">
-        {reportingCurrency}
-      </p>
-    </div>
+        <div className="mt-4 grid gap-4 md:grid-cols-4">
+          <div>
+            <p className="text-xs font-bold uppercase text-gray-500">
+              Generated
+            </p>
+            <p className="mt-1 font-bold">
+              Generated on page load
+            </p>
+          </div>
 
-    <div>
-      <p className="text-xs font-bold uppercase text-gray-500">
-        Report Period
-      </p>
+          <div>
+            <p className="text-xs font-bold uppercase text-gray-500">
+              Reporting Currency
+            </p>
+            <p className="mt-1 font-bold">
+              {reportingCurrency}
+            </p>
+          </div>
 
-      <p className="mt-1 font-bold">
-        {reportPeriod}
-      </p>
-    </div>
+          <div>
+            <p className="text-xs font-bold uppercase text-gray-500">
+              Report Period
+            </p>
+            <p className="mt-1 font-bold">
+              {reportPeriod}
+            </p>
+          </div>
 
-    <div>
-      <p className="text-xs font-bold uppercase text-gray-500">
-        FX Source
-      </p>
-
-      <p className="mt-1 font-bold">
-        {fxRates[0]?.source || "Unknown"}
-      </p>
-    </div>
-  </div>
-</div>
-
-        <p className="mt-3 max-w-4xl text-gray-600">
-          Platform finance overview for multi-currency tips, NiaTube platform
-          fees, creator net earnings, and pending payout obligations.
-        </p>
-
-        <div className="mt-6 flex flex-col gap-3 sm:flex-row sm:items-center">
-          <label className="text-sm font-bold text-gray-700">
-            Report Period
-          </label>
-
-          <select
-            value={reportPeriod}
-            onChange={(e) =>
-              setReportPeriod(
-                e.target.value as
-                  | "all"
-                  | "monthly"
-                  | "quarterly"
-                  | "semiannual"
-                  | "annual"
-              )
-            }
-            className="rounded-xl border px-4 py-2 text-sm font-bold"
-          >
-            <option value="all">All Time</option>
-            <option value="monthly">Monthly</option>
-            <option value="quarterly">Quarterly</option>
-            <option value="semiannual">Semi-Annual</option>
-            <option value="annual">Annual</option>
-          </select>
-
-          <label className="text-sm font-bold text-gray-700">
-            Reporting Currency
-          </label>
-
-          <select
-            value={reportingCurrency}
-            onChange={(e) =>
-              setReportingCurrency(e.target.value as "USD" | "EUR")
-            }
-            className="rounded-xl border px-4 py-2 text-sm font-bold"
-          >
-            <option value="USD">USD</option>
-            <option value="EUR">EUR</option>
-          </select>
+          <div>
+            <p className="text-xs font-bold uppercase text-gray-500">
+              FX Source
+            </p>
+            <p className="mt-1 font-bold">
+              {fxRates[0]?.source || "Unknown"}
+            </p>
+          </div>
         </div>
+      </div>
 
-        {message && (
-          <p className="mt-6 rounded-xl bg-yellow-50 p-4 text-sm font-bold text-yellow-800">
-            {message}
-          </p>
-        )}
-         <div className="mt-6 rounded-3xl bg-white p-6 shadow-sm">
+      <p className="mt-3 max-w-4xl text-gray-600">
+        Platform finance overview for multi-currency tips, NiaTube platform
+        fees, creator net earnings, and pending payout obligations.
+      </p>
+
+      <div className="mt-6 flex flex-col gap-3 sm:flex-row sm:items-center">
+        <label className="text-sm font-bold text-gray-700">
+          Report Period
+        </label>
+
+        <select
+          value={reportPeriod}
+          onChange={(e) =>
+            setReportPeriod(
+              e.target.value as
+                | "all"
+                | "monthly"
+                | "quarterly"
+                | "semiannual"
+                | "annual"
+            )
+          }
+          className="rounded-xl border px-4 py-2 text-sm font-bold"
+        >
+          <option value="all">All Time</option>
+          <option value="monthly">Monthly</option>
+          <option value="quarterly">Quarterly</option>
+          <option value="semiannual">Semi-Annual</option>
+          <option value="annual">Annual</option>
+        </select>
+
+        <label className="text-sm font-bold text-gray-700">
+          Reporting Currency
+        </label>
+
+        <select
+          value={reportingCurrency}
+          onChange={(e) =>
+            setReportingCurrency(e.target.value as "USD" | "EUR")
+          }
+          className="rounded-xl border px-4 py-2 text-sm font-bold"
+        >
+          <option value="USD">USD</option>
+          <option value="EUR">EUR</option>
+        </select>
+      </div>
+
+      {message && (
+        <p className="mt-6 rounded-xl bg-yellow-50 p-4 text-sm font-bold text-yellow-800">
+          {message}
+        </p>
+      )}
+
+      <div className="mt-6 rounded-3xl bg-white p-6 shadow-sm">
   <h2 className="text-xl font-black text-gray-900">
     FX Status
   </h2>
@@ -495,9 +448,7 @@ totals[currency].convertedFeesUsd += convertAmount(
       </p>
       <p className="mt-1 text-sm font-bold">
         {fxRates[0]?.updated_at
-          ? new Date(
-              fxRates[0].updated_at
-            ).toLocaleString()
+          ? new Date(fxRates[0].updated_at).toLocaleString()
           : "Not available"}
       </p>
     </div>
