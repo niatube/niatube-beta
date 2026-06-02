@@ -325,8 +325,8 @@ totals[currency].convertedFeesUsd += convertAmount(
         Generated
       </p>
       <p className="mt-1 font-bold">
-        {new Date().toLocaleString()}
-      </p>
+  Generated on page load
+</p>
     </div>
 
     <div>
