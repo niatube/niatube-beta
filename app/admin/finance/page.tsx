@@ -116,6 +116,54 @@ export default function AdminFinancePage() {
 
   const [reportingCurrency, setReportingCurrency] =
     useState<"USD" | "EUR">("USD");
+    function exportCurrencyReportCsv() {
+  const rows = [
+    [
+      "Currency",
+      "Transactions",
+      "Gross Tips",
+      "NiaTube Fees",
+      "Creator Net",
+      "FX to USD",
+      "Converted Creator Net (USD)",
+      "Converted Fees (USD)",
+    ],
+
+    ...totalsByCurrency.map((item) => [
+      item.currency,
+      item.count,
+      item.gross,
+      item.fees,
+      item.net,
+      item.fxToUsd,
+      item.convertedCreatorNetUsd,
+      item.convertedFeesUsd,
+    ]),
+  ];
+
+  const csv = rows
+    .map((row) => row.join(","))
+    .join("\n");
+
+  const blob = new Blob([csv], {
+    type: "text/csv;charset=utf-8;",
+  });
+
+  const url = URL.createObjectURL(blob);
+
+  const link = document.createElement("a");
+
+  link.href = url;
+  link.download = `finance-report-${Date.now()}.csv`;
+
+  document.body.appendChild(link);
+
+  link.click();
+
+  document.body.removeChild(link);
+
+  URL.revokeObjectURL(url);
+}
 
   async function loadFinanceData() {
     setLoading(true);
@@ -555,9 +603,18 @@ totals[currency].convertedFeesUsd += convertAmount(
             </div>
 
             <div className="mt-8 rounded-3xl bg-white p-6 shadow-sm">
-              <h2 className="text-2xl font-black text-gray-900">
-                Tip Revenue by Currency
-              </h2>
+              <div className="flex items-center justify-between">
+  <h2 className="text-2xl font-black text-gray-900">
+    Tip Revenue by Currency
+  </h2>
+
+  <button
+    onClick={exportCurrencyReportCsv}
+    className="rounded-xl bg-blue-600 px-4 py-2 text-sm font-bold text-white hover:bg-blue-700"
+  >
+    Export CSV
+  </button>
+</div>
 
               <p className="mt-1 text-sm text-gray-600">
                 Amounts are grouped by original currency. NiaTube does not
