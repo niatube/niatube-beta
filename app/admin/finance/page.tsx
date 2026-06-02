@@ -3,6 +3,7 @@
 import { useEffect, useMemo, useState } from "react";
 import Navbar from "@/components/Navbar";
 import { supabase } from "@/lib/supabase-browser";
+import * as XLSX from "xlsx";
 
 type Tip = {
   id: string;
@@ -162,6 +163,84 @@ export default function AdminFinancePage() {
       },
     ]);
   }
+
+  function exportFinanceExcel() {
+  const workbook = XLSX.utils.book_new();
+
+  const summarySheet = XLSX.utils.json_to_sheet([
+    {
+      ReportingCurrency: reportingCurrency,
+      GrossTips: unifiedTotals.gross,
+      NiaTubeFees: unifiedTotals.fees,
+      CreatorNet: unifiedTotals.net,
+    },
+  ]);
+
+  XLSX.utils.book_append_sheet(
+    workbook,
+    summarySheet,
+    "Finance Summary"
+  );
+
+  const currencySheet = XLSX.utils.json_to_sheet(
+    totalsByCurrency.map((item) => ({
+      Currency: item.currency,
+      Transactions: item.count,
+      GrossTips: item.gross,
+      NiaTubeFees: item.fees,
+      CreatorNet: item.net,
+      FxToUsd: item.fxToUsd,
+      ConvertedCreatorNetUsd: item.convertedCreatorNetUsd,
+      ConvertedFeesUsd: item.convertedFeesUsd,
+    }))
+  );
+
+  XLSX.utils.book_append_sheet(
+    workbook,
+    currencySheet,
+    "Revenue By Currency"
+  );
+
+  const tipsSheet = XLSX.utils.json_to_sheet(
+    filteredTips.map((tip) => ({
+      Date: tip.created_at,
+      Creator: tip.creator_name,
+      Currency: tip.currency_code || tip.currency,
+      Gross: tip.gross_amount ?? tip.amount,
+      Fee: tip.platform_fee,
+      Net: tip.net_amount,
+    }))
+  );
+
+  XLSX.utils.book_append_sheet(
+    workbook,
+    tipsSheet,
+    "Recent Transactions"
+  );
+
+  const payoutSheet = XLSX.utils.json_to_sheet(
+    pendingPayoutsByCurrency
+  );
+
+  XLSX.utils.book_append_sheet(
+    workbook,
+    payoutSheet,
+    "Pending Payouts"
+  );
+
+  const fxSheet = XLSX.utils.json_to_sheet(fxRates);
+
+  XLSX.utils.book_append_sheet(
+    workbook,
+    fxSheet,
+    "FX Rates"
+  );
+
+  XLSX.writeFile(
+    workbook,
+    `finance-report-${Date.now()}.xlsx`
+  );
+}
 
   async function loadFinanceData() {
     setLoading(true);
@@ -596,12 +675,21 @@ export default function AdminFinancePage() {
                   Tip Revenue by Currency
                 </h2>
 
-                <button
-                  onClick={exportCurrencyReportCsv}
-                  className="rounded-xl bg-blue-600 px-4 py-2 text-sm font-bold text-white hover:bg-blue-700"
-                >
-                  Export CSV
-                </button>
+                <div className="flex gap-2">
+  <button
+    onClick={exportCurrencyReportCsv}
+    className="rounded-xl bg-blue-600 px-4 py-2 text-sm font-bold text-white hover:bg-blue-700"
+  >
+    Export CSV
+  </button>
+
+  <button
+    onClick={exportFinanceExcel}
+    className="rounded-xl bg-green-600 px-4 py-2 text-sm font-bold text-white hover:bg-green-700"
+  >
+    Export Excel
+  </button>
+</div>
               </div>
 
               <p className="mt-1 text-sm text-gray-600">
