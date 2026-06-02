@@ -122,6 +122,7 @@ export default function CreatorDashboardPage() {
   const [nativeSubscriberCount, setNativeSubscriberCount] = useState(0);
 const [migratedSubscriberCount, setMigratedSubscriberCount] = useState(0);
 const [subscriberCount, setSubscriberCount] = useState(0);
+const [subscriberGrowth30Days, setSubscriberGrowth30Days] = useState(0);
   const [loading, setLoading] = useState(true);
   const [creatorSince, setCreatorSince] = useState("");
   const [creatorCountry, setCreatorCountry] = useState("Not set");
@@ -226,13 +227,22 @@ setFxRates((fxData || []) as FxRate[]);
       setTips((tipsData || []) as Tip[]);
       setPayouts((payoutData || []) as PayoutRequest[]);
       setNotifications((notificationsData || []) as NotificationItem[]);
-      const nativeSubscribers = subscriberData?.length || 0;
+const nativeSubscribers = subscriberData?.length || 0;
 const totalSubscribers = nativeSubscribers + migratedSubscribers;
+
+const thirtyDaysAgo = new Date();
+thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
+
+const subscribersLast30Days =
+  subscriberData?.filter((subscriber: any) => {
+    if (!subscriber.created_at) return false;
+    return new Date(subscriber.created_at) >= thirtyDaysAgo;
+  }).length || 0;
 
 setNativeSubscriberCount(nativeSubscribers);
 setMigratedSubscriberCount(migratedSubscribers);
 setSubscriberCount(totalSubscribers);
-
+setSubscriberGrowth30Days(subscribersLast30Days);
       setLoading(false);
     }
 
@@ -632,6 +642,61 @@ const convertedCreatorNetUsd = useMemo(() => {
         </p>
         </div>
         </div>
+
+     <div className="mt-8 rounded-3xl border border-yellow-200 bg-yellow-50 p-6 shadow-sm">
+  <div className="flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
+    <div>
+      <h2 className="text-2xl font-black text-gray-900">
+        Subscriber Analytics
+      </h2>
+
+      <p className="mt-1 text-sm text-gray-700">
+        Track your native NiaTube audience and verified migrated subscribers.
+      </p>
+    </div>
+
+    <span className="rounded-full bg-black px-4 py-2 text-sm font-bold text-white">
+      Total: {subscriberCount.toLocaleString()}
+    </span>
+  </div>
+
+  <div className="mt-6 grid gap-4 md:grid-cols-5">
+    <div className="rounded-2xl bg-white p-5 shadow-sm">
+      <p className="text-sm font-bold text-gray-500">Total Subscribers</p>
+      <p className="mt-2 text-3xl font-black text-gray-900">
+        {subscriberCount.toLocaleString()}
+      </p>
+    </div>
+
+    <div className="rounded-2xl bg-white p-5 shadow-sm">
+      <p className="text-sm font-bold text-gray-500">Native NiaTube</p>
+      <p className="mt-2 text-3xl font-black text-gray-900">
+        {nativeSubscriberCount.toLocaleString()}
+      </p>
+    </div>
+
+    <div className="rounded-2xl bg-white p-5 shadow-sm">
+      <p className="text-sm font-bold text-gray-500">Migrated Audience</p>
+      <p className="mt-2 text-3xl font-black text-gray-900">
+        {migratedSubscriberCount.toLocaleString()}
+      </p>
+    </div>
+
+    <div className="rounded-2xl bg-white p-5 shadow-sm">
+      <p className="text-sm font-bold text-gray-500">30-Day Growth</p>
+      <p className="mt-2 text-3xl font-black text-green-700">
+        +{subscriberGrowth30Days.toLocaleString()}
+      </p>
+    </div>
+
+    <div className="rounded-2xl bg-white p-5 shadow-sm">
+      <p className="text-sm font-bold text-gray-500">Joined NiaTube</p>
+      <p className="mt-2 text-xl font-black text-gray-900">
+        {creatorSince || "Not available"}
+      </p>
+    </div>
+  </div>
+</div>   
 <div className="rounded-2xl bg-white p-5 shadow-sm">
   <p className="text-sm font-bold text-gray-500">
     Creator Net Earnings (USD)
