@@ -34,15 +34,19 @@ type Upload = {
 type Tip = {
   id: string;
   creator_name: string;
+  video_id?: string;
   amount: number;
   currency_code?: string;
   currency?: string;
-  message?: string;
-  created_at?: string;
+  created_at: string;
   gross_amount?: number;
   platform_fee?: number;
   net_amount?: number;
+  message?: string;
 };
+
+
+
 type FxRate = {
   id?: string;
   base_currency: string;
@@ -69,6 +73,29 @@ type NotificationItem = {
   read?: boolean;
   created_at?: string;
 };
+
+type MigrationRequest = {
+  id: string;
+  creator_name?: string;
+  email?: string;
+  status?: string;
+  platform_name?: string;
+  source_platform?: string;
+  previous_platform?: string;
+  requested_subscribers?: number;
+  subscriber_count?: number;
+  migrated_subscribers?: number;
+  external_profile_url?: string;
+  platform_url?: string;
+  evidence_url?: string;
+  admin_notes?: string;
+  notes?: string;
+  created_at?: string;
+  updated_at?: string;
+  reviewed_at?: string;
+  review_notes?: string | null;
+};
+
 function convertAmount(
   amount: number,
   fromCurrency: string,
@@ -119,6 +146,7 @@ export default function CreatorDashboardPage() {
   const [tips, setTips] = useState<Tip[]>([]);
   const [payouts, setPayouts] = useState<PayoutRequest[]>([]);
   const [notifications, setNotifications] = useState<NotificationItem[]>([]);
+  const [migrationRequest, setMigrationRequest] = useState<MigrationRequest | null>(null);
   const [nativeSubscriberCount, setNativeSubscriberCount] = useState(0);
 const [migratedSubscriberCount, setMigratedSubscriberCount] = useState(0);
 
@@ -174,6 +202,16 @@ const [creatorCurrency, setCreatorCurrency] = useState("Not set");
       }
 
       setCreatorName(activeCreatorName);
+     
+     const { data: migrationData } = await supabase
+  .from("creator_migration_requests")
+  .select("*")
+  .eq("creator_name", activeCreatorName)
+  .order("created_at", { ascending: false })
+  .limit(1)
+  .maybeSingle();
+
+setMigrationRequest((migrationData || null) as MigrationRequest | null);
       setCreatorCountry(profileByEmail?.country || "Not set");
 const profileCurrency = profileByEmail?.currency_code || "Not set";
 
@@ -215,6 +253,32 @@ if (profileCurrency !== "Not set") {
 const migratedSubscribers =
   Number(creatorProfile?.migrated_subscribers || 0);
 
+
+      const migrationTables = [
+        "subscriber_migration_requests",
+        "migration_requests",
+        "creator_migration_requests",
+      ];
+
+      let latestMigrationRequest: MigrationRequest | null = null;
+
+      for (const tableName of migrationTables) {
+        const { data: migrationData, error: migrationError } = await supabase
+          .from(tableName)
+          .select("*")
+          .or(
+            `creator_name.eq.${activeCreatorName},email.eq.${user.email || ""}`
+          )
+          .order("created_at", { ascending: false })
+          .limit(1)
+          .maybeSingle();
+
+        if (!migrationError && migrationData) {
+          latestMigrationRequest = migrationData as MigrationRequest;
+          break;
+        }
+      }
+
       const { data: notificationsData } = await supabase
         .from("notifications")
         .select("*")
@@ -231,6 +295,7 @@ setFxRates((fxData || []) as FxRate[]);
       setTips((tipsData || []) as Tip[]);
       setPayouts((payoutData || []) as PayoutRequest[]);
       setNotifications((notificationsData || []) as NotificationItem[]);
+      setMigrationRequest(latestMigrationRequest);
 const nativeSubscribers = subscriberData?.length || 0;
 const totalSubscribers = nativeSubscribers + migratedSubscribers;
 
@@ -283,6 +348,57 @@ setLoading(false);
   const unreadNotificationCount = notifications.filter(
     (notification) => !notification.read
   ).length;
+
+  const migrationStatus = migrationRequest?.status || "Not submitted";
+
+  const migrationStatusLabel =
+    migrationStatus === "pending"
+      ? "Pending Review"
+      : migrationStatus === "under_review"
+      ? "Under Verification"
+      : migrationStatus === "approved"
+      ? "Approved"
+      : migrationStatus === "rejected"
+      ? "Rejected"
+      : migrationStatus === "needs_info"
+      ? "More Information Required"
+      : migrationStatus === "not_submitted"
+      ? "Not Submitted"
+      : migrationStatus
+          .replace(/_/g, " ")
+          .replace(/\b\w/g, (letter) => letter.toUpperCase());
+
+  const migrationRequestedSubscribers = Number(
+    migrationRequest?.requested_subscribers ??
+      migrationRequest?.subscriber_count ??
+      migrationRequest?.migrated_subscribers ??
+      migratedSubscriberCount ??
+      0
+  );
+
+  const migrationPlatform =
+    migrationRequest?.platform_name ||
+    migrationRequest?.source_platform ||
+    migrationRequest?.previous_platform ||
+    "Not provided";
+
+  const migrationProfileUrl =
+    migrationRequest?.external_profile_url ||
+    migrationRequest?.platform_url ||
+    migrationRequest?.evidence_url ||
+    "";
+
+  const migrationSubmittedDate = migrationRequest?.created_at
+    ? new Date(migrationRequest.created_at).toLocaleDateString()
+    : "Not submitted";
+
+  const migrationUpdatedDate =
+    migrationRequest?.reviewed_at || migrationRequest?.updated_at
+      ? new Date(
+          migrationRequest.reviewed_at || migrationRequest.updated_at || ""
+        ).toLocaleDateString()
+      : "Not available";
+
 
   const totalViews = uploads.reduce(
     (sum, upload) => sum + Number(upload.views || 0),
@@ -648,6 +764,125 @@ const convertedCreatorNetUsd = useMemo(() => {
           Net wallet currencies
         </p>
         </div>
+        </div>
+
+
+        <div className="mt-8 rounded-3xl border border-blue-100 bg-white p-6 shadow-sm">
+          <div className="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
+            <div>
+              <p className="text-sm font-black uppercase tracking-wide text-blue-700">
+                Subscriber Migration
+              </p>
+
+              <h2 className="mt-2 text-2xl font-black text-gray-900">
+                Migration Status Card
+              </h2>
+
+              <p className="mt-2 max-w-3xl text-sm leading-6 text-gray-600">
+                This shows whether your audience/subscriber migration request has
+                been submitted, reviewed, approved, or returned for more
+                information.
+              </p>
+            </div>
+
+            <span
+              className={`rounded-full px-4 py-2 text-sm font-black ${
+                migrationStatus === "approved"
+                  ? "bg-green-100 text-green-800"
+                  : migrationStatus === "rejected"
+                  ? "bg-red-100 text-red-800"
+                  : migrationStatus === "needs_info"
+                  ? "bg-orange-100 text-orange-800"
+                  : migrationRequest
+                  ? "bg-yellow-100 text-yellow-800"
+                  : "bg-gray-100 text-gray-700"
+              }`}
+            >
+              {migrationStatusLabel}
+            </span>
+          </div>
+
+          <div className="mt-6 grid gap-4 md:grid-cols-4">
+            <div className="rounded-2xl bg-gray-50 p-5">
+              <p className="text-sm font-bold text-gray-500">
+                Requested Subscribers
+              </p>
+              <p className="mt-2 text-3xl font-black text-gray-900">
+                {migrationRequestedSubscribers.toLocaleString()}
+              </p>
+            </div>
+
+            <div className="rounded-2xl bg-gray-50 p-5">
+              <p className="text-sm font-bold text-gray-500">Source Platform</p>
+              <p className="mt-2 text-xl font-black text-gray-900">
+                {migrationPlatform}
+              </p>
+            </div>
+
+            <div className="rounded-2xl bg-gray-50 p-5">
+              <p className="text-sm font-bold text-gray-500">Submitted</p>
+              <p className="mt-2 text-xl font-black text-gray-900">
+                {migrationSubmittedDate}
+              </p>
+            </div>
+
+            <div className="rounded-2xl bg-gray-50 p-5">
+              <p className="text-sm font-bold text-gray-500">Last Update</p>
+              <p className="mt-2 text-xl font-black text-gray-900">
+                {migrationUpdatedDate}
+              </p>
+            </div>
+          </div>
+
+          {migrationRequest ? (
+            <div className="mt-5 rounded-2xl border border-gray-200 bg-gray-50 p-5">
+              <p className="text-sm font-bold text-gray-700">
+                Application Visibility
+              </p>
+
+              <p className="mt-2 text-sm leading-6 text-gray-600">
+                Your subscriber migration application is visible to the NiaTube
+                review team. You will see the status update here when the admin
+                team reviews or approves the request.
+              </p>
+
+              {migrationProfileUrl && (
+                <a
+                  href={migrationProfileUrl}
+                  target="_blank"
+                  rel="noreferrer"
+                  className="mt-3 inline-flex rounded-xl bg-black px-4 py-2 text-sm font-bold text-white hover:bg-gray-800"
+                >
+                  View Submitted Profile
+                </a>
+              )}
+
+              {migrationRequest.review_notes && (
+  <p className="mt-4 text-sm font-semibold text-gray-700">
+    Admin note: {migrationRequest.review_notes}
+  </p>
+)}
+            </div>
+          ) : (
+            <div className="mt-5 rounded-2xl border border-dashed border-gray-300 bg-gray-50 p-5">
+              <p className="text-sm font-bold text-gray-700">
+                No migration request submitted yet.
+              </p>
+
+              <p className="mt-2 text-sm leading-6 text-gray-600">
+                Start a subscriber migration request after signing up and
+                confirming your email. This helps verified creators bring their
+                existing audience momentum to NiaTube.
+              </p>
+
+              <a
+                href="/creator/migration"
+                className="mt-3 inline-flex rounded-xl bg-yellow-400 px-4 py-2 text-sm font-black text-black hover:bg-yellow-300"
+              >
+                Start Subscriber Migration
+              </a>
+            </div>
+          )}
         </div>
 
      <div className="mt-8 rounded-3xl border border-yellow-200 bg-yellow-50 p-6 shadow-sm">
