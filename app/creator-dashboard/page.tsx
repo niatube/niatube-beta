@@ -1182,6 +1182,44 @@ const sortedUploads = useMemo(() => {
     </div>
   </div>
 </div>
+<div className="mt-8 rounded-3xl bg-white p-6 shadow-sm">
+  <h2 className="text-2xl font-black text-gray-900">
+    Next Milestone Progress
+  </h2>
+
+  <p className="mt-2 text-sm text-gray-600">
+    Track your progress toward the next subscriber milestone.
+  </p>
+
+  <div className="mt-6 rounded-2xl bg-gray-50 p-5">
+    <div className="flex items-center justify-between">
+      <p className="text-sm font-bold text-gray-500">
+        Next Milestone
+      </p>
+
+      <p className="text-lg font-black text-gray-900">
+        {nextSubscriberMilestone.toLocaleString()} Subscribers
+      </p>
+    </div>
+
+    <div className="mt-4 h-4 overflow-hidden rounded-full bg-gray-200">
+      <div
+        className="h-full rounded-full bg-green-600"
+        style={{ width: `${progressToNextMilestone}%` }}
+      />
+    </div>
+
+    <div className="mt-4 flex items-center justify-between">
+      <p className="text-sm font-semibold text-gray-700">
+        Progress: {progressToNextMilestone}%
+      </p>
+
+      <p className="text-sm font-semibold text-gray-700">
+        {subscribersRemaining.toLocaleString()} remaining
+      </p>
+    </div>
+  </div>
+</div>
      <div className="mt-8 rounded-3xl border border-yellow-200 bg-yellow-50 p-6 shadow-sm">
   <div className="flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
     <div>
