@@ -552,6 +552,27 @@ const convertedCreatorNetUsd = useMemo(() => {
     }));
   }, [tipTotalsByCurrency]);
 
+  const subscriberGrowthChartData = useMemo(() => {
+  let runningTotal = migratedSubscriberCount;
+
+  return [...subscriberRows]
+    .sort((a, b) => {
+      const dateA = a.created_at ? new Date(a.created_at).getTime() : 0;
+      const dateB = b.created_at ? new Date(b.created_at).getTime() : 0;
+      return dateA - dateB;
+    })
+    .map((subscriber, index) => {
+      runningTotal += 1;
+
+      return {
+        name: subscriber.created_at
+          ? new Date(subscriber.created_at).toLocaleDateString()
+          : `Subscriber ${index + 1}`,
+        subscribers: runningTotal,
+      };
+    });
+}, [subscriberRows, migratedSubscriberCount]);
+
   const sortedUploads = useMemo(() => {
     return [...uploads].sort((a, b) => {
       const dateA = a.created_at ? new Date(a.created_at).getTime() : 0;
@@ -800,7 +821,7 @@ const convertedCreatorNetUsd = useMemo(() => {
             >
               {migrationStatusLabel}
             </span>
-          </div>
+         </div>
 
           <div className="mt-6 grid gap-4 md:grid-cols-4">
             <div className="rounded-2xl bg-gray-50 p-5">
@@ -858,12 +879,12 @@ const convertedCreatorNetUsd = useMemo(() => {
               )}
 
               {migrationRequest.review_notes && (
-  <p className="mt-4 text-sm font-semibold text-gray-700">
-    Admin note: {migrationRequest.review_notes}
-  </p>
-)}
+              <p className="mt-4 text-sm font-semibold text-gray-700">
+               Admin note: {migrationRequest.review_notes}
+              </p>
+               )}
             </div>
-          ) : (
+               ) : (
             <div className="mt-5 rounded-2xl border border-dashed border-gray-300 bg-gray-50 p-5">
               <p className="text-sm font-bold text-gray-700">
                 No migration request submitted yet.
@@ -884,6 +905,38 @@ const convertedCreatorNetUsd = useMemo(() => {
             </div>
           )}
         </div>
+        <div className="mt-8 rounded-3xl bg-white p-6 shadow-sm">
+  <h2 className="text-2xl font-black text-gray-900">
+    Subscriber Growth Trend
+  </h2>
+
+  <p className="mt-2 text-sm text-gray-600">
+    Tracks subscriber growth over time, including migrated subscribers as the starting base.
+  </p>
+
+  <div className="mt-6 h-72">
+    {subscriberGrowthChartData.length > 0 ? (
+      <ResponsiveContainer width="100%" height="100%">
+        <LineChart data={subscriberGrowthChartData}>
+          <CartesianGrid strokeDasharray="3 3" />
+          <XAxis dataKey="name" />
+          <YAxis />
+          <Tooltip />
+          <Line
+            type="monotone"
+            dataKey="subscribers"
+            strokeWidth={3}
+            dot={false}
+          />
+        </LineChart>
+      </ResponsiveContainer>
+    ) : (
+      <div className="flex h-full items-center justify-center rounded-2xl bg-gray-50 text-sm font-semibold text-gray-500">
+        Subscriber growth data will appear once subscribers are recorded.
+      </div>
+    )}
+  </div>
+</div>
 
      <div className="mt-8 rounded-3xl border border-yellow-200 bg-yellow-50 p-6 shadow-sm">
   <div className="flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
