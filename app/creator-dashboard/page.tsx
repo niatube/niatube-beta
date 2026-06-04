@@ -1143,6 +1143,45 @@ const sortedUploads = useMemo(() => {
     )}
   </div>
 </div>
+<div className="mt-8 rounded-3xl bg-white p-6 shadow-sm">
+  <h2 className="text-2xl font-black text-gray-900">
+    Audience Growth Summary
+  </h2>
+
+  <p className="mt-2 text-sm text-gray-600">
+    Gives creators a quick snapshot of audience momentum and the next subscriber milestone.
+  </p>
+
+  <div className="mt-6 grid gap-4 md:grid-cols-4">
+    <div className="rounded-2xl bg-gray-50 p-5">
+      <p className="text-sm font-bold text-gray-500">Total Subscribers</p>
+      <p className="mt-2 text-3xl font-black text-gray-900">
+        {subscriberCount.toLocaleString()}
+      </p>
+    </div>
+
+    <div className="rounded-2xl bg-gray-50 p-5">
+      <p className="text-sm font-bold text-gray-500">30-Day Growth</p>
+      <p className="mt-2 text-3xl font-black text-gray-900">
+        +{subscriberGrowth30Days.toLocaleString()}
+      </p>
+    </div>
+
+    <div className="rounded-2xl bg-gray-50 p-5">
+      <p className="text-sm font-bold text-gray-500">Next Milestone</p>
+      <p className="mt-2 text-3xl font-black text-gray-900">
+        {nextSubscriberMilestone.toLocaleString()}
+      </p>
+    </div>
+
+    <div className="rounded-2xl bg-gray-50 p-5">
+      <p className="text-sm font-bold text-gray-500">Remaining</p>
+      <p className="mt-2 text-3xl font-black text-gray-900">
+        {subscribersRemaining.toLocaleString()}
+      </p>
+    </div>
+  </div>
+</div>
      <div className="mt-8 rounded-3xl border border-yellow-200 bg-yellow-50 p-6 shadow-sm">
   <div className="flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
     <div>
