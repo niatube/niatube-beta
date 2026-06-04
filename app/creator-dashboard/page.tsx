@@ -634,6 +634,20 @@ const topPerformingVideos = useMemo(() => {
     .slice(0, 5);
 }, [uploads]);
 
+const monetizationChecks = {
+  hasSubscribers: subscriberCount > 0,
+  hasVideos: uploads.length > 0,
+ hasWatchHours: watchHoursTrendData.some(
+  (item) => Number(item.watchHours || 0) > 0
+),
+  hasEarnings: tipTotalsByCurrency.length > 0,
+  migrationSubmitted: Boolean(migrationRequest),
+};
+
+const monetizationReady =
+  monetizationChecks.hasSubscribers &&
+  monetizationChecks.hasVideos;
+
 const sortedUploads = useMemo(() => {
   return [...uploads].sort((a, b) => {
     const dateA = a.created_at ? new Date(a.created_at).getTime() : 0;
@@ -1220,6 +1234,56 @@ const sortedUploads = useMemo(() => {
     </div>
   </div>
 </div>
+
+<div className="mt-8 rounded-3xl bg-white p-6 shadow-sm">
+  <h2 className="text-2xl font-black text-gray-900">
+    Monetization Readiness
+  </h2>
+
+  <p className="mt-2 text-sm text-gray-600">
+    Tracks your progress toward creator monetization eligibility.
+  </p>
+
+  <div className="mt-6 grid gap-4 md:grid-cols-2">
+    <div className="rounded-2xl bg-gray-50 p-4">
+      <p className="font-semibold">
+        {monetizationChecks.hasSubscribers ? "✅" : "⬜"} Subscribers
+      </p>
+    </div>
+
+    <div className="rounded-2xl bg-gray-50 p-4">
+      <p className="font-semibold">
+        {monetizationChecks.hasVideos ? "✅" : "⬜"} Uploaded Videos
+      </p>
+    </div>
+
+    <div className="rounded-2xl bg-gray-50 p-4">
+      <p className="font-semibold">
+        {monetizationChecks.hasWatchHours ? "✅" : "⬜"} Watch Hours
+      </p>
+    </div>
+
+    <div className="rounded-2xl bg-gray-50 p-4">
+      <p className="font-semibold">
+        {monetizationChecks.hasEarnings ? "✅" : "⬜"} Creator Earnings
+      </p>
+    </div>
+
+    <div className="rounded-2xl bg-gray-50 p-4 md:col-span-2">
+      <p className="font-semibold">
+        {monetizationChecks.migrationSubmitted ? "✅" : "⬜"} Migration Application
+      </p>
+    </div>
+  </div>
+
+  <div className="mt-6 rounded-2xl p-4 text-center font-black text-lg
+    bg-green-100 text-green-800">
+    {monetizationReady
+      ? "Eligible for Monetization Review"
+      : "Continue Growing Your Channel"}
+  </div>
+</div>
+
      <div className="mt-8 rounded-3xl border border-yellow-200 bg-yellow-50 p-6 shadow-sm">
   <div className="flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
     <div>
