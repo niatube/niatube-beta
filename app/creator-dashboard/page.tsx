@@ -628,6 +628,11 @@ const watchHoursTrendData = useMemo(() => {
       };
     });
 }, [uploads]);
+const topPerformingVideos = useMemo(() => {
+  return [...uploads]
+    .sort((a, b) => Number(b.views || 0) - Number(a.views || 0))
+    .slice(0, 5);
+}, [uploads]);
 
 const sortedUploads = useMemo(() => {
   return [...uploads].sort((a, b) => {
@@ -1084,6 +1089,56 @@ const sortedUploads = useMemo(() => {
     ) : (
       <div className="flex h-full items-center justify-center rounded-2xl bg-gray-50 text-sm font-semibold text-gray-500">
         Watch hours data will appear once videos receive views.
+      </div>
+    )}
+  </div>
+</div>
+<div className="mt-8 rounded-3xl bg-white p-6 shadow-sm">
+  <h2 className="text-2xl font-black text-gray-900">
+    Top Performing Videos
+  </h2>
+
+  <p className="mt-2 text-sm text-gray-600">
+    Shows your strongest videos ranked by current view count.
+  </p>
+
+  <div className="mt-6 space-y-3">
+    {topPerformingVideos.length > 0 ? (
+      topPerformingVideos.map((video, index) => (
+        <div
+          key={video.id}
+          className="flex items-center justify-between rounded-2xl bg-gray-50 p-4"
+        >
+          <div>
+            <p className="text-sm font-black text-gray-900">
+              {index === 0
+                ? "🥇"
+                : index === 1
+                ? "🥈"
+                : index === 2
+                ? "🥉"
+                : `#${index + 1}`}{" "}
+              {video.title || "Untitled Video"}
+            </p>
+
+            <p className="mt-1 text-xs font-semibold text-gray-500">
+              {video.created_at
+                ? new Date(video.created_at).toLocaleDateString()
+                : "Date unavailable"}
+            </p>
+          </div>
+
+          <div className="text-right">
+            <p className="text-lg font-black text-gray-900">
+              {Number(video.views || 0).toLocaleString()}
+            </p>
+            <p className="text-xs font-bold text-gray-500">views</p>
+          </div>
+        </div>
+      ))
+    ) : (
+      <div className="rounded-2xl bg-gray-50 p-5 text-sm font-semibold text-gray-500">
+        Top performing videos will appear once you upload videos.
       </div>
     )}
   </div>
