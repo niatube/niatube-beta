@@ -552,7 +552,7 @@ const convertedCreatorNetUsd = useMemo(() => {
     }));
   }, [tipTotalsByCurrency]);
 
-  const subscriberGrowthChartData = useMemo(() => {
+ const subscriberGrowthChartData = useMemo(() => {
   let runningTotal = migratedSubscriberCount;
 
   return [...subscriberRows]
@@ -573,14 +573,34 @@ const convertedCreatorNetUsd = useMemo(() => {
     });
 }, [subscriberRows, migratedSubscriberCount]);
 
-  const sortedUploads = useMemo(() => {
-    return [...uploads].sort((a, b) => {
-      const dateA = a.created_at ? new Date(a.created_at).getTime() : 0;
-      const dateB = b.created_at ? new Date(b.created_at).getTime() : 0;
-      return dateB - dateA;
-    });
-  }, [uploads]);
+const earningsTrendData = useMemo(() => {
+  const grouped: Record<string, number> = {};
 
+  tips.forEach((tip) => {
+    const date = tip.created_at
+      ? new Date(tip.created_at).toLocaleDateString()
+      : "Unknown";
+
+    const amount = Number(
+      tip.net_amount ?? tip.gross_amount ?? tip.amount ?? 0
+    );
+
+    grouped[date] = (grouped[date] || 0) + amount;
+  });
+
+  return Object.entries(grouped).map(([date, amount]) => ({
+    date,
+    amount,
+  }));
+}, [tips]);
+
+const sortedUploads = useMemo(() => {
+  return [...uploads].sort((a, b) => {
+    const dateA = a.created_at ? new Date(a.created_at).getTime() : 0;
+    const dateB = b.created_at ? new Date(b.created_at).getTime() : 0;
+    return dateB - dateA;
+  });
+}, [uploads]);
   const totalPages = Math.max(
     1,
     Math.ceil(sortedUploads.length / videosPerPage)
@@ -937,7 +957,38 @@ const convertedCreatorNetUsd = useMemo(() => {
     )}
   </div>
 </div>
+<div className="mt-8 rounded-3xl bg-white p-6 shadow-sm">
+  <h2 className="text-2xl font-black text-gray-900">
+    Creator Earnings Trend
+  </h2>
 
+  <p className="mt-2 text-sm text-gray-600">
+    Tracks creator earnings over time based on tips received.
+  </p>
+
+  <div className="mt-6 h-72">
+    {earningsTrendData.length > 0 ? (
+      <ResponsiveContainer width="100%" height="100%">
+        <LineChart data={earningsTrendData}>
+          <CartesianGrid strokeDasharray="3 3" />
+          <XAxis dataKey="date" />
+          <YAxis />
+          <Tooltip />
+          <Line
+            type="monotone"
+            dataKey="amount"
+            strokeWidth={3}
+            dot={false}
+          />
+        </LineChart>
+      </ResponsiveContainer>
+    ) : (
+      <div className="flex h-full items-center justify-center rounded-2xl bg-gray-50 text-sm font-semibold text-gray-500">
+        Earnings trend data will appear once tips are received.
+      </div>
+    )}
+  </div>
+</div>
      <div className="mt-8 rounded-3xl border border-yellow-200 bg-yellow-50 p-6 shadow-sm">
   <div className="flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
     <div>
