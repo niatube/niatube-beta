@@ -593,6 +593,41 @@ const earningsTrendData = useMemo(() => {
     amount,
   }));
 }, [tips]);
+const viewsTrendData = useMemo(() => {
+  return [...uploads]
+    .sort((a, b) => {
+      const dateA = a.created_at ? new Date(a.created_at).getTime() : 0;
+      const dateB = b.created_at ? new Date(b.created_at).getTime() : 0;
+      return dateA - dateB;
+    })
+    .map((upload, index) => ({
+      date: upload.created_at
+        ? new Date(upload.created_at).toLocaleDateString()
+        : `Video ${index + 1}`,
+      views: Number(upload.views || 0),
+    }));
+}, [uploads]);
+
+const watchHoursTrendData = useMemo(() => {
+  return [...uploads]
+    .sort((a, b) => {
+      const dateA = a.created_at ? new Date(a.created_at).getTime() : 0;
+      const dateB = b.created_at ? new Date(b.created_at).getTime() : 0;
+      return dateA - dateB;
+    })
+    .map((upload, index) => {
+      const views = Number(upload.views || 0);
+      const durationSeconds = Number(upload.duration_seconds || 0);
+      const watchHours = (views * durationSeconds) / 3600;
+
+      return {
+        date: upload.created_at
+          ? new Date(upload.created_at).toLocaleDateString()
+          : `Video ${index + 1}`,
+        watchHours: Number(watchHours.toFixed(2)),
+      };
+    });
+}, [uploads]);
 
 const sortedUploads = useMemo(() => {
   return [...uploads].sort((a, b) => {
@@ -985,6 +1020,70 @@ const sortedUploads = useMemo(() => {
     ) : (
       <div className="flex h-full items-center justify-center rounded-2xl bg-gray-50 text-sm font-semibold text-gray-500">
         Earnings trend data will appear once tips are received.
+      </div>
+    )}
+  </div>
+</div>
+<div className="mt-8 rounded-3xl bg-white p-6 shadow-sm">
+  <h2 className="text-2xl font-black text-gray-900">
+  Views by Video
+   </h2>
+
+  <p className="mt-2 text-sm text-gray-600">
+  Compares the current view performance of your uploaded videos.
+  </p>
+
+  <div className="mt-6 h-72">
+    {viewsTrendData.length > 0 ? (
+      <ResponsiveContainer width="100%" height="100%">
+        <LineChart data={viewsTrendData}>
+          <CartesianGrid strokeDasharray="3 3" />
+          <XAxis dataKey="date" />
+          <YAxis />
+          <Tooltip />
+          <Line
+            type="monotone"
+            dataKey="views"
+            strokeWidth={3}
+            dot={false}
+          />
+        </LineChart>
+      </ResponsiveContainer>
+    ) : (
+      <div className="flex h-full items-center justify-center rounded-2xl bg-gray-50 text-sm font-semibold text-gray-500">
+        Views trend data will appear once videos receive views.
+      </div>
+    )}
+  </div>
+</div>
+<div className="mt-8 rounded-3xl bg-white p-6 shadow-sm">
+  <h2 className="text-2xl font-black text-gray-900">
+    Watch Hours Trend
+  </h2>
+
+  <p className="mt-2 text-sm text-gray-600">
+    Estimates watch hours by video using views and video duration.
+  </p>
+
+  <div className="mt-6 h-72">
+    {watchHoursTrendData.length > 0 ? (
+      <ResponsiveContainer width="100%" height="100%">
+        <LineChart data={watchHoursTrendData}>
+          <CartesianGrid strokeDasharray="3 3" />
+          <XAxis dataKey="date" />
+          <YAxis />
+          <Tooltip />
+          <Line
+            type="monotone"
+            dataKey="watchHours"
+            strokeWidth={3}
+            dot={false}
+          />
+        </LineChart>
+      </ResponsiveContainer>
+    ) : (
+      <div className="flex h-full items-center justify-center rounded-2xl bg-gray-50 text-sm font-semibold text-gray-500">
+        Watch hours data will appear once videos receive views.
       </div>
     )}
   </div>
