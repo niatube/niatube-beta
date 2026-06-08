@@ -21,6 +21,67 @@ app.get("/", (req, res) => {
     message: "NiaTube Upload Service Running",
   });
 });
+app.post("/create-video", async (req, res) => {
+  // create Bunny video only
+});
+
+app.post("/create-video", async (req, res) => {
+  try {
+    const { title } = req.body;
+
+    if (!title) {
+      return res.status(400).json({
+        error: "Video title is required.",
+      });
+    }
+
+    const createRes = await fetch(
+      `https://video.bunnycdn.com/library/${libraryId}/videos`,
+      {
+        method: "POST",
+        headers: {
+          AccessKey: apiKey,
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({ title }),
+      }
+    );
+
+    const createText = await createRes.text();
+
+    if (!createRes.ok) {
+      return res.status(500).json({
+        error: "Bunny create video failed.",
+        details: createText,
+      });
+    }
+
+    const createdVideo = JSON.parse(createText);
+
+    const videoId = createdVideo.guid;
+
+    if (!videoId) {
+      return res.status(500).json({
+        error: "Bunny did not return video ID.",
+      });
+    }
+
+    return res.json({
+      success: true,
+      videoId,
+      uploadUrl: `https://video.bunnycdn.com/library/${libraryId}/videos/${videoId}`,
+      embedUrl: `https://iframe.mediadelivery.net/embed/${libraryId}/${videoId}`,
+      playbackUrl: `https://iframe.mediadelivery.net/play/${libraryId}/${videoId}`,
+    });
+  } catch (error) {
+    console.error(error);
+
+    return res.status(500).json({
+      error: "Create video failed.",
+      details: error.message,
+    });
+  }
+});
 
 app.post("/upload", upload.single("file"), async (req, res) => {
     console.log("Upload request received");
