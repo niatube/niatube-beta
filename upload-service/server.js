@@ -27,7 +27,7 @@ app.post("/create-video", async (req, res) => {
 
 app.post("/create-video", async (req, res) => {
   try {
-    const { title } = req.body;
+    const title = req.body?.title;
 
     if (!title) {
       return res.status(400).json({
