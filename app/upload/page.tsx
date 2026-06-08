@@ -4,7 +4,7 @@ import { useEffect, useState } from "react";
 import { supabase } from "@/lib/supabase-browser";
 import Navbar from "@/components/Navbar";
 
-const MAX_VIDEO_SIZE = 1024 * 1024 * 1024; // 1GB
+const MAX_VIDEO_SIZE = 5 * 1024 * 1024 * 1024; // 5GB
 const ALLOWED_VIDEO_TYPES = ["video/mp4"];
 const ALLOWED_THUMBNAIL_TYPES = ["image/jpeg", "image/png", "image/webp"];
 
@@ -82,13 +82,20 @@ const [uploadedVideoId, setUploadedVideoId] = useState("");
 
     if (!file) return;
 
-    if (!ALLOWED_VIDEO_TYPES.includes(file.type)) {
-      setError("Only MP4 videos are supported for beta.");
-      return;
-    }
+   const fileName = file.name.toLowerCase();
+const isMp4File =
+  file.type === "video/mp4" || fileName.endsWith(".mp4");
+
+if (!isMp4File) {
+  setError("Please choose an MP4 video file.");
+  return;
+}
+console.log("File name:", file.name);
+console.log("File size:", file.size);
+console.log("MAX_VIDEO_SIZE:", MAX_VIDEO_SIZE);
 
     if (file.size > MAX_VIDEO_SIZE) {
-      setError("Video exceeds the 1GB upload limit.");
+            setError("Video exceeds the 5GB upload limit.");
       return;
     }
 
@@ -151,10 +158,10 @@ const [uploadedVideoId, setUploadedVideoId] = useState("");
       return;
     }
 
-    if (videoFile.size > MAX_VIDEO_SIZE) {
-      setError("Video exceeds the 1GB upload limit.");
-      return;
-    }
+   if (videoFile.size > MAX_VIDEO_SIZE) {
+  setError("Video exceeds the 5GB upload limit.");
+  return;
+}
 
     if (!ALLOWED_THUMBNAIL_TYPES.includes(thumbnailFile.type)) {
       setError("Thumbnail must be JPG, PNG, or WebP.");

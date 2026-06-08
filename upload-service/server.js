@@ -9,7 +9,7 @@ app.use(cors());
 
 const upload = multer({
   limits: {
-    fileSize: 1024 * 1024 * 1024, // 1GB
+    fileSize: 5 * 1024 * 1024 * 1024, // 5GB
   },
 });
 
