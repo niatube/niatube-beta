@@ -77,15 +77,17 @@ export async function POST(req: Request) {
     const supabaseAdmin = getSupabaseAdmin();
     const body = await req.json();
 
-    const {
-      title,
-      creator,
-      description,
-      thumbnail_url,
-      video_url,
-      category,
-      duration_seconds,
-    } = body;
+  const {
+  title,
+  creator,
+  description,
+  thumbnail_url,
+  video_url,
+  category,
+  duration_seconds,
+  status,
+  bunny_video_id,
+} = body;
 
     const { data, error } = await supabaseAdmin
       .from("uploads")
@@ -96,9 +98,10 @@ export async function POST(req: Request) {
           description: description?.trim() || "",
           thumbnail_url: thumbnail_url || null,
           video_url: video_url || null,
+          bunny_video_id: bunny_video_id || null,
           category: category || "culture",
           duration_seconds: duration_seconds || 0,
-          status: "published",
+          status: status || "published",
           trending_score: 100,
           is_live: false,
           live_status: null,

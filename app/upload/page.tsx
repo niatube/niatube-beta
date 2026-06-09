@@ -343,8 +343,9 @@ export default function UploadPage() {
           video_url: bunnyEmbedUrl,
           category,
           duration_seconds: duration,
-          status: "published",
-          is_live: false,
+          status: "processing",
+           bunny_video_id: bunnyData.videoId,
+            is_live: false,
         }),
       });
 
