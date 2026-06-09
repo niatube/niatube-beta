@@ -5,8 +5,103 @@ import { supabase } from "@/lib/supabase-browser";
 import Navbar from "@/components/Navbar";
 
 const MAX_VIDEO_SIZE = 5 * 1024 * 1024 * 1024; // 5GB
-const ALLOWED_VIDEO_TYPES = ["video/mp4"];
 const ALLOWED_THUMBNAIL_TYPES = ["image/jpeg", "image/png", "image/webp"];
+
+function encodeMetadata(value: string) {
+  return btoa(unescape(encodeURIComponent(value)));
+}
+
+function isMp4Video(file: File) {
+  return file.type === "video/mp4" || file.name.toLowerCase().endsWith(".mp4");
+}
+
+async function uploadVideoToBunnyTus({
+  file,
+  title,
+  tusEndpoint,
+  libraryId,
+  videoId,
+  signature,
+  expirationTime,
+  onProgress,
+}: {
+  file: File;
+  title: string;
+  tusEndpoint: string;
+  libraryId: string | number;
+  videoId: string;
+  signature: string;
+  expirationTime: string | number;
+  onProgress: (progress: number) => void;
+}) {
+  const authHeaders = {
+    AuthorizationSignature: signature,
+    AuthorizationExpire: String(expirationTime),
+    VideoId: videoId,
+    LibraryId: String(libraryId),
+  };
+
+  const createUploadRes = await fetch(tusEndpoint, {
+    method: "POST",
+    headers: {
+      "Tus-Resumable": "1.0.0",
+      "Upload-Length": String(file.size),
+      "Upload-Metadata": `filename ${encodeMetadata(file.name)},filetype ${encodeMetadata(
+        file.type || "video/mp4"
+      )},title ${encodeMetadata(title)}`,
+      ...authHeaders,
+    },
+  });
+
+  if (!createUploadRes.ok) {
+    throw new Error("Could not start Bunny video upload.");
+  }
+
+ const uploadLocation = createUploadRes.headers.get("Location");
+
+if (!uploadLocation) {
+  throw new Error("Bunny did not return an upload location.");
+}
+
+const uploadUrl = new URL(uploadLocation, tusEndpoint).toString();
+
+  await new Promise<void>((resolve, reject) => {
+    const xhr = new XMLHttpRequest();
+
+    xhr.open("PATCH", uploadUrl);
+
+    xhr.setRequestHeader("Tus-Resumable", "1.0.0");
+    xhr.setRequestHeader("Upload-Offset", "0");
+    xhr.setRequestHeader("Content-Type", "application/offset+octet-stream");
+    xhr.setRequestHeader("AuthorizationSignature", signature);
+    xhr.setRequestHeader("AuthorizationExpire", String(expirationTime));
+    xhr.setRequestHeader("VideoId", videoId);
+    xhr.setRequestHeader("LibraryId", String(libraryId));
+
+    xhr.upload.onprogress = (event) => {
+      if (event.lengthComputable) {
+        const percent = Math.round((event.loaded / event.total) * 60);
+        onProgress(15 + percent);
+      }
+    };
+
+    xhr.onload = () => {
+      if (xhr.status >= 200 && xhr.status < 300) {
+        resolve();
+      } else {
+    reject(
+  new Error(
+    `Bunny video upload failed. Status: ${xhr.status}. Response: ${xhr.responseText}`
+  )
+);
+      }
+    };
+
+    xhr.onerror = () => reject(new Error("Network error during Bunny upload."));
+
+    xhr.send(file);
+  });
+}
 
 export default function UploadPage() {
   const [title, setTitle] = useState("");
@@ -16,7 +111,7 @@ export default function UploadPage() {
   const [thumbnailFile, setThumbnailFile] = useState<File | null>(null);
   const [videoPreview, setVideoPreview] = useState("");
   const [thumbnailPreview, setThumbnailPreview] = useState("");
- 
+
   const [uploading, setUploading] = useState(false);
   const [uploadProgress, setUploadProgress] = useState(0);
   const [uploadStage, setUploadStage] = useState("");
@@ -25,8 +120,8 @@ export default function UploadPage() {
   const [error, setError] = useState("");
   const [category, setCategory] = useState("culture");
   const [duration, setDuration] = useState<number | null>(null);
+  const [uploadedVideoId, setUploadedVideoId] = useState("");
 
-const [uploadedVideoId, setUploadedVideoId] = useState("");
   useEffect(() => {
     async function loadCreatorName() {
       const {
@@ -82,20 +177,13 @@ const [uploadedVideoId, setUploadedVideoId] = useState("");
 
     if (!file) return;
 
-   const fileName = file.name.toLowerCase();
-const isMp4File =
-  file.type === "video/mp4" || fileName.endsWith(".mp4");
-
-if (!isMp4File) {
-  setError("Please choose an MP4 video file.");
-  return;
-}
-console.log("File name:", file.name);
-console.log("File size:", file.size);
-console.log("MAX_VIDEO_SIZE:", MAX_VIDEO_SIZE);
+    if (!isMp4Video(file)) {
+      setError("Please choose an MP4 video file.");
+      return;
+    }
 
     if (file.size > MAX_VIDEO_SIZE) {
-            setError("Video exceeds the 5GB upload limit.");
+      setError("Video exceeds the 5GB upload limit.");
       return;
     }
 
@@ -153,15 +241,15 @@ console.log("MAX_VIDEO_SIZE:", MAX_VIDEO_SIZE);
       return;
     }
 
-    if (!ALLOWED_VIDEO_TYPES.includes(videoFile.type)) {
+    if (!isMp4Video(videoFile)) {
       setError("Only MP4 videos are supported for beta.");
       return;
     }
 
-   if (videoFile.size > MAX_VIDEO_SIZE) {
-  setError("Video exceeds the 5GB upload limit.");
-  return;
-}
+    if (videoFile.size > MAX_VIDEO_SIZE) {
+      setError("Video exceeds the 5GB upload limit.");
+      return;
+    }
 
     if (!ALLOWED_THUMBNAIL_TYPES.includes(thumbnailFile.type)) {
       setError("Thumbnail must be JPG, PNG, or WebP.");
@@ -169,53 +257,51 @@ console.log("MAX_VIDEO_SIZE:", MAX_VIDEO_SIZE);
     }
 
     try {
-      setUploadProgress(5);
-setUploadStage("Preparing upload...");
       setUploading(true);
-      setUploadProgress(15);
-setUploadStage("Uploading video to NiaTube...");
+      setUploadProgress(5);
+      setUploadStage("Creating Bunny video...");
 
-      const bunnyFormData = new FormData();
-      bunnyFormData.append("title", cleanTitle);
-      bunnyFormData.append("file", videoFile);
+      const bunnyCreateRes = await fetch("/api/bunny/create-video", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          title: cleanTitle,
+        }),
+      });
 
-      const bunnyRes = await fetch(
-  "https://niatube-beta-production.up.railway.app/upload",
-  {
-    method: "POST",
-    body: bunnyFormData,
-  }
-);
+      const bunnyData = await bunnyCreateRes.json();
 
-      let bunnyData: any = null;
-
-      try {
-        bunnyData = await bunnyRes.json();
-      } catch {
-        bunnyData = null;
+      if (!bunnyCreateRes.ok || !bunnyData?.success) {
+        console.error("Bunny create video failed:", bunnyData);
+        setError(
+          bunnyData?.error ||
+            "Could not create Bunny video. Please check the Bunny API route."
+        );
+        return;
       }
 
-      if (!bunnyRes.ok) {
-  console.error("Bunny upload failed:", bunnyData);
+      setUploadProgress(15);
+      setUploadStage("Uploading video to Bunny...");
 
-  setError(
-    bunnyData?.error
-      ? `${bunnyData.error} ${bunnyData.details || ""}`
-      : "Video upload failed. Please try again."
-  );
+      await uploadVideoToBunnyTus({
+        file: videoFile,
+        title: cleanTitle,
+        tusEndpoint: bunnyData.tusEndpoint,
+        libraryId: bunnyData.libraryId,
+        videoId: bunnyData.videoId,
+        signature: bunnyData.signature,
+        expirationTime: bunnyData.expirationTime,
+        onProgress: setUploadProgress,
+      });
 
-  return;
-}
+      const bunnyEmbedUrl =
+        bunnyData.embedUrl ||
+        `https://iframe.mediadelivery.net/embed/${bunnyData.libraryId}/${bunnyData.videoId}`;
 
-const bunnyEmbedUrl = bunnyData?.embedUrl || bunnyData?.embed_url;
-
-if (!bunnyEmbedUrl) {
-  setError("Video uploaded, but Bunny did not return a playable URL.");
-  return;
-}
-
-setUploadProgress(70);
-setUploadStage("Processing video...");
+      setUploadProgress(78);
+      setUploadStage("Uploading thumbnail...");
 
       const thumbExt = thumbnailFile.name.split(".").pop() || "jpg";
       const thumbFileName = `${Date.now()}-thumbnail.${thumbExt}`;
@@ -229,13 +315,13 @@ setUploadStage("Processing video...");
         });
 
       if (thumbnailUploadError) {
-  console.error("Thumbnail upload failed:", thumbnailUploadError);
-  setError("Thumbnail upload failed. Please try another image.");
-  return;
-}
+        console.error("Thumbnail upload failed:", thumbnailUploadError);
+        setError("Thumbnail upload failed. Please try another image.");
+        return;
+      }
 
-setUploadProgress(85);
-setUploadStage("Finalizing publish...");
+      setUploadProgress(88);
+      setUploadStage("Saving video to NiaTube...");
 
       const { data: thumbnailPublicData } = supabase.storage
         .from("videos")
@@ -254,7 +340,7 @@ setUploadStage("Finalizing publish...");
           creator: cleanCreator,
           description: cleanDescription,
           thumbnail_url: thumbnailUrl,
-         video_url: bunnyEmbedUrl,
+          video_url: bunnyEmbedUrl,
           category,
           duration_seconds: duration,
           status: "published",
@@ -266,8 +352,6 @@ setUploadStage("Finalizing publish...");
 
       try {
         metadataData = await metadataRes.json();
-
-        console.log("Metadata response:", metadataData);
       } catch {
         metadataData = null;
       }
@@ -284,10 +368,9 @@ setUploadStage("Finalizing publish...");
       }
 
       setUploadedTitle(cleanTitle);
-
       setUploadedVideoId(metadataData?.upload?.id || metadataData?.id || "");
       setUploadProgress(100);
-setUploadStage("Upload complete.");
+      setUploadStage("Upload complete.");
       setSubmitted(true);
 
       setTitle("");
@@ -295,7 +378,6 @@ setUploadStage("Upload complete.");
       setVideoFile(null);
       setThumbnailFile(null);
       setVideoPreview("");
-      setThumbnailPreview("");
       setDuration(null);
       setCategory("culture");
     } catch (err: any) {
@@ -322,11 +404,9 @@ setUploadStage("Upload complete.");
           <div className="mb-6 rounded-xl border border-yellow-200 bg-yellow-50 p-4">
             <p className="font-semibold text-gray-900">Recommended Format</p>
             <p className="mt-1 text-sm text-gray-700">
-              .mp4 · H.264 · AAC · 720p/1080p · 24–30fps · Max 1GB
+              .mp4 · H.264 · AAC · 720p/1080p · 24–30fps · Max 5GB
             </p>
           </div>
-
-         
 
           <form onSubmit={handleSubmit} className="space-y-4">
             <input
@@ -379,20 +459,20 @@ setUploadStage("Upload complete.");
                 className="mt-2 w-full rounded-xl border border-gray-300 px-4 py-3 disabled:bg-gray-100"
               >
                 <option value="culture">Culture</option>
-<option value="history">History</option>
-<option value="music">Music</option>
-<option value="afrobeats">Afrobeats</option>
-<option value="news">News</option>
-<option value="trending">Trending</option>
-<option value="live">Live</option>
-<option value="shorts">Shorts</option>
-<option value="vlogs">Vlogs</option>
-<option value="podcast">Podcast</option>
-<option value="education">Education</option>
-<option value="business">Business</option>
-<option value="sport">Sport</option>
-<option value="travel">Travel</option>
-<option value="film">Film</option>
+                <option value="history">History</option>
+                <option value="music">Music</option>
+                <option value="afrobeats">Afrobeats</option>
+                <option value="news">News</option>
+                <option value="trending">Trending</option>
+                <option value="live">Live</option>
+                <option value="shorts">Shorts</option>
+                <option value="vlogs">Vlogs</option>
+                <option value="podcast">Podcast</option>
+                <option value="education">Education</option>
+                <option value="business">Business</option>
+                <option value="sport">Sport</option>
+                <option value="travel">Travel</option>
+                <option value="film">Film</option>
               </select>
             </label>
 
@@ -409,7 +489,7 @@ setUploadStage("Upload complete.");
               />
 
               <p className="mt-1 text-xs text-gray-500">
-                MP4 only for beta. Maximum file size: 500MB.
+                MP4 only for beta. Maximum file size: 5GB.
               </p>
             </div>
 
@@ -466,13 +546,13 @@ setUploadStage("Upload complete.");
 
                 <p className="mt-1 text-sm text-gray-500">
                   {creator || "Creator name preview"}
-                  {duration ? ` • ${Math.floor(duration / 60)}m ${duration % 60}s` : ""}
+                  {duration
+                    ? ` • ${Math.floor(duration / 60)}m ${duration % 60}s`
+                    : ""}
                 </p>
 
                 {description && (
-                  <p className="mt-2 text-sm text-gray-700">
-                    {description}
-                  </p>
+                  <p className="mt-2 text-sm text-gray-700">{description}</p>
                 )}
               </div>
             </div>
@@ -484,73 +564,69 @@ setUploadStage("Upload complete.");
             >
               {uploading ? "Uploading... Please do not refresh" : "Upload"}
             </button>
+
             {uploading && (
-  <div className="rounded-xl border border-blue-200 bg-blue-50 p-4">
-    <div className="mb-2 flex items-center justify-between text-sm font-bold text-blue-800">
-      <span>{uploadStage || "Uploading..."}</span>
-      <span>{uploadProgress}%</span>
-    </div>
+              <div className="rounded-xl border border-blue-200 bg-blue-50 p-4">
+                <div className="mb-2 flex items-center justify-between text-sm font-bold text-blue-800">
+                  <span>{uploadStage || "Uploading..."}</span>
+                  <span>{uploadProgress}%</span>
+                </div>
 
-    <div className="h-3 overflow-hidden rounded-full bg-blue-100">
-      <div
-        className="h-full rounded-full bg-blue-600 transition-all duration-500"
-        style={{ width: `${uploadProgress}%` }}
-      />
-    </div>
+                <div className="h-3 overflow-hidden rounded-full bg-blue-100">
+                  <div
+                    className="h-full rounded-full bg-blue-600 transition-all duration-500"
+                    style={{ width: `${uploadProgress}%` }}
+                  />
+                </div>
 
-    <p className="mt-2 text-xs text-blue-700">
-      Please keep this page open while your video uploads.
-    </p>
-  </div>
-)}
-            
-         {submitted && (
-  <div className="mb-5 rounded-2xl border border-green-200 bg-green-50 p-5 shadow-sm">
-    <div className="flex items-start gap-3">
-      <div className="mt-1 text-2xl">✅</div>
+                <p className="mt-2 text-xs text-blue-700">
+                  Please keep this page open while your video uploads.
+                </p>
+              </div>
+            )}
 
-      <div className="flex-1">
-        <h3 className="text-lg font-black text-green-800">
-          Your video was uploaded successfully. It may take just a few minutes to finish processing before playback becomes available
-        </h3>
+            {submitted && (
+              <div className="mb-5 rounded-2xl border border-green-200 bg-green-50 p-5 shadow-sm">
+                <div className="flex items-start gap-3">
+                  <div className="mt-1 text-2xl">✅</div>
 
-        <p className="mt-1 text-sm text-green-700">
-          Your video <strong>{uploadedTitle}</strong> is now live on
-          NiaTube.
-        </p>
+                  <div className="flex-1">
+                    <h3 className="text-lg font-black text-green-800">
+                      Your video was uploaded successfully. It may take just a
+                      few minutes to finish processing before playback becomes
+                      available.
+                    </h3>
 
-        {thumbnailPreview && (
-          <img
-            src={thumbnailPreview}
-            alt="Thumbnail preview"
-            className="mt-4 h-40 w-full rounded-xl object-cover shadow-sm"
-          />
-        )}
+                    <p className="mt-1 text-sm text-green-700">
+                      Your video <strong>{uploadedTitle}</strong> is now live on
+                      NiaTube.
+                    </p>
 
-        <div className="mt-5 flex flex-wrap gap-3">
-          <a
-          href={uploadedVideoId ? `/watch/${uploadedVideoId}` : "/"}
-            className="rounded-xl bg-black px-4 py-2 text-sm font-bold text-white hover:bg-gray-800"
-          >
-            Watch Video
-          </a>
+                    <div className="mt-5 flex flex-wrap gap-3">
+                      <a
+                        href={uploadedVideoId ? `/watch/${uploadedVideoId}` : "/"}
+                        className="rounded-xl bg-black px-4 py-2 text-sm font-bold text-white hover:bg-gray-800"
+                      >
+                        Watch Video
+                      </a>
 
-          <a
-            href="/creator-dashboard"
-            className="rounded-xl border border-green-700 px-4 py-2 text-sm font-bold text-green-800 hover:bg-green-100"
-          >
-            Go to Creator Dashboard
-          </a>
-        </div>
-      </div>
-    </div>
-  </div>
-)}
-          {error && (
-            <div className="mb-5 rounded-xl border border-red-200 bg-red-50 p-4 text-red-700">
-              {error}
-            </div>
-          )}
+                      <a
+                        href="/creator-dashboard"
+                        className="rounded-xl border border-green-700 px-4 py-2 text-sm font-bold text-green-800 hover:bg-green-100"
+                      >
+                        Go to Creator Dashboard
+                      </a>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            )}
+
+            {error && (
+              <div className="mb-5 rounded-xl border border-red-200 bg-red-50 p-4 text-red-700">
+                {error}
+              </div>
+            )}
           </form>
         </div>
       </main>

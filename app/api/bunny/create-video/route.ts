@@ -1,3 +1,4 @@
+import { createHash } from "node:crypto";
 import { NextResponse } from "next/server";
 
 export const runtime = "nodejs";
@@ -16,20 +17,14 @@ export async function POST(req: Request) {
     }
 
     const body = await req.json();
-    const title = body.title;
-
-    if (!title) {
-      return NextResponse.json(
-        { error: "Video title is required." },
-        { status: 400 }
-      );
-    }
+    const title = body.title || "Untitled Video";
 
     const createRes = await fetch(
       `https://video.bunnycdn.com/library/${libraryId}/videos`,
       {
         method: "POST",
         headers: {
+          Accept: "application/json",
           AccessKey: apiKey,
           "Content-Type": "application/json",
         },
@@ -50,11 +45,30 @@ export async function POST(req: Request) {
     }
 
     const createdVideo = JSON.parse(createText);
+    const videoId = createdVideo.guid;
+
+    if (!videoId) {
+      return NextResponse.json(
+        { error: "Bunny did not return a video ID." },
+        { status: 500 }
+      );
+    }
+
+    const expirationTime = Math.floor(Date.now() / 1000) + 86400;
+
+    const signature = createHash("sha256")
+      .update(`${libraryId}${apiKey}${expirationTime}${videoId}`)
+      .digest("hex");
 
     return NextResponse.json({
       success: true,
       libraryId,
-      videoId: createdVideo.guid,
+      videoId,
+      expirationTime,
+      signature,
+      tusEndpoint: "https://video.bunnycdn.com/tusupload",
+      embedUrl: `https://iframe.mediadelivery.net/embed/${libraryId}/${videoId}`,
+      playbackUrl: `https://iframe.mediadelivery.net/play/${libraryId}/${videoId}`,
     });
   } catch (error: any) {
     return NextResponse.json(
