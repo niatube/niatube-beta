@@ -4,7 +4,7 @@ import { useEffect, useState } from "react";
 import { supabase } from "@/lib/supabase-browser";
 import Navbar from "@/components/Navbar";
 
-const MAX_VIDEO_SIZE = 5 * 1024 * 1024 * 1024; // 5GB
+const MAX_VIDEO_SIZE = 10 * 1024 * 1024 * 1024; // 10GB
 const ALLOWED_THUMBNAIL_TYPES = ["image/jpeg", "image/png", "image/webp"];
 
 function encodeMetadata(value: string) {
@@ -403,9 +403,10 @@ export default function UploadPage() {
 
           <div className="mb-6 rounded-xl border border-yellow-200 bg-yellow-50 p-4">
             <p className="font-semibold text-gray-900">Recommended Format</p>
-            <p className="mt-1 text-sm text-gray-700">
-              .mp4 · H.264 · AAC · 720p/1080p · 24–30fps · Max 5GB
-            </p>
+           
+           <p className="mt-1 text-sm text-gray-700">
+  .mp4 · H.264 · AAC · 720p/1080p · 24–30fps · Max 10GB
+</p>
           </div>
 
           <form onSubmit={handleSubmit} className="space-y-4">
@@ -489,8 +490,8 @@ export default function UploadPage() {
               />
 
               <p className="mt-1 text-xs text-gray-500">
-                MP4 only for beta. Maximum file size: 5GB.
-              </p>
+  MP4 only. Maximum file size: 10GB.
+</p>
             </div>
 
             <div>
