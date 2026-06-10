@@ -30,7 +30,8 @@ export async function POST(req: Request) {
       .from("uploads")
       .update({
         status: "published",
-      })
+       published_at: new Date().toISOString(),
+       })
       .eq("bunny_video_id", videoId)
      .select()
 .maybeSingle();

@@ -87,6 +87,8 @@ export async function POST(req: Request) {
   duration_seconds,
   status,
   bunny_video_id,
+  processing_started_at,
+processing_deadline_at,
 } = body;
 
     const { data, error } = await supabaseAdmin
@@ -99,6 +101,10 @@ export async function POST(req: Request) {
           thumbnail_url: thumbnail_url || null,
           video_url: video_url || null,
           bunny_video_id: bunny_video_id || null,
+          processing_started_at:
+         processing_started_at || null,
+         processing_deadline_at:
+         processing_deadline_at || null,
           category: category || "culture",
           duration_seconds: duration_seconds || 0,
           status: status || "published",

@@ -335,18 +335,22 @@ export default function UploadPage() {
         headers: {
           "Content-Type": "application/json",
         },
-        body: JSON.stringify({
-          title: cleanTitle,
-          creator: cleanCreator,
-          description: cleanDescription,
-          thumbnail_url: thumbnailUrl,
-          video_url: bunnyEmbedUrl,
-          category,
-          duration_seconds: duration,
-          status: "processing",
-           bunny_video_id: bunnyData.videoId,
-            is_live: false,
-        }),
+       body: JSON.stringify({
+  title: cleanTitle,
+  creator: cleanCreator,
+  description: cleanDescription,
+  thumbnail_url: thumbnailUrl,
+  video_url: bunnyEmbedUrl,
+  category,
+  duration_seconds: duration,
+  status: "processing",
+  bunny_video_id: bunnyData.videoId,
+  processing_started_at: new Date().toISOString(),
+  processing_deadline_at: new Date(
+    Date.now() + 15 * 60 * 1000
+  ).toISOString(),
+  is_live: false,
+}),
       });
 
       let metadataData: any = null;
