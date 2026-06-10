@@ -10,12 +10,14 @@ export async function POST(req: Request) {
     const body = await req.json();
     console.log("BUNNY WEBHOOK RECEIVED:", JSON.stringify(body, null, 2));
 
-    const videoId =
-      body?.videoId ||
-      body?.VideoId ||
-      body?.guid ||
-      body?.video?.guid ||
-      body?.video?.id;
+   const videoId =
+  body?.videoId ||
+  body?.VideoId ||
+  body?.VideoGuid ||
+  body?.guid ||
+  body?.Guid ||
+  body?.video?.guid ||
+  body?.video?.id;
 
     if (!videoId) {
       return NextResponse.json(
