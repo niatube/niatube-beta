@@ -8,6 +8,7 @@ export async function POST(req: Request) {
   try {
     const supabaseAdmin = getSupabaseAdmin();
     const body = await req.json();
+    console.log("BUNNY WEBHOOK RECEIVED:", JSON.stringify(body, null, 2));
 
     const videoId =
       body?.videoId ||
