@@ -1011,6 +1011,7 @@ const sortedUploads = useMemo(() => {
   <p className="mt-2 text-sm text-gray-600">
     Tracks subscriber growth over time, including migrated subscribers as the starting base.
   </p>
+  
   <div className="mt-4 grid gap-3 sm:grid-cols-3">
   <div className="rounded-2xl bg-gray-50 p-4">
     <p className="text-xs font-bold uppercase text-gray-500">
@@ -1039,34 +1040,7 @@ const sortedUploads = useMemo(() => {
     </p>
   </div>
 </div>
-  <div className="mt-4 grid gap-3 sm:grid-cols-3">
-  <div className="rounded-2xl bg-gray-50 p-4">
-    <p className="text-xs font-bold uppercase text-gray-500">
-      Native Subscribers
-    </p>
-    <p className="mt-1 text-2xl font-black text-gray-900">
-      {nativeSubscriberCount}
-    </p>
-  </div>
-
-  <div className="rounded-2xl bg-gray-50 p-4">
-    <p className="text-xs font-bold uppercase text-gray-500">
-      Migrated Subscribers
-    </p>
-    <p className="mt-1 text-2xl font-black text-gray-900">
-      {migratedSubscriberCount}
-    </p>
-  </div>
-
-  <div className="rounded-2xl bg-gray-50 p-4">
-    <p className="text-xs font-bold uppercase text-gray-500">
-      Total Subscribers
-    </p>
-    <p className="mt-1 text-2xl font-black text-gray-900">
-      {subscriberCount}
-    </p>
-  </div>
-</div>
+  
 
   <div className="mt-6 h-72">
     {subscriberGrowthChartData.length > 0 ? (
