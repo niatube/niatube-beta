@@ -1121,12 +1121,15 @@ const sortedUploads = useMemo(() => {
           <XAxis dataKey="date" />
           <YAxis />
           <Tooltip />
-          <Line
-            type="monotone"
-            dataKey="amount"
-            strokeWidth={3}
-            dot={false}
-          />
+<Legend />
+
+<Line
+  type="monotone"
+  dataKey="amount"
+  name="Creator Earnings"
+  strokeWidth={3}
+  dot={true}
+/>
         </LineChart>
       </ResponsiveContainer>
     ) : (
