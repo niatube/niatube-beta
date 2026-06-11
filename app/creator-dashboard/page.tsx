@@ -9,14 +9,15 @@ import {
   ResponsiveContainer,
   LineChart,
   Line,
-  XAxis,
-  YAxis,
-  Tooltip,
-  CartesianGrid,
   AreaChart,
   Area,
   BarChart,
   Bar,
+  CartesianGrid,
+  XAxis,
+  YAxis,
+  Tooltip,
+  Legend,
 } from "recharts";
 
 type Upload = {
@@ -193,7 +194,7 @@ const [creatorCurrency, setCreatorCurrency] = useState("Not set");
 
       const { data: profileByEmail } = await supabase
         .from("creator_profiles")
-       .select("creator_name,email,country,currency_code")
+       .select("creator_name,email,country,currency_code,migrated_subscribers")
 .ilike("email", user.email || "")
 .maybeSingle();
 
@@ -552,27 +553,50 @@ const convertedCreatorNetUsd = useMemo(() => {
     }));
   }, [tipTotalsByCurrency]);
 
- const subscriberGrowthChartData = useMemo(() => {
-  let runningTotal = migratedSubscriberCount;
+const subscriberGrowthChartData = useMemo(() => {
+  const sortedSubscribers = [...subscriberRows].sort((a, b) => {
+    const dateA = a.created_at ? new Date(a.created_at).getTime() : 0;
+    const dateB = b.created_at ? new Date(b.created_at).getTime() : 0;
+    return dateA - dateB;
+  });
 
-  return [...subscriberRows]
-    .sort((a, b) => {
-      const dateA = a.created_at ? new Date(a.created_at).getTime() : 0;
-      const dateB = b.created_at ? new Date(b.created_at).getTime() : 0;
-      return dateA - dateB;
-    })
-    .map((subscriber, index) => {
-      runningTotal += 1;
+  const data: {
+    name: string;
+    nativeSubscribers: number;
+    totalSubscribers: number;
+  }[] = [
+    {
+      name: "Migration Baseline",
+      nativeSubscribers: 0,
+      totalSubscribers: migratedSubscriberCount,
+    },
+  ];
 
-      return {
-        name: subscriber.created_at
-          ? new Date(subscriber.created_at).toLocaleDateString()
-          : `Subscriber ${index + 1}`,
-        subscribers: runningTotal,
-      };
+  let nativeTotal = 0;
+
+  sortedSubscribers.forEach((subscriber, index) => {
+    nativeTotal += 1;
+
+    data.push({
+      name: subscriber.created_at
+        ? new Date(subscriber.created_at).toLocaleDateString()
+        : `Subscriber ${index + 1}`,
+      nativeSubscribers: nativeTotal,
+      totalSubscribers: nativeTotal + migratedSubscriberCount,
     });
-}, [subscriberRows, migratedSubscriberCount]);
+  });
 
+  if (data.length === 1) {
+    data.push({
+      name: "Today",
+      nativeSubscribers: 0,
+      totalSubscribers: migratedSubscriberCount,
+    });
+  }
+  
+
+  return data;
+}, [subscriberRows, migratedSubscriberCount]);
 const earningsTrendData = useMemo(() => {
   const grouped: Record<string, number> = {};
 
@@ -987,6 +1011,62 @@ const sortedUploads = useMemo(() => {
   <p className="mt-2 text-sm text-gray-600">
     Tracks subscriber growth over time, including migrated subscribers as the starting base.
   </p>
+  <div className="mt-4 grid gap-3 sm:grid-cols-3">
+  <div className="rounded-2xl bg-gray-50 p-4">
+    <p className="text-xs font-bold uppercase text-gray-500">
+      Native Subscribers
+    </p>
+    <p className="mt-1 text-2xl font-black text-gray-900">
+      {nativeSubscriberCount}
+    </p>
+  </div>
+
+  <div className="rounded-2xl bg-gray-50 p-4">
+    <p className="text-xs font-bold uppercase text-gray-500">
+      Migrated Subscribers
+    </p>
+    <p className="mt-1 text-2xl font-black text-gray-900">
+      {migratedSubscriberCount}
+    </p>
+  </div>
+
+  <div className="rounded-2xl bg-gray-50 p-4">
+    <p className="text-xs font-bold uppercase text-gray-500">
+      Total Subscribers
+    </p>
+    <p className="mt-1 text-2xl font-black text-gray-900">
+      {subscriberCount}
+    </p>
+  </div>
+</div>
+  <div className="mt-4 grid gap-3 sm:grid-cols-3">
+  <div className="rounded-2xl bg-gray-50 p-4">
+    <p className="text-xs font-bold uppercase text-gray-500">
+      Native Subscribers
+    </p>
+    <p className="mt-1 text-2xl font-black text-gray-900">
+      {nativeSubscriberCount}
+    </p>
+  </div>
+
+  <div className="rounded-2xl bg-gray-50 p-4">
+    <p className="text-xs font-bold uppercase text-gray-500">
+      Migrated Subscribers
+    </p>
+    <p className="mt-1 text-2xl font-black text-gray-900">
+      {migratedSubscriberCount}
+    </p>
+  </div>
+
+  <div className="rounded-2xl bg-gray-50 p-4">
+    <p className="text-xs font-bold uppercase text-gray-500">
+      Total Subscribers
+    </p>
+    <p className="mt-1 text-2xl font-black text-gray-900">
+      {subscriberCount}
+    </p>
+  </div>
+</div>
 
   <div className="mt-6 h-72">
     {subscriberGrowthChartData.length > 0 ? (
@@ -996,12 +1076,25 @@ const sortedUploads = useMemo(() => {
           <XAxis dataKey="name" />
           <YAxis />
           <Tooltip />
-          <Line
-            type="monotone"
-            dataKey="subscribers"
-            strokeWidth={3}
-            dot={false}
-          />
+<Legend />
+
+<Line
+  type="monotone"
+  dataKey="nativeSubscribers"
+  name="Native Subscribers"
+  stroke="#2563eb"
+  strokeWidth={3}
+  dot={true}
+/>
+
+<Line
+  type="monotone"
+  dataKey="totalSubscribers"
+  name="Total Subscribers"
+  stroke="#16a34a"
+  strokeWidth={3}
+  dot={false}
+/>
         </LineChart>
       </ResponsiveContainer>
     ) : (
