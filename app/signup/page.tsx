@@ -108,14 +108,21 @@ export default function SignupPage() {
       return;
     }
 
-    const { error: profileError } = await supabase.from("creator_profiles").insert([
+    const { error: profileError } = await supabase
+  .from("creator_profiles")
+  .upsert(
+    [
       {
         creator_name: creatorName.trim(),
         email: email.trim(),
         country,
         currency_code: currencyCode,
+        migrated_subscribers: 0,
+        verified: false,
       },
-    ]);
+    ],
+    { onConflict: "creator_name" }
+  );
 
     setLoading(false);
 
