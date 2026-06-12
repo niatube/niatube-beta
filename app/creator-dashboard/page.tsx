@@ -995,7 +995,7 @@ const sortedUploads = useMemo(() => {
               </p>
 
               <a
-                href="/creator/migration"
+                href="/creator/migrate"
                 className="mt-3 inline-flex rounded-xl bg-yellow-400 px-4 py-2 text-sm font-black text-black hover:bg-yellow-300"
               >
                 Start Subscriber Migration
