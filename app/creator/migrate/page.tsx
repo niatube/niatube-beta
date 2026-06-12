@@ -89,7 +89,7 @@ export default function CreatorMigrationPage() {
       },
     ]);
 
-    setStatus("Migration request submitted for review.");
+    setStatus("Subscriber migration request submitted for review. If this is an update, the review team will compare it with your previous approved migration.");
     setChannelUrl("");
     setClaimedSubscribers("");
     setProofUrl("");
@@ -225,7 +225,7 @@ export default function CreatorMigrationPage() {
   type="submit"
   className="w-full rounded-xl bg-black px-5 py-3 text-sm font-bold text-white hover:bg-gray-800"
 >
-  Submit Subscriber Migration Request
+  Submit / Update Subscriber Migration Request
 </button>
 
             {status && (
