@@ -37,6 +37,67 @@ export default function AdminPage() {
   return (
     <div className="p-6">
       <h1 className="text-2xl font-bold mb-4">Admin: Pending Uploads</h1>
+      <div className="mb-8 grid gap-4 md:grid-cols-2 lg:grid-cols-3">
+  <a
+    href="/admin/migration-requests"
+    className="rounded-xl border bg-white p-4 shadow-sm hover:bg-gray-50"
+  >
+    <h2 className="text-lg font-black">Subscriber Migration Requests</h2>
+    <p className="mt-2 text-sm text-gray-600">
+      Review and approve subscriber migration requests.
+    </p>
+  </a>
+
+  <a
+    href="/admin/niacircle"
+    className="rounded-xl border bg-white p-4 shadow-sm hover:bg-gray-50"
+  >
+    <h2 className="text-lg font-black">NiaCircle Applications</h2>
+    <p className="mt-2 text-sm text-gray-600">
+      Review NiaCircle membership applications.
+    </p>
+  </a>
+
+  <a
+    href="/admin/niamall-application"
+    className="rounded-xl border bg-white p-4 shadow-sm hover:bg-gray-50"
+  >
+    <h2 className="text-lg font-black">NiaMALL Applications</h2>
+    <p className="mt-2 text-sm text-gray-600">
+      Review NiaMALL partnership applications.
+    </p>
+  </a>
+
+  <a
+    href="/admin/finance"
+    className="rounded-xl border bg-white p-4 shadow-sm hover:bg-gray-50"
+  >
+    <h2 className="text-lg font-black">Finance Dashboard</h2>
+    <p className="mt-2 text-sm text-gray-600">
+      Review platform finance reports.
+    </p>
+  </a>
+
+  <a
+    href="/admin/finance/payouts"
+    className="rounded-xl border bg-white p-4 shadow-sm hover:bg-gray-50"
+  >
+    <h2 className="text-lg font-black">Payout Requests</h2>
+    <p className="mt-2 text-sm text-gray-600">
+      Review creator payout requests.
+    </p>
+  </a>
+
+  <a
+    href="/admin/fx"
+    className="rounded-xl border bg-white p-4 shadow-sm hover:bg-gray-50"
+  >
+    <h2 className="text-lg font-black">FX Management</h2>
+    <p className="mt-2 text-sm text-gray-600">
+      Review and manage FX rates.
+    </p>
+  </a>
+</div>
       <p className="mb-4 text-red-600 font-bold">
   ADMIN PAGE TEST
 </p>
