@@ -59,7 +59,7 @@ export default function AdminPage() {
   </a>
 
   <a
-    href="/admin/niamall-application"
+    href="/admin/niamall-applications"
     className="rounded-xl border bg-white p-4 shadow-sm hover:bg-gray-50"
   >
     <h2 className="text-lg font-black">NiaMALL Applications</h2>
