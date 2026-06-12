@@ -985,20 +985,21 @@ const sortedUploads = useMemo(() => {
                ) : (
             <div className="mt-5 rounded-2xl border border-dashed border-gray-300 bg-gray-50 p-5">
               <p className="text-sm font-bold text-gray-700">
-                No migration request submitted yet.
+                Have you updated your subscriber migration yet?
               </p>
 
               <p className="mt-2 text-sm leading-6 text-gray-600">
-                Start a subscriber migration request after signing up and
-                confirming your email. This helps verified creators bring their
-                existing audience momentum to NiaTube.
-              </p>
+  You can update your subscriber migration here. If you did not
+  request subscriber migration after signing up, you can do so here
+  after confirming your email. This helps verified creators bring
+  their existing audience momentum to NiaTube.
+</p>
 
               <a
                 href="/creator/migrate"
                 className="mt-3 inline-flex rounded-xl bg-yellow-400 px-4 py-2 text-sm font-black text-black hover:bg-yellow-300"
               >
-                Start Subscriber Migration
+                Update Your Subscriber Migration
               </a>
             </div>
           )}
