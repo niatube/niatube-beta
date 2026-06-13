@@ -264,6 +264,12 @@ export default function Navbar({ simple = false }: { simple?: boolean }) {
               <Link className="block rounded-lg px-4 py-2 text-sm font-medium hover:bg-yellow-50 hover:text-yellow-700" href="/creator-dashboard">
                 Creator Dashboard
               </Link>
+              <Link
+  className="block rounded-lg bg-yellow-400 px-4 py-2 text-sm font-black text-black hover:bg-yellow-300"
+  href="/admin/access"
+>
+  Admin Control Center
+</Link>
 
               <div className="mt-3 grid grid-cols-2 gap-2 border-t pt-3">
                 <Link
