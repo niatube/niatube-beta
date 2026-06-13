@@ -9,9 +9,10 @@ export default function LanguagePage() {
   "Spanish",
   "Swahili",
   "Arabic",
-  "Portuguese",
   "Yoruba",
   "Zulu",
+  "Portuguese",
+  "Hausa",
 ];
 
   return (
