@@ -40,8 +40,20 @@ if (!result.success) {
   return;
 }
 
-    sessionStorage.setItem("niatube_admin_access", "granted");
-    window.location.href = result.redirectPath || "/admin";
+ 
+  sessionStorage.setItem(
+  "niatube_admin_access",
+  JSON.stringify({
+    granted: true,
+    sessionToken: result.sessionToken,
+    codeName: result.codeName,
+    redirectPath: result.redirectPath || "/admin",
+    expiresAt: result.expiresAt,
+    grantedAt: new Date().toISOString(),
+  })
+);
+
+window.location.assign(result.redirectPath || "/admin");
   }
 
   return (
