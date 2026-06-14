@@ -18,6 +18,8 @@ type NiaCircleMember = {
 
 export default function AdminNiaCirclePage() {
   const [applications, setApplications] = useState<NiaCircleMember[]>([]);
+  const [accessChecked, setAccessChecked] = useState(false);
+  const [hasAccess, setHasAccess] = useState(false);
 
   async function loadApplications() {
     const { data, error } = await supabase
@@ -33,10 +35,49 @@ export default function AdminNiaCirclePage() {
     setApplications(data || []);
   }
 
-  useEffect(() => {
-    loadApplications();
-  }, []);
+ useEffect(() => {
+  async function checkNiaCircleAccess() {
+    const rawAccess = sessionStorage.getItem("niatube_admin_access");
 
+    if (!rawAccess) {
+      setHasAccess(false);
+      setAccessChecked(true);
+      return;
+    }
+
+    try {
+      const access = JSON.parse(rawAccess);
+
+      const response = await fetch("/api/admin/session/check", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          sessionToken: access.sessionToken,
+          requestedPath: "/admin/niacircle",
+        }),
+      });
+
+      const result = await response.json();
+
+      if (!result.allowed) {
+        setHasAccess(false);
+        setAccessChecked(true);
+        return;
+      }
+
+      setHasAccess(true);
+      setAccessChecked(true);
+      await loadApplications();
+    } catch {
+      setHasAccess(false);
+      setAccessChecked(true);
+    }
+  }
+
+  checkNiaCircleAccess();
+}, []);
   async function updateStatus(id: string, status: "approved" | "rejected") {
     const { error } = await supabase
       .from("niacircle_members")
@@ -50,6 +91,39 @@ export default function AdminNiaCirclePage() {
 
     loadApplications();
   }
+
+  if (!accessChecked) {
+  return (
+    <main className="min-h-screen bg-gray-50 px-6 py-16">
+      <p className="text-sm font-bold text-gray-600">
+        Checking NiaCircle admin access...
+      </p>
+    </main>
+  );
+}
+
+if (!hasAccess) {
+  return (
+    <main className="min-h-screen bg-gray-50 px-6 py-16">
+      <section className="mx-auto max-w-md rounded-3xl bg-white p-8 shadow-sm">
+        <h1 className="text-3xl font-black text-gray-900">
+          NiaCircle Admin Access Required
+        </h1>
+
+        <p className="mt-3 text-sm leading-6 text-gray-600">
+          Please enter a valid community admin code before opening NiaCircle applications.
+        </p>
+
+        <a
+          href="/admin/access"
+          className="mt-5 inline-flex rounded-xl bg-black px-5 py-3 text-sm font-black text-white hover:bg-gray-800"
+        >
+          Enter Admin Code
+        </a>
+      </section>
+    </main>
+  );
+}
 
   return (
     <main className="min-h-screen bg-gray-50">
