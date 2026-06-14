@@ -22,6 +22,9 @@ export default function AdminMigrationRequestsPage() {
   const [loading, setLoading] = useState(true);
   const [message, setMessage] = useState("");
 
+   const [accessChecked, setAccessChecked] = useState(false);
+const [hasAccess, setHasAccess] = useState(false);
+ 
   async function loadRequests() {
     setLoading(true);
 
@@ -41,9 +44,52 @@ export default function AdminMigrationRequestsPage() {
     setLoading(false);
   }
 
-  useEffect(() => {
-    loadRequests();
-  }, []);
+ useEffect(() => {
+  async function checkMigrationAccess() {
+    const rawAccess = sessionStorage.getItem("niatube_admin_access");
+
+    if (!rawAccess) {
+      setHasAccess(false);
+      setAccessChecked(true);
+      setLoading(false);
+      return;
+    }
+
+    try {
+      const access = JSON.parse(rawAccess);
+
+      const response = await fetch("/api/admin/session/check", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          sessionToken: access.sessionToken,
+          requestedPath: "/admin/migration-requests",
+        }),
+      });
+
+      const result = await response.json();
+
+      if (!result.allowed) {
+        setHasAccess(false);
+        setAccessChecked(true);
+        setLoading(false);
+        return;
+      }
+
+      setHasAccess(true);
+      setAccessChecked(true);
+      await loadRequests();
+    } catch {
+      setHasAccess(false);
+      setAccessChecked(true);
+      setLoading(false);
+    }
+  }
+
+  checkMigrationAccess();
+}, []);
 
   async function approveRequest(request: MigrationRequest) {
     const approvedSubscribers = Number(request.claimed_subscribers || 0);
@@ -126,6 +172,39 @@ export default function AdminMigrationRequestsPage() {
     setMessage(`Rejected migration request for ${request.creator_name}.`);
     loadRequests();
   }
+
+  if (!accessChecked) {
+  return (
+    <main className="min-h-screen bg-gray-50 px-6 py-16">
+      <p className="text-sm font-bold text-gray-600">
+        Checking migration admin access...
+      </p>
+    </main>
+  );
+}
+
+if (!hasAccess) {
+  return (
+    <main className="min-h-screen bg-gray-50 px-6 py-16">
+      <section className="mx-auto max-w-md rounded-3xl bg-white p-8 shadow-sm">
+        <h1 className="text-3xl font-black text-gray-900">
+          Migration Admin Access Required
+        </h1>
+
+        <p className="mt-3 text-sm leading-6 text-gray-600">
+          Please enter a valid community admin code before opening subscriber migration requests.
+        </p>
+
+        <a
+          href="/admin/access"
+          className="mt-5 inline-flex rounded-xl bg-black px-5 py-3 text-sm font-black text-white hover:bg-gray-800"
+        >
+          Enter Admin Code
+        </a>
+      </section>
+    </main>
+  );
+}
 
   return (
     <main className="min-h-screen bg-gray-50">
