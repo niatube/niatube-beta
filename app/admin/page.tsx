@@ -164,6 +164,17 @@ if (!hasAccess) {
       Review and manage FX rates.
     </p>
   </a>
+
+  <a
+  href="/admin/advertising"
+  className="rounded-xl border bg-white p-4 shadow-sm hover:bg-gray-50"
+>
+  <h2 className="text-lg font-black">Advertising Requests</h2>
+  <p className="mt-2 text-sm text-gray-600">
+    Review advertiser campaign requests and update sales status.
+  </p>
+</a>
+
 </div>
       <p className="mb-4 text-red-600 font-bold">
   ADMIN PAGE TEST
