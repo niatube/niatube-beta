@@ -23,6 +23,8 @@ export default function AdminFinancePayoutsPage() {
   const [payouts, setPayouts] = useState<PayoutRequest[]>([]);
   const [loading, setLoading] = useState(true);
   const [message, setMessage] = useState("");
+const [accessChecked, setAccessChecked] = useState(false);
+const [hasAccess, setHasAccess] = useState(false);
   const [reportPeriod, setReportPeriod] = useState<
   "all" | "monthly" | "quarterly" | "semiannual" | "annual"
 >("all");
@@ -46,9 +48,52 @@ export default function AdminFinancePayoutsPage() {
     setLoading(false);
   }
 
-  useEffect(() => {
-    loadPayouts();
-  }, []);
+ useEffect(() => {
+  async function checkPayoutAccess() {
+    const rawAccess = sessionStorage.getItem("niatube_admin_access");
+
+    if (!rawAccess) {
+      setHasAccess(false);
+      setAccessChecked(true);
+      setLoading(false);
+      return;
+    }
+
+    try {
+      const access = JSON.parse(rawAccess);
+
+      const response = await fetch("/api/admin/session/check", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          sessionToken: access.sessionToken,
+          requestedPath: "/admin/finance/payouts",
+        }),
+      });
+
+      const result = await response.json();
+
+      if (!result.allowed) {
+        setHasAccess(false);
+        setAccessChecked(true);
+        setLoading(false);
+        return;
+      }
+
+      setHasAccess(true);
+      setAccessChecked(true);
+      await loadPayouts();
+    } catch {
+      setHasAccess(false);
+      setAccessChecked(true);
+      setLoading(false);
+    }
+  }
+
+  checkPayoutAccess();
+}, []);
   const filteredPayouts = useMemo(() => {
   const now = new Date();
 
@@ -59,7 +104,40 @@ export default function AdminFinancePayoutsPage() {
 
     switch (reportPeriod) {
       case "monthly":
-        return (
+       if (!accessChecked) {
+  return (
+    <main className="min-h-screen bg-gray-50 px-6 py-16">
+      <p className="text-sm font-bold text-gray-600">
+        Checking payout admin access...
+      </p>
+    </main>
+  );
+}
+
+if (!hasAccess) {
+  return (
+    <main className="min-h-screen bg-gray-50 px-6 py-16">
+      <section className="mx-auto max-w-md rounded-3xl bg-white p-8 shadow-sm">
+        <h1 className="text-3xl font-black text-gray-900">
+          Payout Admin Access Required
+        </h1>
+
+        <p className="mt-3 text-sm leading-6 text-gray-600">
+          Please enter a valid payout admin code before opening the Payout Dashboard.
+        </p>
+
+        <a
+          href="/admin/access"
+          className="mt-5 inline-flex rounded-xl bg-black px-5 py-3 text-sm font-black text-white hover:bg-gray-800"
+        >
+          Enter Admin Code
+        </a>
+      </section>
+    </main>
+  );
+}
+      
+      return (
           payoutDate.getMonth() === now.getMonth() &&
           payoutDate.getFullYear() === now.getFullYear()
         );
