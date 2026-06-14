@@ -113,6 +113,8 @@ export default function AdminFinancePage() {
   const [fxRates, setFxRates] = useState<FxRate[]>([]);
   const [loading, setLoading] = useState(true);
   const [message, setMessage] = useState("");
+  const [accessChecked, setAccessChecked] = useState(false);
+const [hasAccess, setHasAccess] = useState(false);
 
   const [reportPeriod, setReportPeriod] = useState<
     "all" | "monthly" | "quarterly" | "semiannual" | "annual"
@@ -299,8 +301,51 @@ export default function AdminFinancePage() {
   }
 
   useEffect(() => {
-    loadFinanceData();
-  }, []);
+  async function checkFinanceAccess() {
+    const rawAccess = sessionStorage.getItem("niatube_admin_access");
+
+    if (!rawAccess) {
+      setHasAccess(false);
+      setAccessChecked(true);
+      setLoading(false);
+      return;
+    }
+
+    try {
+      const access = JSON.parse(rawAccess);
+
+      const response = await fetch("/api/admin/session/check", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          sessionToken: access.sessionToken,
+          requestedPath: "/admin/finance",
+        }),
+      });
+
+      const result = await response.json();
+
+      if (!result.allowed) {
+        setHasAccess(false);
+        setAccessChecked(true);
+        setLoading(false);
+        return;
+      }
+
+      setHasAccess(true);
+      setAccessChecked(true);
+      await loadFinanceData();
+    } catch {
+      setHasAccess(false);
+      setAccessChecked(true);
+      setLoading(false);
+    }
+  }
+
+  checkFinanceAccess();
+}, []);
 
   const filteredTips = useMemo(() => {
     const now = new Date();
@@ -313,6 +358,39 @@ export default function AdminFinancePage() {
 
       switch (reportPeriod) {
         case "monthly":
+
+        if (!accessChecked) {
+  return (
+    <main className="min-h-screen bg-gray-50 px-6 py-16">
+      <p className="text-sm font-bold text-gray-600">
+        Checking finance admin access...
+      </p>
+    </main>
+  );
+}
+
+if (!hasAccess) {
+  return (
+    <main className="min-h-screen bg-gray-50 px-6 py-16">
+      <section className="mx-auto max-w-md rounded-3xl bg-white p-8 shadow-sm">
+        <h1 className="text-3xl font-black text-gray-900">
+          Finance Admin Access Required
+        </h1>
+
+        <p className="mt-3 text-sm leading-6 text-gray-600">
+          Please enter a valid finance admin code before opening the Finance Dashboard.
+        </p>
+
+        <a
+          href="/admin/access"
+          className="mt-5 inline-flex rounded-xl bg-black px-5 py-3 text-sm font-black text-white hover:bg-gray-800"
+        >
+          Enter Admin Code
+        </a>
+      </section>
+    </main>
+  );
+}
           return (
             tipDate.getMonth() === now.getMonth() &&
             tipDate.getFullYear() === now.getFullYear()

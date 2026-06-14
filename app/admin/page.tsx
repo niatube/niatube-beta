@@ -11,6 +11,8 @@ type Upload = {
 
 export default function AdminPage() {
   const [uploads, setUploads] = useState<Upload[]>([]);
+  const [accessChecked, setAccessChecked] = useState(false);
+const [hasAccess, setHasAccess] = useState(false);
 
   const fetchUploads = async () => {
     const res = await fetch("/api/uploads?all=true");
@@ -18,9 +20,42 @@ export default function AdminPage() {
     setUploads(data.uploads || []);
   };
 
-  useEffect(() => {
+ useEffect(() => {
+  const rawAccess = sessionStorage.getItem("niatube_admin_access");
+
+  if (!rawAccess) {
+    setHasAccess(false);
+    setAccessChecked(true);
+    return;
+  }
+
+  try {
+    const access = JSON.parse(rawAccess);
+    const expiresAt = access?.expiresAt ? new Date(access.expiresAt) : null;
+    const allowedPath = access?.redirectPath;
+
+    if (!access?.sessionToken || !expiresAt || expiresAt < new Date()) {
+      sessionStorage.removeItem("niatube_admin_access");
+      setHasAccess(false);
+      setAccessChecked(true);
+      return;
+    }
+
+    if (allowedPath !== "/admin") {
+      setHasAccess(false);
+      setAccessChecked(true);
+      return;
+    }
+
+    setHasAccess(true);
+    setAccessChecked(true);
     fetchUploads();
-  }, []);
+  } catch {
+    sessionStorage.removeItem("niatube_admin_access");
+    setHasAccess(false);
+    setAccessChecked(true);
+  }
+}, []);
 
   const publish = async (id: string) => {
     await fetch("/api/uploads/publish", {
@@ -33,6 +68,38 @@ export default function AdminPage() {
 
     fetchUploads();
   };
+  if (!accessChecked) {
+  return (
+    <main className="min-h-screen bg-gray-50 px-6 py-16">
+      <p className="text-sm font-bold text-gray-600">
+        Checking admin access...
+      </p>
+    </main>
+  );
+}
+
+if (!hasAccess) {
+  return (
+    <main className="min-h-screen bg-gray-50 px-6 py-16">
+      <section className="mx-auto max-w-md rounded-3xl bg-white p-8 shadow-sm">
+        <h1 className="text-3xl font-black text-gray-900">
+          Admin Access Required
+        </h1>
+
+        <p className="mt-3 text-sm leading-6 text-gray-600">
+          Please enter the Super Admin code to open the Admin Control Center.
+        </p>
+
+        <a
+          href="/admin/access"
+          className="mt-5 inline-flex rounded-xl bg-black px-5 py-3 text-sm font-black text-white hover:bg-gray-800"
+        >
+          Enter Admin Code
+        </a>
+      </section>
+    </main>
+  );
+}
 
   return (
     <div className="p-6">
