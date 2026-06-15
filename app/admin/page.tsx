@@ -103,16 +103,17 @@ if (!hasAccess) {
 
   return (
     <div className="p-6">
-      <h1 className="text-2xl font-bold mb-4">Admin: Pending Uploads</h1>
+      <h1 className="text-2xl font-bold mb-4">Admin Control Center</h1>
       <div className="mb-8 grid gap-4 md:grid-cols-2 lg:grid-cols-3">
   <a
     href="/admin/migration-requests"
     className="rounded-xl border bg-white p-4 shadow-sm hover:bg-gray-50"
   >
     <h2 className="text-lg font-black">Subscriber Migration Requests</h2>
-    <p className="mt-2 text-sm text-gray-600">
-      Review and approve subscriber migration requests.
-    </p>
+    
+    <p className="mt-3 text-gray-600">
+  Review submissions, applications, advertising requests, and platform operations.
+</p>
   </a>
 
   <a

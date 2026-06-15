@@ -49,6 +49,8 @@ export default function AdminNiaMallApplicationsPage() {
   const [applications, setApplications] = useState<NiaMallApplication[]>([]);
   const [loading, setLoading] = useState(true);
   const [message, setMessage] = useState("");
+  const [accessChecked, setAccessChecked] = useState(false);
+const [hasAccess, setHasAccess] = useState(false);
 
   async function loadApplications() {
     setLoading(true);
@@ -69,9 +71,52 @@ export default function AdminNiaMallApplicationsPage() {
     setLoading(false);
   }
 
-  useEffect(() => {
-    loadApplications();
-  }, []);
+ useEffect(() => {
+  async function checkNiaMallAccess() {
+    const rawAccess = sessionStorage.getItem("niatube_admin_access");
+
+    if (!rawAccess) {
+      setHasAccess(false);
+      setAccessChecked(true);
+      setLoading(false);
+      return;
+    }
+
+    try {
+      const access = JSON.parse(rawAccess);
+
+      const response = await fetch("/api/admin/session/check", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          sessionToken: access.sessionToken,
+          requestedPath: "/admin/niamall-applications",
+        }),
+      });
+
+      const result = await response.json();
+
+      if (!result.allowed) {
+        setHasAccess(false);
+        setAccessChecked(true);
+        setLoading(false);
+        return;
+      }
+
+      setHasAccess(true);
+      setAccessChecked(true);
+      await loadApplications();
+    } catch {
+      setHasAccess(false);
+      setAccessChecked(true);
+      setLoading(false);
+    }
+  }
+
+  checkNiaMallAccess();
+}, []);
 
   async function approveApplication(application: NiaMallApplication) {
     if (!isSafeHttpsUrl(application.store_url)) {
@@ -141,6 +186,39 @@ export default function AdminNiaMallApplicationsPage() {
     setMessage(`Rejected ${application.store_name}.`);
     loadApplications();
   }
+
+if (!accessChecked) {
+  return (
+    <main className="min-h-screen bg-gray-50 px-6 py-16">
+      <p className="text-sm font-bold text-gray-600">
+        Checking NiaMALL admin access...
+      </p>
+    </main>
+  );
+}
+
+if (!hasAccess) {
+  return (
+    <main className="min-h-screen bg-gray-50 px-6 py-16">
+      <section className="mx-auto max-w-md rounded-3xl bg-white p-8 shadow-sm">
+        <h1 className="text-3xl font-black text-gray-900">
+          NiaMALL Admin Access Required
+        </h1>
+
+        <p className="mt-3 text-sm leading-6 text-gray-600">
+          Please enter the Super Admin code before opening NiaMALL applications.
+        </p>
+
+        <a
+          href="/admin/access"
+          className="mt-5 inline-flex rounded-xl bg-black px-5 py-3 text-sm font-black text-white hover:bg-gray-800"
+        >
+          Enter Admin Code
+        </a>
+      </section>
+    </main>
+  );
+}
 
   return (
     <main className="min-h-screen bg-gray-50">

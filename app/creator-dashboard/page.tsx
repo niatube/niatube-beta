@@ -95,6 +95,13 @@ type MigrationRequest = {
   updated_at?: string;
   reviewed_at?: string;
   review_notes?: string | null;
+
+
+  platform?: string;
+claimed_subscribers?: number;
+
+
+
 };
 
 function convertAmount(
@@ -1003,8 +1010,87 @@ const sortedUploads = useMemo(() => {
               </a>
             </div>
           )}
-        </div>
-        <div className="mt-8 rounded-3xl bg-white p-6 shadow-sm">
+       
+
+          </div>
+
+{migrationRequest && (
+  <div className="mt-8 rounded-3xl bg-white p-6 shadow-sm">
+    <h2 className="text-2xl font-black text-gray-900">
+      Subscriber Migration Status
+    </h2>
+
+    <div className="mt-4 grid gap-4 md:grid-cols-2">
+      <div>
+        <p className="text-sm font-bold text-gray-500">
+          Platform
+        </p>
+
+        <p className="mt-1 text-lg font-semibold text-gray-900">
+          {migrationRequest.platform || "Not specified"}
+        </p>
+      </div>
+
+      <div>
+        <p className="text-sm font-bold text-gray-500">
+          Claimed Subscribers
+        </p>
+
+        <p className="mt-1 text-lg font-semibold text-gray-900">
+          {Number(
+            migrationRequest.claimed_subscribers || 0
+          ).toLocaleString()}
+        </p>
+      </div>
+
+      <div>
+        <p className="text-sm font-bold text-gray-500">
+          Status
+        </p>
+
+        <p
+          className={`mt-1 inline-flex rounded-full px-3 py-1 text-sm font-bold ${
+            migrationRequest.status === "approved"
+              ? "bg-green-100 text-green-700"
+              : migrationRequest.status === "rejected"
+              ? "bg-red-100 text-red-700"
+              : "bg-yellow-100 text-yellow-700"
+          }`}
+        >
+          {migrationRequest.status || "pending"}
+        </p>
+      </div>
+
+      <div>
+        <p className="text-sm font-bold text-gray-500">
+          Submitted
+        </p>
+
+        <p className="mt-1 text-lg font-semibold text-gray-900">
+          {migrationRequest.created_at
+            ? new Date(
+                migrationRequest.created_at
+              ).toLocaleDateString()
+            : "Not available"}
+        </p>
+      </div>
+    </div>
+
+    {migrationRequest.review_notes && (
+      <div className="mt-5 rounded-2xl bg-gray-50 p-4">
+        <p className="text-sm font-bold text-gray-500">
+          Admin Notes
+        </p>
+
+        <p className="mt-2 text-sm text-gray-700">
+          {migrationRequest.review_notes}
+        </p>
+      </div>
+    )}
+  </div>
+)}
+
+<div className="mt-8 rounded-3xl bg-white p-6 shadow-sm">
   <h2 className="text-2xl font-black text-gray-900">
     Subscriber Growth Trend
   </h2>

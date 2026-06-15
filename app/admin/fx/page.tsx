@@ -19,6 +19,8 @@ export default function AdminFxPage() {
   const [rate, setRate] = useState("");
   const [message, setMessage] = useState("");
   const [loading, setLoading] = useState(true);
+  const [accessChecked, setAccessChecked] = useState(false);
+  const [hasAccess, setHasAccess] = useState(false);
 
   async function loadRates() {
     setLoading(true);
@@ -41,8 +43,51 @@ export default function AdminFxPage() {
   }
 
   useEffect(() => {
-    loadRates();
-  }, []);
+  async function checkFxAccess() {
+    const rawAccess = sessionStorage.getItem("niatube_admin_access");
+
+    if (!rawAccess) {
+      setHasAccess(false);
+      setAccessChecked(true);
+      setLoading(false);
+      return;
+    }
+
+    try {
+      const access = JSON.parse(rawAccess);
+
+      const response = await fetch("/api/admin/session/check", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          sessionToken: access.sessionToken,
+          requestedPath: "/admin/fx",
+        }),
+      });
+
+      const result = await response.json();
+
+      if (!result.allowed) {
+        setHasAccess(false);
+        setAccessChecked(true);
+        setLoading(false);
+        return;
+      }
+
+      setHasAccess(true);
+      setAccessChecked(true);
+      await loadRates();
+    } catch {
+      setHasAccess(false);
+      setAccessChecked(true);
+      setLoading(false);
+    }
+  }
+
+  checkFxAccess();
+}, []);
 
   async function saveRate(e: React.FormEvent) {
     e.preventDefault();
@@ -118,6 +163,39 @@ export default function AdminFxPage() {
     await loadRates();
   }
 
+
+  if (!accessChecked) {
+  return (
+    <main className="min-h-screen bg-gray-50 px-6 py-16">
+      <p className="text-sm font-bold text-gray-600">
+        Checking FX admin access...
+      </p>
+    </main>
+  );
+}
+
+if (!hasAccess) {
+  return (
+    <main className="min-h-screen bg-gray-50 px-6 py-16">
+      <section className="mx-auto max-w-md rounded-3xl bg-white p-8 shadow-sm">
+        <h1 className="text-3xl font-black text-gray-900">
+          FX Admin Access Required
+        </h1>
+
+        <p className="mt-3 text-sm leading-6 text-gray-600">
+          Please enter the Super Admin code before opening FX Management.
+        </p>
+
+        <a
+          href="/admin/access"
+          className="mt-5 inline-flex rounded-xl bg-black px-5 py-3 text-sm font-black text-white hover:bg-gray-800"
+        >
+          Enter Admin Code
+        </a>
+      </section>
+    </main>
+  );
+}
   return (
     <main className="min-h-screen bg-gray-50">
       <Navbar />
