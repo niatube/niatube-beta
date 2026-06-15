@@ -560,6 +560,8 @@ const convertedCreatorNetUsd = useMemo(() => {
     }));
   }, [tipTotalsByCurrency]);
 
+  
+
 const subscriberGrowthChartData = useMemo(() => {
   const sortedSubscribers = [...subscriberRows].sort((a, b) => {
     const dateA = a.created_at ? new Date(a.created_at).getTime() : 0;
@@ -1695,23 +1697,35 @@ const sortedUploads = useMemo(() => {
           </div>
         </div>
 
+        
         <div className="mt-6 rounded-3xl bg-white p-6 shadow-sm">
-          <h2 className="text-2xl font-black text-gray-900">
-            Tips Revenue Analytics by Currency
-          </h2>
+  <h2 className="text-2xl font-black text-gray-900">
+    Creator Earnings Trend
+  </h2>
 
-          <div className="mt-6 h-[320px]">
-            <ResponsiveContainer width="100%" height="100%">
-              <BarChart data={tipsChartData}>
-                <CartesianGrid strokeDasharray="3 3" />
-                <XAxis dataKey="name" />
-                <YAxis />
-                <Tooltip />
-                <Bar dataKey="amount" fill="#f59e0b" radius={[8, 8, 0, 0]} />
-              </BarChart>
-            </ResponsiveContainer>
-          </div>
-        </div>
+  <p className="mt-1 text-sm text-gray-600">
+    Earnings trend based on creator tips received over time.
+  </p>
+
+  <div className="mt-6 h-[320px]">
+    <ResponsiveContainer width="100%" height="100%">
+      <LineChart data={earningsTrendData}>
+        <CartesianGrid strokeDasharray="3 3" />
+        <XAxis dataKey="name" />
+        <YAxis />
+        <Tooltip />
+        <Legend />
+        <Line
+          type="monotone"
+          dataKey="earnings"
+          stroke="#16a34a"
+          strokeWidth={3}
+          dot={{ r: 4 }}
+        />
+      </LineChart>
+    </ResponsiveContainer>
+  </div>
+</div>
 
         <div className="mt-8 rounded-3xl bg-white p-6 shadow-sm">
           <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">

@@ -932,41 +932,43 @@ const [membershipLoading, setMembershipLoading] = useState(false);
           </section>
 
           <aside className="space-y-5">
-            <div className="rounded-2xl bg-white p-5 shadow-sm">
-              <h2 className="text-xl font-black text-gray-900">
-                Recommended Videos
-              </h2>
+            {!isLive && (
+  <div className="rounded-2xl bg-white p-5 shadow-sm">
+    <h2 className="text-xl font-black text-gray-900">
+      Recommended Videos
+    </h2>
 
-              <div className="mt-5 space-y-4">
-                {recommendedVideos.map((recommended) => (
-                  <a
-                    key={recommended.id}
-                    href={`/watch/${recommended.id}`}
-                    className="flex gap-3 rounded-xl transition hover:bg-gray-50"
-                  >
-                    <img
-                      src={
-                        recommended.thumbnail_url ||
-                        recommended.image ||
-                        "/default-thumbnail.jpg"
-                      }
-                      alt={recommended.title}
-                      className="h-24 w-36 rounded-xl object-cover"
-                    />
+    <div className="mt-5 space-y-4">
+      {recommendedVideos.map((recommended) => (
+        <a
+          key={recommended.id}
+          href={`/watch/${recommended.id}`}
+          className="flex gap-3 rounded-xl transition hover:bg-gray-50"
+        >
+          <img
+            src={
+              recommended.thumbnail_url ||
+              recommended.image ||
+              "/default-thumbnail.jpg"
+            }
+            alt={recommended.title}
+            className="h-24 w-36 rounded-xl object-cover"
+          />
 
-                    <div>
-                      <h3 className="line-clamp-2 text-sm font-black text-gray-900">
-                        {recommended.title}
-                      </h3>
+          <div>
+            <h3 className="line-clamp-2 text-sm font-black text-gray-900">
+              {recommended.title}
+            </h3>
 
-                      <p className="mt-1 text-xs font-semibold text-gray-600">
-                        {recommended.creator}
-                      </p>
-                    </div>
-                  </a>
-                ))}
-              </div>
-            </div>
+            <p className="mt-1 text-xs font-semibold text-gray-600">
+              {recommended.creator}
+            </p>
+          </div>
+        </a>
+      ))}
+    </div>
+  </div>
+)}
 
             {creatorVideo && (
               <div className="rounded-2xl bg-white p-5 shadow-sm">
@@ -1053,6 +1055,29 @@ const [membershipLoading, setMembershipLoading] = useState(false);
         Send Message
       </button>
     </div>
+  </div>
+)}
+{isLive && (
+  <div className="rounded-2xl border border-yellow-200 bg-yellow-50 p-5 shadow-sm">
+    <p className="text-xs font-black uppercase tracking-wide text-yellow-700">
+      Live Sponsor
+    </p>
+
+    <h2 className="mt-2 text-xl font-black text-gray-900">
+      Advertise During Live Events
+    </h2>
+
+    <p className="mt-3 text-sm leading-6 text-gray-700">
+      Put your brand in front of NiaTube viewers during live broadcasts,
+      creator events, interviews, and cultural programming.
+    </p>
+
+    <a
+      href="/advertise"
+      className="mt-4 inline-flex rounded-xl bg-black px-4 py-2 text-sm font-black text-white hover:bg-gray-800"
+    >
+      Book Live Ad Space
+    </a>
   </div>
 )}
           </aside>
