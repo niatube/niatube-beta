@@ -183,7 +183,7 @@ export default function UploadPage() {
     }
 
     if (file.size > MAX_VIDEO_SIZE) {
-      setError("Video exceeds the 5GB upload limit.");
+      setError("Video exceeds the 10GB upload limit.");
       return;
     }
 
