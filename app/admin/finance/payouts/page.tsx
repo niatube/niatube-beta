@@ -47,6 +47,26 @@ const [hasAccess, setHasAccess] = useState(false);
     setPayouts((data || []) as PayoutRequest[]);
     setLoading(false);
   }
+  async function updatePayoutStatus(payoutId: string, newStatus: string) {
+  const { error } = await supabase
+    .from("payout_requests")
+    .update({ status: newStatus })
+    .eq("id", payoutId);
+
+  if (error) {
+    console.error(error);
+    setMessage("Could not update payout status.");
+    return;
+  }
+
+  setPayouts((prev) =>
+    prev.map((payout) =>
+      payout.id === payoutId
+        ? { ...payout, status: newStatus }
+        : payout
+    )
+  );
+}
 
  useEffect(() => {
   async function checkPayoutAccess() {
@@ -436,10 +456,17 @@ if (!hasAccess) {
                           </td>
 
                           <td className="px-4 py-3">
-                            <span className="rounded-full bg-gray-100 px-3 py-1 text-xs font-bold">
-                              {payout.status || "pending"}
-                            </span>
-                          </td>
+  <select
+    value={payout.status || "pending"}
+    onChange={(e) => updatePayoutStatus(payout.id, e.target.value)}
+    className="rounded-xl border px-3 py-2 text-xs font-bold"
+  >
+    <option value="pending">Pending</option>
+    <option value="approved">Approved</option>
+    <option value="rejected">Rejected</option>
+    <option value="paid">Paid</option>
+  </select>
+</td>
                         </tr>
                       ))}
                     </tbody>

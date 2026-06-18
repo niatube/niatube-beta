@@ -152,7 +152,10 @@ export default function CreatorDashboardPage() {
   const [creatorName, setCreatorName] = useState("Creator");
   const [uploads, setUploads] = useState<Upload[]>([]);
   const [tips, setTips] = useState<Tip[]>([]);
+
   const [payouts, setPayouts] = useState<PayoutRequest[]>([]);
+  const [walletPendingPayouts, setWalletPendingPayouts] = useState(0);
+
   const [notifications, setNotifications] = useState<NotificationItem[]>([]);
   const [migrationRequest, setMigrationRequest] = useState<MigrationRequest | null>(null);
   const [nativeSubscriberCount, setNativeSubscriberCount] = useState(0);
@@ -165,10 +168,17 @@ const [subscriberGrowth30Days, setSubscriberGrowth30Days] = useState(0);
 const [subscriberRows, setSubscriberRows] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [creatorSince, setCreatorSince] = useState("");
+  
   const [creatorCountry, setCreatorCountry] = useState("Not set");
-const [creatorCurrency, setCreatorCurrency] = useState("Not set");
+  const [creatorCurrency, setCreatorCurrency] = useState("Not set");
+
+  
   const [currentPage, setCurrentPage] = useState(1);
+  const [payoutAmount, setPayoutAmount] = useState("");
   const [selectedPayoutCurrency, setSelectedPayoutCurrency] = useState("NGN");
+  const [payoutMethod, setPayoutMethod] = useState("Bank Transfer");
+const [payoutDetails, setPayoutDetails] = useState("");
+const [accountHolderName, setAccountHolderName] = useState("");
 
   const videosPerPage = 6;
 
@@ -220,7 +230,8 @@ const [creatorCurrency, setCreatorCurrency] = useState("Not set");
   .maybeSingle();
 
 setMigrationRequest((migrationData || null) as MigrationRequest | null);
-      setCreatorCountry(profileByEmail?.country || "Not set");
+      
+setCreatorCountry(profileByEmail?.country || "Not set");
 const profileCurrency = profileByEmail?.currency_code || "Not set";
 
 setCreatorCurrency(profileCurrency);
@@ -229,6 +240,25 @@ if (profileCurrency !== "Not set") {
   setSelectedPayoutCurrency(profileCurrency);
 }
 
+const { data: payoutProfile } = await supabase
+  .from("creator_payout_profiles")
+  .select("*")
+  .eq("creator_name", activeCreatorName)
+  .maybeSingle();
+
+if (payoutProfile) {
+  setPayoutMethod(
+    payoutProfile.payout_method || "Bank Transfer"
+  );
+
+  setPayoutDetails(
+    payoutProfile.payout_details || ""
+  );
+
+  setAccountHolderName(
+    payoutProfile.account_holder_name || ""
+  );
+}
       const { data: uploadsData } = await supabase
         .from("uploads")
         .select("*")
@@ -241,11 +271,19 @@ if (profileCurrency !== "Not set") {
         .eq("creator_name", activeCreatorName)
         .order("created_at", { ascending: true });
 
-      const { data: payoutData } = await supabase
-        .from("payout_requests")
-        .select("*")
-        .eq("creator_name", activeCreatorName)
-        .order("requested_at", { ascending: false });
+     const { data: payoutData } = await supabase
+  .from("payout_requests")
+  .select("id, creator_name, amount, currency_code, status, created_at")
+  .eq("creator_name", activeCreatorName)
+  .order("created_at", { ascending: false });
+ 
+  const { count: walletPendingCount } = await supabase
+  .from("payout_requests")
+  .select("id", { count: "exact", head: true })
+  .eq("creator_name", activeCreatorName)
+  .eq("status", "pending");
+
+setWalletPendingPayouts(walletPendingCount || 0);
 
       const { data: subscriberData } = await supabase
         .from("creator_subscriptions")
@@ -352,6 +390,31 @@ setLoading(false);
       prev.map((notification) => ({ ...notification, read: true }))
     );
   }
+  async function refreshPayoutStatusOnly() {
+  if (!creatorName || creatorName === "Creator") return;
+
+  const { data: refreshedPayouts, error } = await supabase
+    .from("payout_requests")
+    .select("id, creator_name, amount, currency_code, status, created_at")
+    .eq("creator_name", creatorName)
+    .order("created_at", { ascending: false });
+
+  if (error) {
+    console.error("Payout status refresh error:", error);
+    return;
+  }
+
+  const freshPayouts = (refreshedPayouts || []) as PayoutRequest[];
+
+  setPayouts(freshPayouts);
+
+  const pendingCount = freshPayouts.filter(
+    (payout) =>
+      String(payout.status || "").toLowerCase().trim() === "pending"
+  ).length;
+
+  setWalletPendingPayouts(pendingCount);
+}
 
   const unreadNotificationCount = notifications.filter(
     (notification) => !notification.read
@@ -441,7 +504,8 @@ setLoading(false);
     .sort((a, b) => a.currency.localeCompare(b.currency));
 }, [tips]);
 
-const convertedCreatorNetUsd = useMemo(() => {
+
+ const convertedCreatorNetUsd = useMemo(() => {
   return tipTotalsByCurrency.reduce((sum, item) => {
     return (
       sum +
@@ -454,6 +518,66 @@ const convertedCreatorNetUsd = useMemo(() => {
     );
   }, 0);
 }, [tipTotalsByCurrency, fxRates]);
+
+const creatorLocalCurrency =
+  creatorCurrency !== "Not set" ? creatorCurrency : selectedPayoutCurrency;
+
+const creatorNetLocalCurrency = useMemo(() => {
+  return convertAmount(
+    convertedCreatorNetUsd,
+    "USD",
+    creatorLocalCurrency,
+    fxRates
+  );
+}, [convertedCreatorNetUsd, creatorLocalCurrency, fxRates]);
+
+const payoutsInLocalCurrency = useMemo(() => {
+  return payouts
+    .filter(
+      (payout) =>
+        payout.status !== "rejected" &&
+        payout.status !== "declined" &&
+        payout.status !== "cancelled"
+    )
+    .reduce((sum, payout) => {
+      return (
+        sum +
+        convertAmount(
+          Number(payout.amount || 0),
+          payout.currency_code || creatorLocalCurrency,
+          creatorLocalCurrency,
+          fxRates
+        )
+      );
+    }, 0);
+}, [payouts, creatorLocalCurrency, fxRates]);
+const adjustedCreatorWalletBalance =
+  creatorNetLocalCurrency - payoutsInLocalCurrency;
+
+const availableWalletBalanceLocal = adjustedCreatorWalletBalance;
+
+const availableCreatorNetUsd = convertAmount(
+  availableWalletBalanceLocal,
+  creatorLocalCurrency,
+  "USD",
+  fxRates
+);
+
+const requestedPayoutAmount = Number(payoutAmount || 0);
+
+
+const previewAdjustedWalletBalance = Math.max(
+  availableWalletBalanceLocal - requestedPayoutAmount,
+  0
+);
+
+const previewAdjustedCreatorNetUsd = convertAmount(
+  previewAdjustedWalletBalance,
+  creatorLocalCurrency,
+  "USD",
+  fxRates
+);
+
 
   const selectedCurrencyTotal =
     tipTotalsByCurrency.find(
@@ -476,6 +600,17 @@ const convertedCreatorNetUsd = useMemo(() => {
     if (!top) return upload;
     return Number(upload.views || 0) > Number(top.views || 0) ? upload : top;
   }, null);
+
+  useEffect(() => {
+    if (!creatorName || creatorName === "Creator") return;
+
+   refreshPayoutStatusOnly();
+
+const interval = setInterval(() => {
+  refreshPayoutStatusOnly();
+}, 15000);
+  return () => clearInterval(interval);
+}, [creatorName]);
 
   const subscriberMilestones = [100, 1000, 10000, 100000];
 
@@ -706,6 +841,10 @@ const sortedUploads = useMemo(() => {
       </main>
     );
   }
+  const pendingPayouts = payouts.filter(
+  (payout) =>
+    String(payout.status || "pending").toLowerCase().trim() === "pending"
+);
 
   return (
     <main className="min-h-screen bg-gray-50">
@@ -1464,7 +1603,7 @@ const sortedUploads = useMemo(() => {
   </div>
 </div>   
 
-          <div className="mt-8 rounded-3xl border border-yellow-200 bg-yellow-50 p-6 shadow-sm">
+ <div className="mt-8 rounded-3xl border border-yellow-200 bg-yellow-50 p-6 shadow-sm">
   <h2 className="text-2xl font-black text-gray-900">
     Wallet Summary
   </h2>
@@ -1491,62 +1630,22 @@ const sortedUploads = useMemo(() => {
 
     <div className="rounded-2xl bg-white p-5 shadow-sm">
       <p className="text-sm font-bold text-gray-500">
-        Pending Payout Requests
+        Payouts
       </p>
+
       <p className="mt-2 text-3xl font-black text-gray-900">
-        {payouts.filter((payout) => payout.status === "pending").length}
+        {walletPendingPayouts}
+      </p>
+
+
+      <p className="mt-2 text-xs text-gray-500">
+        Pending payout requests awaiting Super Admin approval
       </p>
     </div>
   </div>
 </div>
 
-        <div className="mt-8 rounded-3xl bg-white p-6 shadow-sm">
-          <h2 className="text-2xl font-black text-gray-900">
-            Creator Wallet Balances
-          </h2>
-
-          <p className="mt-1 text-sm text-gray-600">
-            Wallet balances show the creator’s net earnings after NiaTube’s platform fee. Balances remain separated by currency until an approved FX/NiaCredit conversion or local payout is requested.
-          </p>
-
-          {tipTotalsByCurrency.length === 0 ? (
-            <p className="mt-4 text-gray-500">No tips received yet.</p>
-          ) : (
-            <div className="mt-5 grid gap-4 md:grid-cols-3">
-              {tipTotalsByCurrency.map((item) => (
-                <div
-                  key={item.currency}
-                  className="rounded-2xl border border-gray-200 bg-gray-50 p-5"
-                >
-                  <p className="text-sm font-bold text-gray-500">
-                    {item.currency}
-                  </p>
-
-                  <p className="mt-2 text-3xl font-black text-gray-900">
-                    {item.amount}
-                  </p>
-
-                  <p className="mt-1 text-xs text-gray-500">
-                  Net wallet balance before FX conversion
-                  </p>
-                </div>
-              ))}
-            </div>
-          )}
-        </div>
-         <div className="rounded-2xl bg-white p-5 shadow-sm">
-  <p className="text-sm font-bold text-gray-500">
-    Creator Net Earnings (USD)
-  </p>
-
-  <p className="mt-2 text-3xl font-black">
-    USD {convertedCreatorNetUsd.toFixed(2)}
-  </p>
-
-  <p className="mt-2 text-xs text-gray-500">
-    Converted using approved FX rates
-  </p>
-</div>
+         
      
         
         <div className="mt-8 rounded-3xl bg-white p-6 shadow-sm">
@@ -1729,6 +1828,79 @@ const sortedUploads = useMemo(() => {
 
         <div className="mt-8 rounded-3xl bg-white p-6 shadow-sm">
           <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+            <div className="mt-8 rounded-3xl bg-white p-6 shadow-sm">
+  <h2 className="text-2xl font-black text-gray-900">
+    Payment Settings
+  </h2>
+
+  <p className="mt-1 text-sm text-gray-600">
+    Tell NiaTube where approved creator payouts should be sent.
+  </p>
+
+  <div className="mt-5 grid gap-4 md:grid-cols-2">
+    <input
+      value={accountHolderName}
+      onChange={(e) => setAccountHolderName(e.target.value)}
+      placeholder="Account holder name"
+      className="rounded-xl border px-4 py-3"
+    />
+
+    <select
+      value={payoutMethod}
+      onChange={(e) => setPayoutMethod(e.target.value)}
+      className="rounded-xl border px-4 py-3"
+    >
+      <option>Bank Transfer</option>
+      <option>PayPal</option>
+      <option>Payoneer</option>
+      <option>Wise</option>
+      <option>Mobile Money</option>
+    </select>
+
+    <textarea
+      value={payoutDetails}
+      onChange={(e) => setPayoutDetails(e.target.value)}
+      placeholder="Payout details: bank account, PayPal email, Payoneer/Wise account, or mobile money number"
+      className="min-h-[120px] rounded-xl border px-4 py-3 md:col-span-2"
+    />
+  </div>
+
+  <button
+    onClick={async () => {
+      if (!accountHolderName.trim() || !payoutDetails.trim()) {
+        alert("Please enter account holder name and payout details.");
+        return;
+      }
+
+      const { error } = await supabase
+        .from("creator_payout_profiles")
+        .upsert(
+          {
+            creator_name: creatorName,
+            country: creatorCountry,
+            payout_currency: selectedPayoutCurrency,
+            payout_method: payoutMethod,
+            payout_details: payoutDetails.trim(),
+            account_holder_name: accountHolderName.trim(),
+            updated_at: new Date().toISOString(),
+          },
+          { onConflict: "creator_name" }
+        );
+
+      if (error) {
+        console.error(error);
+        alert("Could not save payment settings.");
+        return;
+      }
+
+      alert("Payment settings saved.");
+    }}
+    className="mt-5 rounded-xl bg-black px-5 py-3 text-sm font-black text-white hover:bg-gray-800"
+  >
+    Save Payment Settings
+  </button>
+</div>
+           
             <div>
               <h2 className="text-2xl font-black text-gray-900">
                 Payout Requests
@@ -1740,65 +1912,107 @@ const sortedUploads = useMemo(() => {
               </p>
             </div>
 
-            {tipTotalsByCurrency.length > 0 && (
-              <div className="flex flex-col gap-2 sm:flex-row sm:items-center">
-                <select
-                  value={selectedPayoutCurrency}
-                  onChange={(e) => setSelectedPayoutCurrency(e.target.value)}
-                  className="rounded-xl border px-4 py-2 text-sm font-bold"
-                >
-                  {tipTotalsByCurrency.map((item) => (
-                    <option key={item.currency} value={item.currency}>
-                      {item.currency} — {item.amount}
-                    </option>
-                  ))}
-                </select>
+            <div className="flex flex-col gap-3">
+  <div className="rounded-xl bg-gray-50 p-4">
+    <p className="text-sm font-bold text-gray-600">
+      Available Wallet Balance
+    </p>
 
-                <button
-                  onClick={async () => {
-                    if (selectedCurrencyTotal <= 0) {
-                      alert("No funds available for this currency.");
-                      return;
-                    }
+    <p className="mt-1 text-2xl font-black text-gray-900">
+      {creatorLocalCurrency}{" "}
+      {adjustedCreatorWalletBalance.toFixed(2)}
+    </p>
+  </div>
 
-                    const { error } = await supabase
-                      .from("payout_requests")
-                      .insert([
-                        {
-                          creator_name: creatorName,
-                          amount: selectedCurrencyTotal,
-                          currency_code: selectedPayoutCurrency,
-                          status: "pending",
-                        },
-                      ]);
+  <input
+    type="number"
+    min="0"
+    step="0.01"
+    value={payoutAmount}
+    onChange={(e) => setPayoutAmount(e.target.value)}
+    placeholder={`Enter payout amount in ${creatorLocalCurrency}`}
+    className="rounded-xl border px-4 py-3"
+  />
 
-                    if (error) {
-                      console.error(error);
-                      alert("Payout request failed.");
-                      return;
-                    }
+  <button
+    onClick={async () => {
+      const amount = Number(payoutAmount);
 
-                    await supabase.from("notifications").insert([
-                      {
-                        creator_name: creatorName,
-                        type: "payout",
-                        title: "Payout request submitted",
-                        message: `Your payout request for ${selectedPayoutCurrency} ${selectedCurrencyTotal} has been submitted for review.`,
-                      },
-                    ]);
+      if (!amount || amount <= 0) {
+        alert("Enter a valid payout amount.");
+        return;
+      }
 
-                    alert(
-                      `Payout request submitted for ${selectedPayoutCurrency} ${selectedCurrencyTotal}.`
-                    );
-                    window.location.reload();
-                  }}
-                  className="rounded-xl bg-green-700 px-4 py-2 text-sm font-bold text-white hover:bg-green-800"
-                >
-                  Request {selectedPayoutCurrency} Payout
-                </button>
-              </div>
-            )}
+      if (amount > availableWalletBalanceLocal) {
+        alert("Requested payout exceeds available wallet balance.");
+        return;
+      }
+
+      if (!accountHolderName.trim()) {
+        alert("Please complete Payment Settings first.");
+        return;
+      }
+
+      if (!payoutDetails.trim()) {
+        alert("Please complete Payment Settings first.");
+        return;
+      }
+
+      const { error } = await supabase
+        .from("payout_requests")
+        .insert([
+          {
+            creator_name: creatorName,
+            amount,
+            currency_code: creatorLocalCurrency,
+            status: "pending",
+          },
+        ]);
+
+      if (error) {
+        console.error(error);
+        alert("Payout request failed.");
+        return;
+      }
+
+      await supabase.from("notifications").insert([
+        {
+          creator_name: creatorName,
+          type: "payout",
+          title: "Payout request submitted",
+          message: `Your payout request for ${creatorLocalCurrency} ${amount} has been submitted for review.`,
+        },
+      ]);
+const { data: refreshedPayouts } = await supabase
+  .from("payout_requests")
+  .select("*")
+  .eq("creator_name", creatorName)
+  .order("created_at", { ascending: false });
+
+setPayouts((refreshedPayouts || []) as PayoutRequest[]);
+setWalletPendingPayouts((prev) => prev + 1);
+
+setPayoutAmount("");
+
+alert(
+  `Payout request submitted for ${creatorLocalCurrency} ${amount}.`
+);
+    }}
+    className="rounded-xl bg-green-700 px-4 py-3 text-sm font-bold text-white hover:bg-green-800"
+  >
+    Request Payout ({creatorLocalCurrency})
+  </button>
+</div>
           </div>
+          <div className="mt-6">
+  <h3 className="text-lg font-black text-gray-900">
+    Recent Payout Activity
+  </h3>
+
+  <p className="mt-1 text-sm text-gray-600">
+    Review the status of your payout requests.
+  </p>
+</div>
 
           {payouts.length === 0 ? (
             <p className="mt-4 text-gray-500">No payout requests yet.</p>
@@ -1813,14 +2027,68 @@ const sortedUploads = useMemo(() => {
                     Amount: {payout.currency_code || "UNKNOWN"}{" "}
                     {payout.amount}
                   </p>
-                  <p className="text-sm text-gray-600">
-                    Status: {payout.status || "pending"}
-                  </p>
+                  <p
+  className={`text-sm font-bold ${
+    payout.status === "approved"
+      ? "text-green-700"
+      : payout.status === "rejected"
+      ? "text-red-700"
+      : payout.status === "paid"
+      ? "text-blue-700"
+      : "text-yellow-700"
+  }`}
+>
+  Status: {payout.status || "pending"}
+</p>
                 </div>
               ))}
             </div>
           )}
         </div>
+         
+ <div className="mt-8 rounded-3xl bg-white p-6 shadow-sm text-center">
+  <h2 className="text-2xl font-black text-gray-900 underline">
+    Wallet Balance Reconciliation
+  </h2>
+
+  <p className="mt-1 text-sm text-gray-600">
+    Preview how a payout request affects your wallet before submission.
+  </p>
+  </div>
+
+  <div className="mt-5 grid gap-4 md:grid-cols-2 max-w-4xl mx-auto">
+    
+     <div className="rounded-2xl border border-blue-200 bg-blue-50 p-5 text-center"> 
+      <p className="text-sm font-bold text-blue-700">
+        Adjusted Wallet Balance ({creatorLocalCurrency})
+      </p>
+
+      <p className="mt-2 text-3xl font-black text-blue-900">
+        {creatorLocalCurrency}{" "}
+        {previewAdjustedWalletBalance.toFixed(2)}
+      </p>
+
+      <p className="mt-1 text-xs text-blue-700">
+        Net Earnings less requested payout amount
+      </p>
+    </div>
+
+    
+    <div className="rounded-2xl border border-green-200 bg-green-50 p-5 text-center">
+      <p className="text-sm font-bold text-green-700">
+        Adjusted Creator Net Earnings (USD)
+      </p>
+
+      <p className="mt-2 text-3xl font-black text-green-900">
+        USD {previewAdjustedCreatorNetUsd.toFixed(2)}
+      </p>
+
+      <p className="mt-1 text-xs text-green-700">
+        Converted from adjusted wallet balance
+      </p>
+    </div>
+  </div>
+
 
         {topVideo && (
           <div className="mt-8 rounded-3xl bg-white p-6 shadow-sm">
