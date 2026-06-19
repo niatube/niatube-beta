@@ -11,7 +11,9 @@ export default function AdvertisePage() {
   const [country, setCountry] = useState("");
   const [website, setWebsite] = useState("");
   const [campaignMessage, setCampaignMessage] = useState("");
+
   const [estimatedBudget, setEstimatedBudget] = useState("");
+  const [adInventory, setAdInventory] = useState("");
   const [preferredStartDate, setPreferredStartDate] = useState("");
   const [submitting, setSubmitting] = useState(false);
   const [message, setMessage] = useState("");
@@ -44,6 +46,7 @@ export default function AdvertisePage() {
         website: website.trim() || null,
         campaign_message: campaignMessage.trim(),
         estimated_budget: estimatedBudget.trim() || null,
+        ad_inventory: adInventory,
         preferred_start_date: preferredStartDate || null,
       },
     ]);
@@ -63,6 +66,7 @@ export default function AdvertisePage() {
     setWebsite("");
     setCampaignMessage("");
     setEstimatedBudget("");
+    setAdInventory("");
     setPreferredStartDate("");
 
     setMessage(
@@ -99,8 +103,24 @@ export default function AdvertisePage() {
           <input type="tel" placeholder="Phone Number *" value={phoneNumber} onChange={(e) => setPhoneNumber(e.target.value)} className="w-full rounded-md border px-4 py-2" />
           <input type="text" placeholder="Country *" value={country} onChange={(e) => setCountry(e.target.value)} className="w-full rounded-md border px-4 py-2" />
           <input type="url" placeholder="Website" value={website} onChange={(e) => setWebsite(e.target.value)} className="w-full rounded-md border px-4 py-2" />
+          
           <input type="text" placeholder="Estimated Budget" value={estimatedBudget} onChange={(e) => setEstimatedBudget(e.target.value)} className="w-full rounded-md border px-4 py-2" />
-
+           <select
+  value={adInventory}
+  onChange={(e) => setAdInventory(e.target.value)}
+  required
+  className="rounded-xl border px-4 py-3"
+>
+  <option value="">Select Ad Inventory / Placement</option>
+  <option value="homepage_banner">Homepage Banner</option>
+  <option value="watch_page_sidebar">Watch Page Sidebar</option>
+  <option value="live_stream_sponsorship">Live Stream Sponsorship</option>
+  <option value="creator_channel_sponsorship">Creator Channel Sponsorship</option>
+  <option value="category_sponsorship">Category Sponsorship</option>
+  <option value="niacircle_sponsorship">NiaCircle Sponsorship</option>
+  <option value="custom_campaign">Custom Campaign</option>
+</select>
+          
           <div>
             <label className="mb-1 block text-sm font-bold text-gray-700">
               Preferred Start Date

@@ -13,8 +13,9 @@ type AdRequest = {
   country?: string | null;
   website?: string | null;
   campaign_message: string;
-  estimated_budget?: string | null;
-  preferred_start_date?: string | null;
+ estimated_budget?: string | null;
+ad_inventory?: string | null;
+preferred_start_date?: string | null;
   status?: string;
   created_at?: string;
 };
@@ -26,23 +27,43 @@ export default function AdminAdvertisingPage() {
   const [accessChecked, setAccessChecked] = useState(false);
   const [hasAccess, setHasAccess] = useState(false);
 
-  async function loadRequests() {
-    setLoading(true);
+  const pendingLeads = requests.filter(
+  (request) => request.status === "pending"
+).length;
 
-    const { data, error } = await supabase
-      .from("ad_requests")
-      .select("*")
-      .order("created_at", { ascending: false });
+const contactedLeads = requests.filter(
+  (request) => request.status === "contacted"
+).length;
 
-    if (error) {
-      setMessage("Could not load advertising requests.");
-      setLoading(false);
-      return;
-    }
+const approvedCampaigns = requests.filter(
+  (request) => request.status === "approved"
+).length;
 
-    setRequests((data || []) as AdRequest[]);
+const liveCampaigns = requests.filter(
+  (request) => request.status === "campaign_live"
+).length;
+
+ async function loadRequests() {
+  setLoading(true);
+
+  const response = await fetch("/api/admin/advertising", {
+    method: "GET",
+    cache: "no-store",
+  });
+
+  const result = await response.json();
+
+  if (!response.ok) {
+    setMessage(result.error || "Could not load advertising requests.");
     setLoading(false);
+    return;
   }
+
+  setRequests((result.requests || []) as AdRequest[]);
+  setLoading(false);
+}
+
+   
 
   useEffect(() => {
     async function checkAdvertisingAccess() {
@@ -91,20 +112,27 @@ export default function AdminAdvertisingPage() {
     checkAdvertisingAccess();
   }, []);
 
-  async function updateStatus(id: string, status: string) {
-    const { error } = await supabase
-      .from("ad_requests")
-      .update({ status })
-      .eq("id", id);
+ async function updateStatus(id: string, status: string) {
+  const { error } = await supabase
+    .from("ad_requests")
+    .update({ status })
+    .eq("id", id);
 
-    if (error) {
-      setMessage("Could not update advertising request status.");
-      return;
-    }
-
-    setMessage("Advertising request status updated.");
-    loadRequests();
+  if (error) {
+    setMessage("Could not update advertising request status.");
+    return;
   }
+
+  setRequests((prev) =>
+    prev.map((request) =>
+      request.id === id
+        ? { ...request, status }
+        : request
+    )
+  );
+
+  setMessage("Advertising request status updated.");
+}
 
   if (!accessChecked) {
     return (
@@ -155,6 +183,36 @@ export default function AdminAdvertisingPage() {
         <p className="mt-3 max-w-4xl text-gray-600">
           Review advertiser leads submitted through the Advertise on NiaTube form.
         </p>
+
+        <div className="mt-8 grid gap-4 md:grid-cols-4">
+  <div className="rounded-2xl bg-white p-5 shadow-sm">
+    <p className="text-sm font-bold text-gray-500">Pending Leads</p>
+    <p className="mt-2 text-3xl font-black text-gray-900">
+      {pendingLeads}
+    </p>
+  </div>
+
+  <div className="rounded-2xl bg-white p-5 shadow-sm">
+    <p className="text-sm font-bold text-gray-500">Contacted Leads</p>
+    <p className="mt-2 text-3xl font-black text-gray-900">
+      {contactedLeads}
+    </p>
+  </div>
+
+  <div className="rounded-2xl bg-white p-5 shadow-sm">
+    <p className="text-sm font-bold text-gray-500">Approved Campaigns</p>
+    <p className="mt-2 text-3xl font-black text-gray-900">
+      {approvedCampaigns}
+    </p>
+  </div>
+
+  <div className="rounded-2xl bg-white p-5 shadow-sm">
+    <p className="text-sm font-bold text-gray-500">Live Campaigns</p>
+    <p className="mt-2 text-3xl font-black text-gray-900">
+      {liveCampaigns}
+    </p>
+  </div>
+</div>
 
         {message && (
           <p className="mt-6 rounded-xl bg-yellow-50 p-4 text-sm font-bold text-yellow-800">
@@ -226,10 +284,16 @@ export default function AdminAdvertisingPage() {
                       "Not provided"
                     )}
                   </p>
+                  
                   <p>
                     <strong>Budget:</strong>{" "}
                     {request.estimated_budget || "Not provided"}
                   </p>
+                 <p>
+  <strong>Ad Placement:</strong>{" "}
+  {request.ad_inventory || "Not provided"}
+</p>
+                 
                   <p>
                     <strong>Preferred Start:</strong>{" "}
                     {request.preferred_start_date || "Not provided"}
