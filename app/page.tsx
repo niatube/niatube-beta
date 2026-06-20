@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { useEffect, useState } from "react";
 import Navbar from "@/components/Navbar";
+import { supabase } from "@/lib/supabase-browser";
 import { fallbackVideos } from "../lib/fallbackVideos";
 
 type UploadItem = {
@@ -52,6 +53,7 @@ function formatUploadTime(dateString?: string | null) {
 export default function Home() {
   const [uploads, setUploads] = useState<UploadItem[]>([]);
   const [selectedLanguage, setSelectedLanguage] = useState<string | null>(null);
+  const [homepageAd, setHomepageAd] = useState<any | null>(null);
 
   useEffect(() => {
     const savedLanguage = localStorage.getItem("niatube_language");
@@ -65,6 +67,13 @@ export default function Home() {
 
         const data = await res.json();
         setUploads(Array.isArray(data.uploads) ? data.uploads : []);
+      const adResponse = await fetch(`/api/ads/homepage?ts=${Date.now()}`, {
+  cache: "no-store",
+});
+
+const adData = await adResponse.json();
+
+setHomepageAd(adData.ad || null);
       } catch (error) {
         console.error("Failed to fetch uploads", error);
         setUploads([]);
@@ -125,7 +134,7 @@ export default function Home() {
       return video.language === selectedLanguage;
     }
   );
-
+  
   const sortedVideos = [...filteredVideos].sort((a: any, b: any) => {
     if (a.is_live && !b.is_live) return -1;
     if (!a.is_live && b.is_live) return 1;
@@ -449,27 +458,50 @@ export default function Home() {
           </div>
 
           <aside className="hidden xl:block">
-            <div className="sticky top-6 space-y-5">
-              <div className="rounded-2xl bg-black p-5 text-white">
-                <p className="text-xs font-bold uppercase text-yellow-400">
-                  Sponsored
-                </p>
+          <div className="sticky top-6 space-y-5">
+ <div className="rounded-2xl border-2 border-black bg-gradient-to-br from-green-100 via-emerald-100 to-teal-100 p-5 text-gray-900 shadow-sm">
+      {homepageAd?.ad_image_url && (
+    <img
+      src={homepageAd.ad_image_url}
+      alt={homepageAd?.advertiser_name || "Sponsored ad"}
+      className="mb-4 h-32 w-full rounded-xl object-cover"
+    />
+  )}
 
-                <h3 className="mt-2 text-xl font-extrabold">
-                  Advertise on NiaTube
-                </h3>
+  <p className="inline-block rounded-full bg-yellow-400 px-3 py-1 text-xs font-bold uppercase text-black">
+  Sponsored
+</p>
 
-                <p className="mt-2 text-sm text-gray-300">
-                  Reach Pan-African creators, viewers, and diaspora audiences.
-                </p>
+  <h3 className="mt-2 text-xl font-extrabold">
+  {homepageAd?.headline ||
+    homepageAd?.advertiser_name ||
+    "Advertise on NiaTube"}
+</h3>
 
-                <Link
-                  href="/advertise"
-                  className="mt-4 inline-block rounded-md bg-yellow-400 px-4 py-2 text-sm font-bold text-black"
-                >
-                  Book Ad Space
-                </Link>
-              </div>
+  <p className="mt-2 text-sm text-black">
+  {homepageAd?.subheadline ||
+    homepageAd?.campaign_name ||
+    "Reach Pan-African creators, viewers, and diaspora audiences."}
+</p>
+
+  {homepageAd?.landing_url ? (
+    <a
+      href={homepageAd.landing_url}
+      target="_blank"
+      rel="noopener noreferrer"
+      className="mt-4 inline-block rounded-md bg-yellow-400 px-4 py-2 text-sm font-bold text-black"
+    >
+      {homepageAd?.cta_text || "Learn More"}
+    </a>
+  ) : !homepageAd ? (
+    <Link
+      href="/advertise"
+      className="mt-4 inline-block rounded-md bg-yellow-400 px-4 py-2 text-sm font-bold text-black"
+    >
+      Book Ad Space
+    </Link>
+  ) : null}
+</div>
 
               <div className="rounded-2xl bg-white p-5 shadow-sm">
                 <h3 className="text-lg font-extrabold">Rising Creators</h3>
