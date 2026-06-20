@@ -175,6 +175,27 @@ if (!hasAccess) {
     Review advertiser campaign requests and update sales status.
   </p>
 </a>
+<a
+  href="/admin/advertising/inventory"
+  className="rounded-xl border bg-white p-4 shadow-sm hover:bg-gray-50"
+>
+  <h2 className="text-lg font-black">Advertising Inventory</h2>
+
+  <p className="mt-2 text-sm text-gray-600">
+    Manage ad inventory, slot availability, reserved campaigns, and live placements.
+  </p>
+</a>
+
+<a
+  href="/admin/advertising/assign"
+  className="rounded-xl border bg-white p-4 shadow-sm hover:bg-gray-50"
+>
+  <h2 className="text-lg font-black">Campaign Assignment</h2>
+
+  <p className="mt-2 text-sm text-gray-600">
+    Assign approved advertising campaigns to available inventory slots.
+  </p>
+</a>
 
 </div>
       <p className="mb-4 text-red-600 font-bold">
