@@ -136,6 +136,8 @@ const [membershipLoading, setMembershipLoading] = useState(false);
   const [viewerId, setViewerId] = useState("");
   const [liveViewerId, setLiveViewerId] = useState("");
 
+  const [watchAd, setWatchAd] = useState<any | null>(null);
+
   const chatEndRef = useRef<HTMLDivElement | null>(null);
 
   const visibleMessages = messages.filter(
@@ -295,6 +297,14 @@ const [membershipLoading, setMembershipLoading] = useState(false);
         if (recommendedData) {
           setRecommendedVideos(recommendedData as Video[]);
         }
+
+        const adResponse = await fetch(`/api/ads/watch?ts=${Date.now()}`, {
+  cache: "no-store",
+});
+
+const adData = await adResponse.json();
+
+setWatchAd(adData.ad || null);
       } else {
         const fallback = fallbackVideos.find((item) => item.id === id);
         setVideo((fallback as Video) || null);
@@ -679,8 +689,9 @@ const [membershipLoading, setMembershipLoading] = useState(false);
     <main className="min-h-screen bg-gray-50">
       <Navbar />
 
-      <div className="mx-auto max-w-7xl px-4 py-6">
-        <div className="grid gap-6 lg:grid-cols-[1fr_360px]">
+      <div className="mx-auto max-w-[1300px] px-4 py-6">
+        
+        <div className="grid gap-6 lg:grid-cols-[minmax(0,1fr)_350px]">
           <section>
             <div className="overflow-hidden rounded-2xl bg-black shadow-sm">
             {video.video_url?.includes("iframe.mediadelivery.net") ? (
@@ -932,6 +943,51 @@ const [membershipLoading, setMembershipLoading] = useState(false);
           </section>
 
           <aside className="space-y-5">
+            {!isLive && (
+  <div className="rounded-2xl border-2 border-black bg-gradient-to-br from-green-100 via-emerald-100 to-teal-100 p-5 text-gray-900 shadow-sm">
+    {watchAd?.ad_image_url && (
+      <img
+        src={watchAd.ad_image_url}
+        alt={watchAd?.headline || watchAd?.advertiser_name || "Sponsored ad"}
+        className="mb-4 h-40 w-full rounded-xl object-cover"
+      />
+    )}
+
+    <p className="inline-block rounded-full bg-yellow-400 px-3 py-1 text-xs font-bold uppercase text-black">
+      Sponsored
+    </p>
+
+    <h2 className="mt-3 text-xl font-black text-gray-900">
+      {watchAd?.headline ||
+        watchAd?.advertiser_name ||
+        "Advertise on NiaTube"}
+    </h2>
+
+    <p className="mt-2 text-sm leading-6 text-gray-800">
+      {watchAd?.subheadline ||
+        watchAd?.campaign_name ||
+        "Reach engaged viewers while they watch NiaTube videos."}
+    </p>
+
+    {watchAd?.landing_url ? (
+      <a
+        href={watchAd.landing_url}
+        target="_blank"
+        rel="noopener noreferrer"
+        className="mt-4 inline-flex rounded-xl bg-yellow-400 px-4 py-2 text-sm font-black text-black hover:bg-yellow-300"
+      >
+        {watchAd?.cta_text || "Learn More"}
+      </a>
+    ) : !watchAd ? (
+      <a
+        href="/advertise"
+        className="mt-4 inline-flex rounded-xl bg-black px-4 py-2 text-sm font-black text-white hover:bg-gray-800"
+      >
+        Book Watch Ad Space
+      </a>
+    ) : null}
+  </div>
+)}
             {!isLive && (
   <div className="rounded-2xl bg-white p-5 shadow-sm">
     <h2 className="text-xl font-black text-gray-900">
