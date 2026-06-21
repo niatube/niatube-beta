@@ -136,7 +136,9 @@ const [membershipLoading, setMembershipLoading] = useState(false);
   const [viewerId, setViewerId] = useState("");
   const [liveViewerId, setLiveViewerId] = useState("");
 
+  
   const [watchAd, setWatchAd] = useState<any | null>(null);
+const [liveAd, setLiveAd] = useState<any | null>(null);
 
   const chatEndRef = useRef<HTMLDivElement | null>(null);
 
@@ -305,6 +307,20 @@ const [membershipLoading, setMembershipLoading] = useState(false);
 const adData = await adResponse.json();
 
 setWatchAd(adData.ad || null);
+if (Boolean(data.is_live)) {
+  const liveResponse = await fetch(
+    `/api/ads/live?ts=${Date.now()}`,
+    {
+      cache: "no-store",
+    }
+  );
+
+  const liveData = await liveResponse.json();
+
+  setLiveAd(liveData.ad || null);
+} else {
+  setLiveAd(null);
+}
       } else {
         const fallback = fallbackVideos.find((item) => item.id === id);
         setVideo((fallback as Video) || null);
@@ -1114,26 +1130,48 @@ setWatchAd(adData.ad || null);
   </div>
 )}
 {isLive && (
-  <div className="rounded-2xl border border-yellow-200 bg-yellow-50 p-5 shadow-sm">
-    <p className="text-xs font-black uppercase tracking-wide text-yellow-700">
+  <div className="rounded-2xl border-2 border-black bg-gradient-to-br from-green-100 via-emerald-100 to-teal-100 p-5 text-gray-900 shadow-sm">
+{liveAd?.ad_image_url && (
+      <img
+        src={liveAd.ad_image_url}
+        alt={liveAd?.headline || liveAd?.advertiser_name || "Live Sponsor"}
+        className="mb-4 h-40 w-full rounded-xl object-cover"
+      />
+    )}
+
+    <p className="inline-block rounded-full bg-yellow-400 px-3 py-1 text-xs font-bold uppercase text-black">
       Live Sponsor
     </p>
 
-    <h2 className="mt-2 text-xl font-black text-gray-900">
-      Advertise During Live Events
+    <h2 className="mt-3 text-xl font-black text-gray-900">
+      {liveAd?.headline ||
+        liveAd?.advertiser_name ||
+        "Advertise During Live Events"}
     </h2>
 
-    <p className="mt-3 text-sm leading-6 text-gray-700">
-      Put your brand in front of NiaTube viewers during live broadcasts,
-      creator events, interviews, and cultural programming.
+    <p className="mt-2 text-sm leading-6 text-gray-800">
+      {liveAd?.subheadline ||
+        liveAd?.campaign_name ||
+        "Put your brand in front of NiaTube viewers during live broadcasts."}
     </p>
 
-    <a
-      href="/advertise"
-      className="mt-4 inline-flex rounded-xl bg-black px-4 py-2 text-sm font-black text-white hover:bg-gray-800"
-    >
-      Book Live Ad Space
-    </a>
+    {liveAd?.landing_url ? (
+      <a
+        href={liveAd.landing_url}
+        target="_blank"
+        rel="noopener noreferrer"
+        className="mt-4 inline-flex rounded-xl bg-yellow-400 px-4 py-2 text-sm font-black text-black hover:bg-yellow-300"
+      >
+        {liveAd?.cta_text || "Learn More"}
+      </a>
+    ) : !liveAd ? (
+      <a
+        href="/advertise"
+        className="mt-4 inline-flex rounded-xl bg-black px-4 py-2 text-sm font-black text-white hover:bg-gray-800"
+      >
+        Book Live Ad Space
+      </a>
+    ) : null}
   </div>
 )}
           </aside>
