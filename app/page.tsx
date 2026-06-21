@@ -86,15 +86,15 @@ setHomepageAd(adData.ad || null);
 
   useEffect(() => {
   async function recordImpression() {
-    if (!homepageAd?.id || impressionRecorded) {
-      return;
-    }
+if (!homepageAd?.campaign_name || impressionRecorded) {
+  return;
+}
 
     try {
       await supabase
         .from("ad_events")
         .insert({
-          ad_id: homepageAd.id,
+          ad_id: homepageAd.campaign_name,
           event_type: "impression",
         });
 
