@@ -100,7 +100,6 @@ if (!homepageAd?.campaign_name || impressionRecorded) {
 
       setImpressionRecorded(true);
     }catch (error) {
-  alert(JSON.stringify(error));
   console.error("Failed to record ad impression", error);
 }
   }
