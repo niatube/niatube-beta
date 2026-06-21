@@ -54,6 +54,7 @@ export default function Home() {
   const [uploads, setUploads] = useState<UploadItem[]>([]);
   const [selectedLanguage, setSelectedLanguage] = useState<string | null>(null);
   const [homepageAd, setHomepageAd] = useState<any | null>(null);
+  const [impressionRecorded, setImpressionRecorded] = useState(false);
 
   useEffect(() => {
     const savedLanguage = localStorage.getItem("niatube_language");
@@ -82,6 +83,29 @@ setHomepageAd(adData.ad || null);
 
     fetchUploads();
   }, []);
+
+  useEffect(() => {
+  async function recordImpression() {
+    if (!homepageAd?.id || impressionRecorded) {
+      return;
+    }
+
+    try {
+      await supabase
+        .from("ad_events")
+        .insert({
+          ad_id: homepageAd.id,
+          event_type: "impression",
+        });
+
+      setImpressionRecorded(true);
+    } catch (error) {
+      console.error("Failed to record ad impression", error);
+    }
+  }
+
+  recordImpression();
+}, [homepageAd, impressionRecorded]);
 
   const uploadedVideos = uploads
     .filter((item) => item.status === "published")
