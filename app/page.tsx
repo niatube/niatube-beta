@@ -106,6 +106,24 @@ if (!homepageAd?.campaign_name || impressionRecorded) {
 
   recordImpression();
 }, [homepageAd, impressionRecorded]);
+const recordHomepageAdClick = async () => {
+  if (!homepageAd?.campaign_name) {
+    return;
+  }
+
+  try {
+    await supabase.from("ad_events").insert({
+      ad_id: homepageAd.campaign_name,
+      event_type: "click",
+    });
+  } catch (error) {
+    console.error("Failed to record ad click", error);
+  }
+
+  if (homepageAd?.landing_url) {
+    window.open(homepageAd.landing_url.trim(), "_blank", "noopener,noreferrer");
+  }
+};
 
   const uploadedVideos = uploads
     .filter((item) => item.status === "published")
@@ -509,15 +527,14 @@ if (!homepageAd?.campaign_name || impressionRecorded) {
 </p>
 
   {homepageAd?.landing_url ? (
-    <a
-      href={homepageAd.landing_url}
-      target="_blank"
-      rel="noopener noreferrer"
-      className="mt-4 inline-block rounded-md bg-yellow-400 px-4 py-2 text-sm font-bold text-black"
-    >
-      {homepageAd?.cta_text || "Learn More"}
-    </a>
-  ) : !homepageAd ? (
+  <button
+    type="button"
+    onClick={recordHomepageAdClick}
+    className="mt-4 inline-block rounded-md bg-yellow-400 px-4 py-2 text-sm font-bold text-black"
+  >
+    {homepageAd?.cta_text || "Learn More"}
+  </button>
+) : !homepageAd ? (
     <Link
       href="/advertise"
       className="mt-4 inline-block rounded-md bg-yellow-400 px-4 py-2 text-sm font-bold text-black"
