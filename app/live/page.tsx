@@ -35,7 +35,8 @@ export default function LivePage() {
   const [messages, setMessages] = useState<ChatMessage[]>([]);
   const [input, setInput] = useState("");
   const [username] = useState("Viewer");
-  const [ads, setAds] = useState<any[]>([]);
+  const [liveAd, setLiveAd] = useState<any | null>(null);
+  const [liveAdImpressionRecorded, setLiveAdImpressionRecorded] = useState(false);
   const [loading, setLoading] = useState(true);
   const [statusMessage, setStatusMessage] = useState("");
 
@@ -102,16 +103,42 @@ export default function LivePage() {
 
     if (data) setLiveStreams(data as Video[]);
 
-    const { data: adsData } = await supabase
-      .from("ads")
-      .select("*")
-      .eq("is_active", true)
-      .limit(1);
-
-    if (adsData) setAds(adsData);
-
-    setLoading(false);
+   const adResponse = await fetch(
+  `/api/ads/live?ts=${Date.now()}`,
+  {
+    cache: "no-store",
   }
+);
+
+const adData = await adResponse.json();
+
+setLiveAd(adData.ad || null);
+
+
+      setLoading(false);
+  }
+
+  useEffect(() => {
+    async function recordLiveAdImpression() {
+      if (!liveAd?.campaign_name || liveAdImpressionRecorded) {
+        return;
+      }
+
+      try {
+        await supabase.from("ad_events").insert({
+          ad_id: liveAd.campaign_name,
+          event_type: "impression",
+          placement: "Live Page",
+        });
+
+        setLiveAdImpressionRecorded(true);
+      } catch (error) {
+        console.error("Failed to record live ad impression", error);
+      }
+    }
+
+    recordLiveAdImpression();
+  }, [liveAd, liveAdImpressionRecorded]);
 
   async function loadMessages() {
     const { data, error } = await supabase
@@ -180,6 +207,31 @@ export default function LivePage() {
     setInput("");
     setStatusMessage("");
   }
+    const recordLiveAdClick = async () => {
+    if (!liveAd?.landing_url) {
+      return;
+    }
+
+    const targetUrl = liveAd.landing_url.trim();
+
+    window.open(targetUrl, "_blank", "noopener,noreferrer");
+
+    if (!liveAd?.campaign_name) {
+      return;
+    }
+
+    try {
+      await supabase.from("ad_events").insert({
+        ad_id: liveAd.campaign_name,
+        event_type: "click",
+        placement: "Live Page",
+      });
+    } catch (error) {
+      console.error("Failed to record live ad click", error);
+    }
+  };
+
+  
 
   return (
     <main className="min-h-screen bg-gray-50">
@@ -337,28 +389,38 @@ export default function LivePage() {
           </div>
 
           <aside className="space-y-4">
-            {ads.length > 0 && (
-              <div className="rounded-2xl border border-yellow-200 bg-yellow-50 p-5 shadow-sm">
-                <p className="text-xs font-bold uppercase text-yellow-700">
-                  Sponsored
-                </p>
+  {liveAd && (
+    <div className="rounded-2xl border border-yellow-200 bg-yellow-50 p-5 shadow-sm">
+      <p className="text-xs font-bold uppercase text-yellow-700">
+        Sponsored
+      </p>
 
-                <h2 className="mt-2 text-lg font-black text-gray-900">
-                  {ads[0].title}
-                </h2>
+      {liveAd?.ad_image_url && (
+        <img
+          src={liveAd.ad_image_url}
+          alt={liveAd.headline || "Sponsored Ad"}
+          className="mb-4 h-32 w-full rounded-xl object-cover"
+        />
+      )}
 
-                <p className="mt-2 text-sm text-gray-700">
-                  {ads[0].description}
-                </p>
+      <h2 className="mt-2 text-lg font-black text-gray-900">
+        {liveAd?.headline || liveAd?.campaign_name}
+      </h2>
 
-                <a
-                  href={ads[0].link}
-                  className="mt-4 block w-full rounded-lg bg-black px-4 py-2 text-center text-sm font-bold text-white"
-                >
-                  {ads[0].cta}
-                </a>
-              </div>
-            )}
+      <p className="mt-2 text-sm text-gray-700">
+        {liveAd?.subheadline ||
+          "Reach engaged viewers during live streams."}
+      </p>
+
+      <button
+        type="button"
+        onClick={recordLiveAdClick}
+        className="mt-4 block w-full rounded-lg bg-black px-4 py-2 text-center text-sm font-bold text-white"
+      >
+        {liveAd?.cta_text || "Learn More"}
+      </button>
+    </div>
+  )}
 
             <div className="rounded-2xl bg-white p-5 shadow-sm">
               <h2 className="text-lg font-bold text-gray-900">Live Chat</h2>
