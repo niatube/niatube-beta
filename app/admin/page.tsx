@@ -207,6 +207,16 @@ if (!hasAccess) {
     Assign approved advertising campaigns to available inventory slots.
   </p>
 </a>
+<a
+  href="/admin/ads"
+  className="rounded-xl border bg-white p-4 shadow-sm hover:bg-gray-50"
+>
+  <h2 className="text-lg font-black">Advertising Analytics</h2>
+
+  <p className="mt-2 text-sm text-gray-600">
+    Track campaign impressions, clicks, CTR, and performance reporting.
+  </p>
+</a>
 
 </div>
       <p className="mb-4 text-red-600 font-bold">
