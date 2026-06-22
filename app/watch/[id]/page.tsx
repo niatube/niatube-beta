@@ -707,7 +707,15 @@ if (Boolean(data.is_live)) {
     if (data) setMessages((prev) => [...prev, data as ChatMessage]);
     setInput("");
   }
-  const recordWatchAdClick = async () => {
+ const recordWatchAdClick = async () => {
+  if (!watchAd?.landing_url) {
+    return;
+  }
+
+  const targetUrl = watchAd.landing_url.trim();
+
+  window.open(targetUrl, "_blank", "noopener,noreferrer");
+
   if (!watchAd?.campaign_name) {
     return;
   }
@@ -720,10 +728,6 @@ if (Boolean(data.is_live)) {
     });
   } catch (error) {
     console.error("Failed to record watch ad click", error);
-  }
-
-  if (watchAd?.landing_url) {
-    window.open(watchAd.landing_url.trim(), "_blank", "noopener,noreferrer");
   }
 };
 
