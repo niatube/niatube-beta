@@ -344,6 +344,7 @@ if (Boolean(data.is_live)) {
         ad_id: watchAd.campaign_name,
         event_type: "impression",
         video_id: id,
+        placement: "Watch Page",
       });
 
       setWatchAdImpressionRecorded(true);
@@ -725,6 +726,7 @@ if (Boolean(data.is_live)) {
       ad_id: watchAd.campaign_name,
       event_type: "click",
       video_id: id,
+      placement: "Watch Page",
     });
   } catch (error) {
     console.error("Failed to record watch ad click", error);

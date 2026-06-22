@@ -96,6 +96,7 @@ if (!homepageAd?.campaign_name || impressionRecorded) {
         .insert({
           ad_id: homepageAd.campaign_name,
           event_type: "impression",
+          placement: "Homepage",
         });
 
       setImpressionRecorded(true);
@@ -115,6 +116,7 @@ const recordHomepageAdClick = async () => {
     await supabase.from("ad_events").insert({
       ad_id: homepageAd.campaign_name,
       event_type: "click",
+      placement: "Homepage",
     });
   } catch (error) {
     console.error("Failed to record ad click", error);
