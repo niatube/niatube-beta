@@ -138,7 +138,10 @@ const [membershipLoading, setMembershipLoading] = useState(false);
 
   
   const [watchAd, setWatchAd] = useState<any | null>(null);
-const [liveAd, setLiveAd] = useState<any | null>(null);
+  const [watchAdImpressionRecorded, setWatchAdImpressionRecorded] =
+  useState(false);
+
+  const [liveAd, setLiveAd] = useState<any | null>(null);
 
   const chatEndRef = useRef<HTMLDivElement | null>(null);
 
@@ -305,7 +308,6 @@ const [liveAd, setLiveAd] = useState<any | null>(null);
 });
 
 const adData = await adResponse.json();
-
 setWatchAd(adData.ad || null);
 if (Boolean(data.is_live)) {
   const liveResponse = await fetch(
@@ -331,6 +333,27 @@ if (Boolean(data.is_live)) {
 
     if (id && viewerId) loadVideo();
   }, [id, viewerId]);
+  useEffect(() => {
+  async function recordWatchAdImpression() {
+    if (!watchAd?.campaign_name || watchAdImpressionRecorded) {
+      return;
+    }
+
+    try {
+      await supabase.from("ad_events").insert({
+        ad_id: watchAd.campaign_name,
+        event_type: "impression",
+        video_id: id,
+      });
+
+      setWatchAdImpressionRecorded(true);
+    } catch (error) {
+      console.error("Failed to record watch ad impression", error);
+    }
+  }
+
+  recordWatchAdImpression();
+}, [watchAd, watchAdImpressionRecorded, id]);
 
   useEffect(() => {
     async function loadChat() {
@@ -354,6 +377,8 @@ if (Boolean(data.is_live)) {
         }
       )
       .subscribe();
+
+      
 
     return () => {
       supabase.removeChannel(channel);
@@ -682,6 +707,25 @@ if (Boolean(data.is_live)) {
     if (data) setMessages((prev) => [...prev, data as ChatMessage]);
     setInput("");
   }
+  const recordWatchAdClick = async () => {
+  if (!watchAd?.campaign_name) {
+    return;
+  }
+
+  try {
+    await supabase.from("ad_events").insert({
+      ad_id: watchAd.campaign_name,
+      event_type: "click",
+      video_id: id,
+    });
+  } catch (error) {
+    console.error("Failed to record watch ad click", error);
+  }
+
+  if (watchAd?.landing_url) {
+    window.open(watchAd.landing_url.trim(), "_blank", "noopener,noreferrer");
+  }
+};
 
   if (loading) {
     return (
@@ -986,15 +1030,14 @@ if (Boolean(data.is_live)) {
     </p>
 
     {watchAd?.landing_url ? (
-      <a
-        href={watchAd.landing_url}
-        target="_blank"
-        rel="noopener noreferrer"
-        className="mt-4 inline-flex rounded-xl bg-yellow-400 px-4 py-2 text-sm font-black text-black hover:bg-yellow-300"
-      >
-        {watchAd?.cta_text || "Learn More"}
-      </a>
-    ) : !watchAd ? (
+  <button
+    type="button"
+    onClick={recordWatchAdClick}
+    className="mt-4 inline-flex rounded-xl bg-yellow-400 px-4 py-2 text-sm font-black text-black hover:bg-yellow-300"
+  >
+    {watchAd?.cta_text || "Learn More"}
+  </button>
+) : !watchAd ? (
       <a
         href="/advertise"
         className="mt-4 inline-flex rounded-xl bg-black px-4 py-2 text-sm font-black text-white hover:bg-gray-800"
