@@ -693,24 +693,39 @@ if (Boolean(data.is_live)) {
     setCommentText("");
   }
 
-  async function sendMessage() {
-    if (chatRestricted) return;
+ async function sendMessage() {
+  if (chatRestricted) return;
 
-    const finalMessage = input.trim();
-    if (!finalMessage) return;
+  const finalMessage = input.trim();
+  if (!finalMessage) return;
 
-    const { data, error } = await supabase
-      .from("live_chat")
-      .insert([{ username, message: finalMessage, type: "user" }])
-      .select()
-      .single();
+  const { data, error } = await supabase
+    .from("live_chat")
+    .insert([{ username, message: finalMessage, type: "user" }])
+    .select()
+    .single();
 
-    if (error) return console.error("Chat send error:", error);
+  if (error) return console.error("Chat send error:", error);
 
-    if (data) setMessages((prev) => [...prev, data as ChatMessage]);
-    setInput("");
+  if (data) setMessages((prev) => [...prev, data as ChatMessage]);
+  setInput("");
+}
+
+async function deleteLiveChatMessage(messageId: string) {
+  const { error } = await supabase
+    .from("live_chat")
+    .delete()
+    .eq("id", messageId);
+
+  if (error) {
+    console.error("Delete live chat message error:", error);
+    return;
   }
- const recordWatchAdClick = async () => {
+
+  setMessages((prev) => prev.filter((message) => message.id !== messageId));
+}
+
+const recordWatchAdClick = async () => {
   if (!watchAd?.landing_url) {
     return;
   }
@@ -735,9 +750,9 @@ if (Boolean(data.is_live)) {
   }
 };
 
-  if (loading) {
-    return (
-      <>
+if (loading) {
+  return (
+    <>
         <Navbar />
         <main className="p-8">Loading video...</main>
       </>
@@ -1196,17 +1211,30 @@ if (Boolean(data.is_live)) {
       {visibleMessages.length === 0 ? (
         <p className="text-sm text-gray-500">No messages yet.</p>
       ) : (
-        visibleMessages.map((msg) => (
-          <div key={msg.id} className="mb-3">
-            <span className="text-sm font-black text-blue-700">
-              {msg.username}:{" "}
-            </span>
+       visibleMessages.map((msg) => (
+  <div
+    key={msg.id}
+    className="mb-3 flex items-start justify-between gap-3 rounded-xl bg-white px-3 py-2 shadow-sm"
+  >
+    <div>
+      <span className="text-sm font-black text-blue-700">
+        {msg.username}:{" "}
+      </span>
 
-            <span className="text-sm text-gray-700">
-              {msg.message}
-            </span>
-          </div>
-        ))
+      <span className="text-sm text-gray-700">
+        {msg.message}
+      </span>
+    </div>
+
+    <button
+      type="button"
+      onClick={() => deleteLiveChatMessage(msg.id)}
+      className="rounded-lg bg-red-100 px-2 py-1 text-xs font-black text-red-700 hover:bg-red-200"
+    >
+      Delete
+    </button>
+  </div>
+))
       )}
 
       <div ref={chatEndRef} />
