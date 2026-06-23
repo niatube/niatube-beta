@@ -805,17 +805,57 @@ if (Boolean(data.is_live)) {
                     By {video.creator}
                   </p>
 
-                  <div className="mt-3 flex flex-wrap items-center gap-4 text-sm text-gray-500">
-                    <span>👁️ {video.views || 0} views</span>
-                    <span>👍 {likeCount} likes</span>
-                    <span>👥 {subscriberCount} subscribers</span>
+                 {isLive ? (
+  <div className="mt-4 rounded-2xl border border-red-100 bg-red-50 p-4">
+    <div className="mb-3 inline-flex rounded-full bg-red-600 px-3 py-1 text-xs font-black uppercase text-white">
+      🔴 Live Now
+    </div>
 
-                    {isLive && (
-                      <span className="rounded-full bg-red-100 px-3 py-1 text-xs font-bold text-red-700">
-                        🔴 LIVE • {viewerCount} watching
-                      </span>
-                    )}
-                  </div>
+    <div className="grid gap-3 text-sm text-gray-700 sm:grid-cols-2 lg:grid-cols-4">
+      <div className="rounded-xl bg-white p-3 shadow-sm">
+        <p className="text-xs font-bold uppercase text-gray-500">
+          Current Viewers
+        </p>
+        <p className="mt-1 text-lg font-black text-gray-900">
+          {viewerCount}
+        </p>
+      </div>
+
+      <div className="rounded-xl bg-white p-3 shadow-sm">
+        <p className="text-xs font-bold uppercase text-gray-500">
+          Total Live Views
+        </p>
+        <p className="mt-1 text-lg font-black text-gray-900">
+          {video.views || 0}
+        </p>
+      </div>
+
+      <div className="rounded-xl bg-white p-3 shadow-sm">
+        <p className="text-xs font-bold uppercase text-gray-500">
+          Likes
+        </p>
+        <p className="mt-1 text-lg font-black text-gray-900">
+          {likeCount}
+        </p>
+      </div>
+
+      <div className="rounded-xl bg-white p-3 shadow-sm">
+        <p className="text-xs font-bold uppercase text-gray-500">
+          Subscribers
+        </p>
+        <p className="mt-1 text-lg font-black text-gray-900">
+          {subscriberCount}
+        </p>
+      </div>
+    </div>
+  </div>
+) : (
+  <div className="mt-3 flex flex-wrap items-center gap-4 text-sm text-gray-500">
+    <span>👁️ {video.views || 0} views</span>
+    <span>👍 {likeCount} likes</span>
+    <span>👥 {subscriberCount} subscribers</span>
+  </div>
+)}
                 </div>
 
                 <div className="flex flex-wrap gap-3">
