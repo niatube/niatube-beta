@@ -858,35 +858,57 @@ if (Boolean(data.is_live)) {
 )}
                 </div>
 
-                <div className="flex flex-wrap gap-3">
-                  <button
-                    onClick={handleLike}
-                    className={`rounded-xl px-5 py-2 text-sm font-black transition ${
-                      liked
-                        ? "bg-yellow-400 text-black"
-                        : "bg-black text-white hover:bg-gray-800"
-                    }`}
-                  >
-                    {liked ? "Liked" : "Like"}
-                  </button>
+               <div className="rounded-2xl border border-red-100 bg-red-50 p-4 shadow-sm">
+  <p className="text-xs font-black uppercase text-red-700">
+    Creator Live Panel
+  </p>
 
-                  <button
-                    onClick={handleSubscribe}
-                    className={`rounded-xl px-5 py-2 text-sm font-black transition ${
-                      subscribed
-                        ? "bg-green-600 text-white"
-                        : "bg-blue-600 text-white hover:bg-blue-700"
-                    }`}
-                  >
-                    {subscribed ? "Subscribed" : "Subscribe"}
-                  </button>
-                  <a
-  href={`/membership/${encodeURIComponent(video.creator)}`}
-  className="rounded-xl bg-purple-600 px-5 py-2 text-sm font-black text-white transition hover:bg-purple-700"
->
-  Join Membership
-</a>
-                </div>
+  <h2 className="mt-2 text-xl font-black text-gray-900">
+    {video.creator}
+  </h2>
+
+  <p className="mt-1 text-sm font-semibold text-gray-600">
+    {subscriberCount} subscribers
+  </p>
+
+  <div className="mt-4 flex flex-wrap gap-3">
+    <button
+      onClick={handleLike}
+      className={`rounded-xl px-5 py-2 text-sm font-black transition ${
+        liked
+          ? "bg-yellow-400 text-black"
+          : "bg-black text-white hover:bg-gray-800"
+      }`}
+    >
+      {liked ? "Liked" : "Like"}
+    </button>
+
+    <button
+      onClick={handleSubscribe}
+      className={`rounded-xl px-5 py-2 text-sm font-black transition ${
+        subscribed
+          ? "bg-green-600 text-white"
+          : "bg-blue-600 text-white hover:bg-blue-700"
+      }`}
+    >
+      {subscribed ? "Subscribed" : "Subscribe"}
+    </button>
+
+    <a
+      href={`/membership/${encodeURIComponent(video.creator)}`}
+      className="rounded-xl bg-purple-600 px-5 py-2 text-sm font-black text-white transition hover:bg-purple-700"
+    >
+      Join Membership
+    </a>
+
+    <a
+      href={`/channel/${encodeURIComponent(video.creator)}`}
+      className="rounded-xl bg-white px-5 py-2 text-sm font-black text-gray-900 ring-1 ring-gray-200 transition hover:bg-gray-50"
+    >
+      View Channel
+    </a>
+  </div>
+</div>
               </div>
 
               <div className="mt-6 rounded-2xl bg-gray-50 p-5">
