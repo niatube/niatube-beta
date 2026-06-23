@@ -182,7 +182,7 @@ export default function LivePage() {
                         </p>
 
                         <p className="mt-2 text-sm font-bold text-red-600">
-                          {stream.views || 0} watching
+                          {stream.views || 0} views
                         </p>
 
                         <div className="mt-3 rounded-lg bg-red-600 px-4 py-2 text-center text-sm font-bold text-white">
