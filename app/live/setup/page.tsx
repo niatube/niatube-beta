@@ -31,7 +31,7 @@ export default function LiveSetupPage() {
           title: title.trim(),
           creator: creator.trim(),
           description: description.trim(),
-          category,
+          category: "Live",
           is_live: goLiveNow,
           live_status: goLiveNow ? "live" : "scheduled",
           status: "published",
@@ -120,24 +120,7 @@ export default function LiveSetupPage() {
               />
             </div>
 
-            <div>
-              <label className="text-sm font-bold text-gray-700">
-                Category
-              </label>
-
-              <select
-                value={category}
-                onChange={(e) => setCategory(e.target.value)}
-                className="mt-2 w-full rounded-xl border px-4 py-3"
-              >
-                <option>Sports</option>
-                <option>News</option>
-                <option>Culture</option>
-                <option>Music</option>
-                <option>Podcast</option>
-                <option>Education</option>
-              </select>
-            </div>
+            
 
             <div className="rounded-2xl bg-gray-50 p-5">
               <label className="flex items-center gap-3 font-bold text-gray-800">

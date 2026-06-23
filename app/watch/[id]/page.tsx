@@ -814,10 +814,10 @@ if (Boolean(data.is_live)) {
     <div className="grid gap-3 text-sm text-gray-700 sm:grid-cols-2 lg:grid-cols-4">
       <div className="rounded-xl bg-white p-3 shadow-sm">
         <p className="text-xs font-bold uppercase text-gray-500">
-          Current Viewers
+          Live Status
         </p>
         <p className="mt-1 text-lg font-black text-gray-900">
-          {viewerCount}
+         Active Broadcast
         </p>
       </div>
 
