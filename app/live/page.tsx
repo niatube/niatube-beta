@@ -53,26 +53,26 @@ export default function LivePage() {
   async function loadData() {
     setLoading(true);
 
-    const { data: liveData } = await supabase
-      .from("uploads")
-      .select("*")
-      .eq("status", "published")
-      .eq("is_live", true)
-      .order("created_at", { ascending: false });
+   const { data: liveData } = await supabase
+  .from("uploads")
+  .select("*")
+  .eq("status", "published")
+  .eq("category", "Live")
+  .eq("live_status", "live")
+  .order("created_at", { ascending: false });
 
-    if (liveData) {
-      setLiveStreams(liveData as Video[]);
-    }
+if (liveData) {
+  setLiveStreams(liveData as Video[]);
+}
 
-    const { data: pastData } = await supabase
-      .from("uploads")
-      .select("*")
-      .eq("status", "published")
-      .eq("is_live", false)
-      .eq("category", "Live")
-      .order("created_at", { ascending: false })
-      .limit(12);
-
+const { data: pastData } = await supabase
+  .from("uploads")
+  .select("*")
+  .eq("status", "published")
+  .eq("category", "Live")
+  .eq("live_status", "ended")
+  .order("created_at", { ascending: false })
+  .limit(12);
     if (pastData) {
       setPastLiveEvents(pastData as Video[]);
     }
