@@ -16,6 +16,7 @@ type Video = {
   video_url?: string;
   image?: string;
   is_live?: boolean;
+  category?: string | null;
 };
 
 type ChatMessage = {
@@ -1118,7 +1119,7 @@ if (Boolean(data.is_live)) {
             {!isLive && (
   <div className="rounded-2xl bg-white p-5 shadow-sm">
     <h2 className="text-xl font-black text-gray-900">
-      {isLive ? "Related Live Streams" : "Recommended Videos"}
+      {video.category === "Live" ? "Related Live Events" : "Recommended Videos"}
     </h2>
 
     <div className="mt-5 space-y-4">
