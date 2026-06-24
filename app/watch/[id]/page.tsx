@@ -227,9 +227,20 @@ console.log("MODERATION CHECK", {
   creatorProfile,
 });
 
-setIsCreatorOrModerator(
-  Boolean(loggedInEmail && creatorEmail && loggedInEmail === creatorEmail)
-);
+const isCreatorOwner =
+  Boolean(loggedInEmail && creatorEmail && loggedInEmail === creatorEmail);
+
+const { data: moderatorRow } = await supabase
+  .from("live_moderators")
+  .select("id")
+  .eq("creator_name", data.creator)
+  .eq("moderator_email", loggedInEmail)
+  .eq("status", "active")
+  .maybeSingle();
+
+const isAssignedModerator = Boolean(moderatorRow?.id);
+
+setIsCreatorOrModerator(isCreatorOwner || isAssignedModerator);
 
   setIsLive(Boolean(data.is_live));
 
