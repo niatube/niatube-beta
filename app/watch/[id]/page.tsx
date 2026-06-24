@@ -142,12 +142,17 @@ const [membershipLoading, setMembershipLoading] = useState(false);
   const [viewerId, setViewerId] = useState("");
   const [liveViewerId, setLiveViewerId] = useState("");
 
+  const [debugLoggedInEmail, setDebugLoggedInEmail] = useState("");
+const [debugCreatorEmail, setDebugCreatorEmail] = useState("");
+
   
   const [watchAd, setWatchAd] = useState<any | null>(null);
   const [watchAdImpressionRecorded, setWatchAdImpressionRecorded] =
   useState(false);
 
   const [liveAd, setLiveAd] = useState<any | null>(null);
+
+
 
   const chatEndRef = useRef<HTMLDivElement | null>(null);
 
@@ -211,6 +216,16 @@ const {
 
 const loggedInEmail = user?.email?.trim().toLowerCase() || "";
 const creatorEmail = creatorProfile?.email?.trim().toLowerCase() || "";
+
+setDebugLoggedInEmail(loggedInEmail);
+setDebugCreatorEmail(creatorEmail);
+
+console.log("MODERATION CHECK", {
+  videoCreator: data.creator,
+  loggedInEmail,
+  creatorEmail,
+  creatorProfile,
+});
 
 setIsCreatorOrModerator(
   Boolean(loggedInEmail && creatorEmail && loggedInEmail === creatorEmail)
@@ -1233,8 +1248,8 @@ if (loading) {
     <h2 className="text-xl font-black text-gray-900">
       Live Chat
     </h2>
-
-    <div className="mt-4 h-[320px] overflow-y-auto rounded-2xl border bg-gray-50 p-4">
+    
+   <div className="mt-4 h-[320px] overflow-y-auto rounded-2xl border bg-gray-50 p-4">
       {visibleMessages.length === 0 ? (
         <p className="text-sm text-gray-500">No messages yet.</p>
       ) : (
