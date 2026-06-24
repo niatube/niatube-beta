@@ -230,15 +230,33 @@ console.log("MODERATION CHECK", {
 const isCreatorOwner =
   Boolean(loggedInEmail && creatorEmail && loggedInEmail === creatorEmail);
 
-const { data: moderatorRow } = await supabase
+const { data: moderatorRows } = await supabase
   .from("live_moderators")
-  .select("id")
-  .eq("creator_name", data.creator)
-  .eq("moderator_email", loggedInEmail)
-  .eq("status", "active")
-  .maybeSingle();
+  .select("id, creator_name, moderator_email, status")
+  .eq("status", "active");
 
-const isAssignedModerator = Boolean(moderatorRow?.id);
+const isAssignedModerator = Boolean(
+  (moderatorRows || []).some((moderator) => {
+    const moderatorCreator = (moderator.creator_name || "")
+      .trim()
+      .toLowerCase();
+
+    const streamCreator = (data.creator || "")
+      .trim()
+      .toLowerCase();
+
+    const moderatorEmail = (moderator.moderator_email || "")
+      .trim()
+      .toLowerCase();
+
+    return (
+      moderatorCreator === streamCreator &&
+      moderatorEmail === loggedInEmail
+    );
+  })
+);
+
+
 
 setIsCreatorOrModerator(isCreatorOwner || isAssignedModerator);
 
