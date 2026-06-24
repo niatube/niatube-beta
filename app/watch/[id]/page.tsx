@@ -112,12 +112,11 @@ export default function WatchPage() {
 
 
 
-  const [username, setUsername] = useState("Viewer");
-  const [input, setInput] = useState("");
-  const [messages, setMessages] = useState<ChatMessage[]>([]);
+ const [username, setUsername] = useState("Viewer");
+const [input, setInput] = useState("");
+const [messages, setMessages] = useState<ChatMessage[]>([]);
 const [mutedUsers, setMutedUsers] = useState<string[]>([]);
-const isCreatorOrModerator = username === video?.creator;
-
+const [isCreatorOrModerator, setIsCreatorOrModerator] = useState(false);
 
 const [likeCount, setLikeCount] = useState(0);
   const [liked, setLiked] = useState(false);
@@ -196,15 +195,26 @@ const [membershipLoading, setMembershipLoading] = useState(false);
 
   setVideo({ ...data, views: updatedViews });
 
-  const { data: creatorProfile } = await supabase
-    .from("creator_profiles")
-    .select("currency_code")
-    .eq("creator_name", data.creator)
-    .maybeSingle();
+ const { data: creatorProfile } = await supabase
+  .from("creator_profiles")
+  .select("currency_code, email")
+  .eq("creator_name", data.creator)
+  .maybeSingle();
 
-  if (creatorProfile?.currency_code) {
-    setTipCurrency(creatorProfile.currency_code);
-  }
+if (creatorProfile?.currency_code) {
+  setTipCurrency(creatorProfile.currency_code);
+}
+
+const {
+  data: { user },
+} = await supabase.auth.getUser();
+
+const loggedInEmail = user?.email?.trim().toLowerCase() || "";
+const creatorEmail = creatorProfile?.email?.trim().toLowerCase() || "";
+
+setIsCreatorOrModerator(
+  Boolean(loggedInEmail && creatorEmail && loggedInEmail === creatorEmail)
+);
 
   setIsLive(Boolean(data.is_live));
 
@@ -213,21 +223,21 @@ const [membershipLoading, setMembershipLoading] = useState(false);
     .update({ views: updatedViews })
     .eq("id", id);
 
-        const {
-          data: { user },
-        } = await supabase.auth.getUser();
+      const {
+  data: { user: historyUser },
+} = await supabase.auth.getUser();
 
         const isUuid =
           /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(
             id
           );
 
-        if (user?.id && isUuid) {
+        if (historyUser?.id && isUuid) {
           const { error: watchHistoryError } = await supabase
             .from("watch_history")
             .insert([
               {
-                viewer_id: user.id,
+                viewer_id: historyUser.id,
                 video_id: id,
                 progress_seconds: 0,
                 completed: false,
