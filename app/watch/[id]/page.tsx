@@ -112,8 +112,10 @@ export default function WatchPage() {
 
   const [username, setUsername] = useState("Viewer");
   const [input, setInput] = useState("");
-  const [messages, setMessages] = useState<ChatMessage[]>([]);
 
+  
+  const [messages, setMessages] = useState<ChatMessage[]>([]);
+const [mutedUsers, setMutedUsers] = useState<string[]>([]);
   const [likeCount, setLikeCount] = useState(0);
   const [liked, setLiked] = useState(false);
   const [subscriberGrowth30Days, setSubscriberGrowth30Days] = useState(0);
@@ -699,6 +701,10 @@ if (Boolean(data.is_live)) {
   const finalMessage = input.trim();
   if (!finalMessage) return;
 
+  if (mutedUsers.includes(username)) {
+    return;
+  }
+
   const { data, error } = await supabase
     .from("live_chat")
     .insert([{ username, message: finalMessage, type: "user" }])
@@ -723,6 +729,14 @@ async function deleteLiveChatMessage(messageId: string) {
   }
 
   setMessages((prev) => prev.filter((message) => message.id !== messageId));
+}
+
+function muteLiveChatUser(userToMute: string) {
+  if (!userToMute) return;
+
+  setMutedUsers((prev) =>
+    prev.includes(userToMute) ? prev : [...prev, userToMute]
+  );
 }
 
 const recordWatchAdClick = async () => {
@@ -1226,13 +1240,23 @@ if (loading) {
       </span>
     </div>
 
-    <button
-      type="button"
-      onClick={() => deleteLiveChatMessage(msg.id)}
-      className="rounded-lg bg-red-100 px-2 py-1 text-xs font-black text-red-700 hover:bg-red-200"
-    >
-      Delete
-    </button>
+    <div className="flex gap-2">
+  <button
+    type="button"
+    onClick={() => deleteLiveChatMessage(msg.id)}
+    className="rounded-lg bg-red-100 px-2 py-1 text-xs font-black text-red-700 hover:bg-red-200"
+  >
+    Delete
+  </button>
+
+  <button
+    type="button"
+    onClick={() => muteLiveChatUser(msg.username)}
+    className="rounded-lg bg-gray-100 px-2 py-1 text-xs font-black text-gray-700 hover:bg-gray-200"
+  >
+    Mute
+  </button>
+</div>
   </div>
 ))
       )}
