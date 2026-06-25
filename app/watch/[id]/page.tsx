@@ -769,16 +769,61 @@ if (Boolean(data.is_live)) {
 
   const { data, error } = await supabase
     .from("live_chat")
-    .insert([{ username, message: finalMessage, type: "user" }])
+    .insert([
+      {
+        username,
+        message: finalMessage,
+        type: "user",
+      },
+    ])
     .select()
     .single();
 
-  if (error) return console.error("Chat send error:", error);
+  if (error) {
+    console.error("Chat send error:", error);
+    return;
+  }
 
-  if (data) setMessages((prev) => [...prev, data as ChatMessage]);
+  if (data) {
+    setMessages((prev) => [...prev, data as ChatMessage]);
+  }
+
   setInput("");
 }
 
+async function sendSuperSupport() {
+  if (chatRestricted) return;
+
+  const finalMessage = input.trim();
+  if (!finalMessage) return;
+
+  if (mutedUsers.includes(username)) {
+    return;
+  }
+
+  const { data, error } = await supabase
+    .from("live_chat")
+    .insert([
+      {
+        username,
+        message: finalMessage,
+        type: "super_chat",
+      },
+    ])
+    .select()
+    .single();
+
+  if (error) {
+    console.error("Super Support error:", error);
+    return;
+  }
+
+  if (data) {
+    setMessages((prev) => [...prev, data as ChatMessage]);
+  }
+
+  setInput("");
+}
 async function deleteLiveChatMessage(messageId: string) {
   const { error } = await supabase
     .from("live_chat")
@@ -1337,6 +1382,16 @@ if (loading) {
     <h2 className="text-xl font-black text-gray-900">
       Live Chat
     </h2>
+
+    <div className="mt-3 rounded-xl border bg-gray-50 p-3 text-xs font-bold text-gray-700">
+  Presets loaded: {monetizationPresets.length}
+
+  {monetizationPresets.map((preset) => (
+    <p key={`${preset.currency_code}-${preset.display_order}`}>
+      {preset.tier} — {preset.amount} {preset.currency_code}
+    </p>
+  ))}
+</div>
     
    <div className="mt-4 h-[320px] overflow-y-auto rounded-2xl border bg-gray-50 p-4">
       {visibleMessages.length === 0 ? (
@@ -1354,11 +1409,11 @@ if (loading) {
           : "bg-white"
       }`}
     >
-      {isSuperChat && (
-        <p className="mb-1 text-xs font-black uppercase text-yellow-700">
-          ⭐ Super Chat
-        </p>
-      )}
+    {isSuperChat && (
+  <p className="mb-1 text-xs font-black uppercase text-yellow-700">
+    ⭐ Super Support
+  </p>
+)}
 
       <div>
         <span
@@ -1385,18 +1440,31 @@ if (loading) {
         onChange={(e) => setUsername(e.target.value)}
         placeholder="Display name"
         className="rounded-xl border px-4 py-3"
+        
       />
-      <select
-  value={superChatAmount}
-  onChange={(e) => setSuperChatAmount(e.target.value)}
-  className="rounded-xl border px-4 py-3"
->
-  <option value="5">$5 Super Chat</option>
-  <option value="10">$10 Super Chat</option>
-  <option value="20">$20 Super Chat</option>
-  <option value="50">$50 Super Chat</option>
-  <option value="100">$100 Super Chat</option>
-</select>
+ <div className="rounded-2xl border border-yellow-200 bg-yellow-50 p-4">
+  <h3 className="text-lg font-black text-yellow-900">
+    ⭐ Super Support
+  </h3>
+
+  <p className="mt-1 text-sm text-yellow-800">
+    Support the creator during this live stream.
+  </p>
+
+  <label className="mt-4 block text-sm font-bold text-gray-700">
+    Support Level
+  </label>
+
+  <select
+    value={superChatAmount}
+    onChange={(e) => setSuperChatAmount(e.target.value)}
+    className="mt-2 w-full rounded-xl border px-4 py-3"
+  >
+    <option value="Support">⭐ Support</option>
+    <option value="Champion">🏆 Champion</option>
+    <option value="Legend">👑 Legend</option>
+  </select>
+</div>
 
       <textarea
         value={input}
@@ -1419,6 +1487,16 @@ if (loading) {
       >
         Send Message
       </button>
+
+      
+<button
+  type="button"
+  onClick={sendSuperSupport}
+  className="rounded-xl bg-yellow-500 px-5 py-3 text-sm font-black text-white hover:bg-yellow-600"
+>
+  ⭐ Send Super Support
+</button>
+
     </div>
   </div>
 )}
