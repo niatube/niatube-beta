@@ -151,8 +151,10 @@ const [debugCreatorEmail, setDebugCreatorEmail] = useState("");
   useState(false);
 
   const [liveAd, setLiveAd] = useState<any | null>(null);
+  const [superChatAmount, setSuperChatAmount] = useState("5");
 
-
+const [viewerCurrency, setViewerCurrency] = useState("OTHER");
+const [monetizationPresets, setMonetizationPresets] = useState<any[]>([]);
 
   const chatEndRef = useRef<HTMLDivElement | null>(null);
 
@@ -178,6 +180,9 @@ const [debugCreatorEmail, setDebugCreatorEmail] = useState("");
 
       setViewerId(stableViewerId);
       setLiveViewerId(`live-${crypto.randomUUID()}`);
+
+      setViewerCurrency("OTHER");
+await loadMonetizationPresets("OTHER");
     }
 
     loadViewer();
@@ -788,6 +793,16 @@ async function deleteLiveChatMessage(messageId: string) {
   setMessages((prev) => prev.filter((message) => message.id !== messageId));
 }
 
+<div className="mt-4 rounded-xl border bg-gray-50 p-4">
+  <h3 className="font-bold">Loaded Monetization Presets</h3>
+
+  {monetizationPresets.map((preset) => (
+    <div key={`${preset.currency_code}-${preset.display_order}`}>
+      {preset.tier} — {preset.amount} {preset.currency_code}
+    </div>
+  ))}
+</div>
+
 function muteLiveChatUser(userToMute: string) {
   if (!userToMute) return;
 
@@ -795,7 +810,31 @@ function muteLiveChatUser(userToMute: string) {
     prev.includes(userToMute) ? prev : [...prev, userToMute]
   );
 }
+async function timeoutLiveChatUser(
+  username: string,
+  minutes: number
+) {
+  if (!video || !username) return;
 
+  const expiresAt = new Date(
+    Date.now() + minutes * 60 * 1000
+  ).toISOString();
+
+  const { error } = await supabase
+    .from("live_chat_timeouts")
+    .insert({
+      creator_name: video.creator,
+      username,
+      expires_at: expiresAt,
+    });
+
+  if (error) {
+    console.error("Timeout error:", error);
+    return;
+  }
+
+  alert(`${username} has been timed out for ${minutes} minutes.`);
+}
 const recordWatchAdClick = async () => {
   if (!watchAd?.landing_url) {
     return;
@@ -820,6 +859,27 @@ const recordWatchAdClick = async () => {
     console.error("Failed to record watch ad click", error);
   }
 };
+async function loadMonetizationPresets(currency: string) {
+  let { data } = await supabase
+    .from("monetization_presets")
+    .select("*")
+    .eq("currency_code", currency)
+    .eq("is_active", true)
+    .order("display_order");
+
+  if (!data || data.length === 0) {
+    const fallback = await supabase
+      .from("monetization_presets")
+      .select("*")
+      .eq("currency_code", "OTHER")
+      .eq("is_active", true)
+      .order("display_order");
+
+    data = fallback.data || [];
+  }
+
+  setMonetizationPresets(data);
+}
 
 if (loading) {
   return (
@@ -1282,44 +1342,38 @@ if (loading) {
       {visibleMessages.length === 0 ? (
         <p className="text-sm text-gray-500">No messages yet.</p>
       ) : (
-       visibleMessages.map((msg) => (
-  <div
-    key={msg.id}
-    className="mb-3 flex items-start justify-between gap-3 rounded-xl bg-white px-3 py-2 shadow-sm"
-  >
-    <div>
-      <span className="text-sm font-black text-blue-700">
-        {msg.username}:{" "}
-      </span>
+ visibleMessages.map((msg) => {
+  const isSuperChat = msg.type === "super_chat";
 
-      <span className="text-sm text-gray-700">
-        {msg.message}
-      </span>
+  return (
+    <div
+      key={msg.id}
+      className={`mb-3 rounded-xl px-3 py-2 shadow-sm ${
+        isSuperChat
+          ? "border border-yellow-300 bg-yellow-50"
+          : "bg-white"
+      }`}
+    >
+      {isSuperChat && (
+        <p className="mb-1 text-xs font-black uppercase text-yellow-700">
+          ⭐ Super Chat
+        </p>
+      )}
+
+      <div>
+        <span
+          className={`text-sm font-black ${
+            isSuperChat ? "text-yellow-800" : "text-blue-700"
+          }`}
+        >
+          {msg.username}:{" "}
+        </span>
+
+        <span className="text-sm text-gray-700">{msg.message}</span>
+      </div>
     </div>
-
-   {isCreatorOrModerator && (
-  <div className="flex gap-2">
-    <button
-      type="button"
-      onClick={() => deleteLiveChatMessage(msg.id)}
-      className="rounded-lg bg-red-100 px-2 py-1 text-xs font-black text-red-700 hover:bg-red-200"
-    >
-      Delete
-    </button>
-
-    <button
-      type="button"
-      onClick={() => muteLiveChatUser(msg.username)}
-      className="rounded-lg bg-gray-100 px-2 py-1 text-xs font-black text-gray-700 hover:bg-gray-200"
-    >
-      Mute
-    </button>
-  </div>
-)}
-
-
-  </div>
-))
+  );
+})
       )}
 
       <div ref={chatEndRef} />
@@ -1332,6 +1386,17 @@ if (loading) {
         placeholder="Display name"
         className="rounded-xl border px-4 py-3"
       />
+      <select
+  value={superChatAmount}
+  onChange={(e) => setSuperChatAmount(e.target.value)}
+  className="rounded-xl border px-4 py-3"
+>
+  <option value="5">$5 Super Chat</option>
+  <option value="10">$10 Super Chat</option>
+  <option value="20">$20 Super Chat</option>
+  <option value="50">$50 Super Chat</option>
+  <option value="100">$100 Super Chat</option>
+</select>
 
       <textarea
         value={input}
