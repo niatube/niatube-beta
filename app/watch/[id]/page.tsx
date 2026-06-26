@@ -790,17 +790,52 @@ if (Boolean(data.is_live)) {
 
   setInput("");
 }
-
 async function sendSuperSupport() {
   if (chatRestricted) return;
 
   const finalMessage = input.trim();
   if (!finalMessage) return;
 
+  if (!video || !id) return;
+
   if (mutedUsers.includes(username)) {
     return;
   }
 
+  const supportTier = superChatAmount || "Support";
+
+  const { data: preset } = await supabase
+    .from("monetization_presets")
+    .select("currency_code, amount, tier")
+    .eq("currency_code", viewerCurrency || "OTHER")
+    .eq("tier", supportTier)
+    .eq("is_active", true)
+    .maybeSingle();
+
+  const currencyCode = preset?.currency_code || viewerCurrency || "OTHER";
+  const supportAmount = Number(preset?.amount || 0);
+
+  const { error: transactionError } = await supabase
+    .from("super_support_transactions")
+    .insert([
+      {
+        live_video_id: id,
+        supporter_name: username,
+        creator_name: video.creator,
+        currency_code: currencyCode,
+        amount: supportAmount,
+        tier: supportTier,
+        message: finalMessage,
+        payment_status: "pending",
+      },
+    ]);
+if (transactionError) {
+  console.error(
+    "Super Support transaction error:",
+    JSON.stringify(transactionError, null, 2)
+  );
+  return;
+}
   const { data, error } = await supabase
     .from("live_chat")
     .insert([
@@ -814,7 +849,7 @@ async function sendSuperSupport() {
     .single();
 
   if (error) {
-    console.error("Super Support error:", error);
+    console.error("Super Support chat error:", error);
     return;
   }
 
