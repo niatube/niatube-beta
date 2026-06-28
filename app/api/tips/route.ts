@@ -1,5 +1,6 @@
 import { getSupabaseAdmin } from "@/lib/supabase-server";
 import { NextResponse } from "next/server";
+import { recordCreatorWalletEntry } from "@/lib/creator-wallet-engine";
 
 import {
   calculateNetAmount,
@@ -95,26 +96,28 @@ const netAmount = calculateNetAmount(amount);
       return NextResponse.json({ error: tipError.message }, { status: 500 });
     }
 
-    const { error: ledgerError } = await supabaseAdmin
-      .from("creator_wallet_ledger")
-      .insert([
-        {
-          creator_name: creatorName,
-          transaction_type:  "tip",
-          reference_id: tipData.id,
-          currency_code: currencyCode,
-          amount: netAmount,
-          status: TRANSACTION_STATUS.COMPLETED,
-        },
-      ]);
+   try {
+  await recordCreatorWalletEntry({
+    supabaseAdmin,
+    creatorName,
+    transactionType: "tip", // Keep "tip" for beta compatibility
+    referenceId: tipData.id,
+    currencyCode,
+    amount: netAmount,
+    status: TRANSACTION_STATUS.COMPLETED,
+  });
+} catch (error: any) {
+  console.error("Creator wallet engine error:", error);
 
-    if (ledgerError) {
-      console.error("Creator wallet ledger insert error:", ledgerError);
-      return NextResponse.json(
-        { error: ledgerError.message },
-        { status: 500 }
-      );
-    }
+  return NextResponse.json(
+    {
+      error:
+        error?.message ||
+        "Failed to record creator wallet entry.",
+    },
+    { status: 500 }
+  );
+}
 
     return NextResponse.json(tipData, { status: 201 });
   } catch (error: any) {
