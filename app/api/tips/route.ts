@@ -1,7 +1,13 @@
 import { getSupabaseAdmin } from "@/lib/supabase-server";
 import { NextResponse } from "next/server";
 
-const REPORTING_CURRENCY = "USD";
+import {
+  calculateNetAmount,
+  calculatePlatformFee,
+  normalizeCurrencyCode,
+  SOURCE_TYPES,
+  TRANSACTION_STATUS,
+} from "@/lib/creator-economy";
 
 export async function GET(req: Request) {
   try {
@@ -16,7 +22,7 @@ export async function GET(req: Request) {
       .order("created_at", { ascending: false });
 
     if (creatorName) {
-      query = query.eq("creator_name", creatorName);
+      query = query.ilike("creator_name", creatorName);
     }
 
     const { data, error } = await query;
@@ -29,7 +35,6 @@ export async function GET(req: Request) {
     return NextResponse.json(data ?? []);
   } catch (error: any) {
     console.error("Tips API error:", error);
-
     return NextResponse.json(
       { error: error?.message || "Failed to load tips." },
       { status: 500 }
@@ -40,13 +45,16 @@ export async function GET(req: Request) {
 export async function POST(req: Request) {
   try {
     const supabaseAdmin = getSupabaseAdmin();
-
     const body = await req.json();
 
     const creatorName = body.creator_name || body.creatorName;
     const videoId = body.video_id || body.videoId || null;
     const amount = Number(body.amount || 0);
-    const currency = String(body.currency || "USD").toUpperCase();
+   const currencyCode = normalizeCurrencyCode(
+  body.currency_code || body.currency
+);
+
+    const message = body.message || null;
 
     if (!creatorName) {
       return NextResponse.json(
@@ -62,62 +70,53 @@ export async function POST(req: Request) {
       );
     }
 
-    let fxRateUsed = 1;
-    let fxSource = "same_currency_v1";
-    let fxTimestamp = new Date().toISOString();
+    const platformFee = calculatePlatformFee(amount);
+const netAmount = calculateNetAmount(amount);
 
-    if (currency !== REPORTING_CURRENCY) {
-      const { data: fxRate, error: fxError } = await supabaseAdmin
-        .from("fx_rates")
-        .select("rate, source, updated_at")
-        .eq("base_currency", REPORTING_CURRENCY)
-        .eq("target_currency", currency)
-        .single();
-
-      if (fxError || !fxRate?.rate) {
-        return NextResponse.json(
-          {
-            error: `Missing FX rate for ${REPORTING_CURRENCY} to ${currency}. Please refresh FX rates first.`,
-          },
-          { status: 400 }
-        );
-      }
-
-      fxRateUsed = Number(fxRate.rate);
-      fxSource = fxRate.source || "fx_rates_table";
-      fxTimestamp = fxRate.updated_at || fxTimestamp;
-    }
-
-    const convertedAmount =
-      currency === REPORTING_CURRENCY ? amount : amount / fxRateUsed;
-
-    const { data, error } = await supabaseAdmin
+    const { data: tipData, error: tipError } = await supabaseAdmin
       .from("tips")
       .insert([
         {
           creator_name: creatorName,
           video_id: videoId,
           amount,
-          currency,
-
-          original_amount: amount,
-          original_currency: currency,
-          reporting_currency: REPORTING_CURRENCY,
-          fx_rate_used: fxRateUsed,
-          converted_amount: convertedAmount,
-          fx_source: fxSource,
-          fx_timestamp: fxTimestamp,
+          currency_code: currencyCode,
+          gross_amount: amount,
+          platform_fee: platformFee,
+          net_amount: netAmount,
+          message,
         },
       ])
       .select()
       .single();
 
-    if (error) {
-      console.error("Tip insert error:", error);
-      return NextResponse.json({ error: error.message }, { status: 500 });
+    if (tipError) {
+      console.error("Tip insert error:", tipError);
+      return NextResponse.json({ error: tipError.message }, { status: 500 });
     }
 
-    return NextResponse.json(data, { status: 201 });
+    const { error: ledgerError } = await supabaseAdmin
+      .from("creator_wallet_ledger")
+      .insert([
+        {
+          creator_name: creatorName,
+          transaction_type:  "tip",
+          reference_id: tipData.id,
+          currency_code: currencyCode,
+          amount: netAmount,
+          status: TRANSACTION_STATUS.COMPLETED,
+        },
+      ]);
+
+    if (ledgerError) {
+      console.error("Creator wallet ledger insert error:", ledgerError);
+      return NextResponse.json(
+        { error: ledgerError.message },
+        { status: 500 }
+      );
+    }
+
+    return NextResponse.json(tipData, { status: 201 });
   } catch (error: any) {
     console.error("Tips POST API error:", error);
 

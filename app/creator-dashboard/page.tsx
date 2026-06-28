@@ -6,6 +6,11 @@ import Navbar from "@/components/Navbar";
 import { supabase } from "@/lib/supabase-browser";
 
 import {
+  buildCreatorSettlementSummary,
+  type CreatorSettlementSummary,
+} from "@/lib/creator-settlement";
+
+import {
   ResponsiveContainer,
   LineChart,
   Line,
@@ -152,7 +157,9 @@ export default function CreatorDashboardPage() {
   const [creatorName, setCreatorName] = useState("Creator");
   const [uploads, setUploads] = useState<Upload[]>([]);
   const [tips, setTips] = useState<Tip[]>([]);
-
+  const [superSupportTransactions, setSuperSupportTransactions] = useState<any[]>([]);
+  const [creatorSettlement, setCreatorSettlement] =
+  useState<CreatorSettlementSummary | null>(null);
   const [payouts, setPayouts] = useState<PayoutRequest[]>([]);
   const [walletPendingPayouts, setWalletPendingPayouts] = useState(0);
 
@@ -175,7 +182,7 @@ const [subscriberRows, setSubscriberRows] = useState<any[]>([]);
   
   const [currentPage, setCurrentPage] = useState(1);
   const [payoutAmount, setPayoutAmount] = useState("");
-  const [selectedPayoutCurrency, setSelectedPayoutCurrency] = useState("NGN");
+  const [selectedPayoutCurrency, setSelectedPayoutCurrency] = useState("");
   const [payoutMethod, setPayoutMethod] = useState("Bank Transfer");
 const [payoutDetails, setPayoutDetails] = useState("");
 const [accountHolderName, setAccountHolderName] = useState("");
@@ -224,7 +231,7 @@ const [accountHolderName, setAccountHolderName] = useState("");
      const { data: migrationData } = await supabase
   .from("creator_migration_requests")
   .select("*")
-  .eq("creator_name", activeCreatorName)
+  .ilike("creator_name", activeCreatorName)
   .order("created_at", { ascending: false })
   .limit(1)
   .maybeSingle();
@@ -266,12 +273,12 @@ if (payoutProfile) {
         .order("created_at", { ascending: true });
 
       const { data: tipsData } = await supabase
-        .from("tips")
-        .select("*")
-        .eq("creator_name", activeCreatorName)
-        .order("created_at", { ascending: true });
+  .from("tips")
+  .select("*")
+  .ilike("creator_name", activeCreatorName)
+  .order("created_at", { ascending: true });
 
-     const { data: payoutData } = await supabase
+        const { data: payoutData } = await supabase
   .from("payout_requests")
   .select("id, creator_name, amount, currency_code, status, created_at")
   .eq("creator_name", activeCreatorName)
@@ -285,20 +292,34 @@ if (payoutProfile) {
 
 setWalletPendingPayouts(walletPendingCount || 0);
 
+const { data: superSupportData } = await supabase
+  .from("super_support_transactions")
+  .select("*")
+  .eq("creator_name", activeCreatorName)
+  .order("created_at", { ascending: false });
+
+setSuperSupportTransactions(superSupportData || []);
+
       const { data: subscriberData } = await supabase
         .from("creator_subscriptions")
         .select("*")
         .eq("creator_name", activeCreatorName);
 
-        const { data: creatorProfile } = await supabase
+   const { data: creatorProfile } = await supabase
   .from("creator_profiles")
-  .select("migrated_subscribers")
+  .select("migrated_subscribers, country, currency_code")
   .eq("creator_name", activeCreatorName)
   .maybeSingle();
 
 const migratedSubscribers =
   Number(creatorProfile?.migrated_subscribers || 0);
 
+const loadedCreatorCountry = creatorProfile?.country || "Not set";
+const loadedCreatorCurrency = creatorProfile?.currency_code || "USD";
+
+setCreatorCountry(loadedCreatorCountry);
+setCreatorCurrency(loadedCreatorCurrency);
+setSelectedPayoutCurrency(loadedCreatorCurrency);
 
       const migrationTables = [
         "subscriber_migration_requests",
@@ -331,12 +352,24 @@ const migratedSubscribers =
         .eq("creator_name", activeCreatorName)
         .order("created_at", { ascending: false })
         .limit(8);
-      const { data: fxData } = await supabase
+    const { data: fxData } = await supabase
   .from("fx_rates")
   .select("*");
 
 setFxRates((fxData || []) as FxRate[]);
 
+const { data: walletLedgerData } = await supabase
+  .from("creator_wallet_ledger")
+  .select("*")
+  .ilike("creator_name", activeCreatorName);
+
+const settlementSummary = buildCreatorSettlementSummary(
+  walletLedgerData || [],
+  (fxData || []) as FxRate[],
+  loadedCreatorCurrency
+);
+
+setCreatorSettlement(settlementSummary);
       setUploads((uploadsData || []) as Upload[]);
       setTips((tipsData || []) as Tip[]);
       setPayouts((payoutData || []) as PayoutRequest[]);
@@ -865,7 +898,7 @@ const sortedUploads = useMemo(() => {
             Creator Since: {creatorSince}
           </p>
         )}
-           <div className="mt-5 grid gap-4 md:grid-cols-3">
+           <div className="mt-5 grid gap-4 md:grid-cols-4">
   <div className="rounded-2xl bg-white p-5 shadow-sm">
     <p className="text-sm font-bold text-gray-500">Creator Country</p>
     <p className="mt-2 text-2xl font-black text-gray-900">
@@ -1025,7 +1058,7 @@ const sortedUploads = useMemo(() => {
          <div className="rounded-2xl bg-white p-5 shadow-sm">
            <p className="text-sm font-bold text-gray-500">Currencies Held</p>
            <p className="mt-2 text-3xl font-black">
-              {tipTotalsByCurrency.length}
+              {creatorSettlement?.holdings.length || 0}
            </p>
          <p className="mt-2 text-xs text-gray-500">
           Net wallet currencies
@@ -1603,7 +1636,7 @@ const sortedUploads = useMemo(() => {
   </div>
 </div>   
 
- <div className="mt-8 rounded-3xl border border-yellow-200 bg-yellow-50 p-6 shadow-sm">
+<div className="mt-8 rounded-3xl border border-yellow-200 bg-yellow-50 p-6 shadow-sm">
   <h2 className="text-2xl font-black text-gray-900">
     Wallet Summary
   </h2>
@@ -1613,7 +1646,7 @@ const sortedUploads = useMemo(() => {
     FX conversion happens only when a payout or NiaCredit conversion is requested.
   </p>
 
-  <div className="mt-5 grid gap-4 md:grid-cols-3">
+  <div className="mt-5 grid gap-4 md:grid-cols-4">
     <div className="rounded-2xl bg-white p-5 shadow-sm">
       <p className="text-sm font-bold text-gray-500">Currencies Held</p>
       <p className="mt-2 text-3xl font-black text-gray-900">
@@ -1624,19 +1657,27 @@ const sortedUploads = useMemo(() => {
     <div className="rounded-2xl bg-white p-5 shadow-sm">
       <p className="text-sm font-bold text-gray-500">Lifetime Tips</p>
       <p className="mt-2 text-3xl font-black text-gray-900">
-        {tips.length}
+        {creatorSettlement?.holdings.reduce((sum, holding) => sum + Number(holding.balance > 0 ? 1 : 0), 0) || tips.length}
       </p>
     </div>
 
     <div className="rounded-2xl bg-white p-5 shadow-sm">
-      <p className="text-sm font-bold text-gray-500">
-        Payouts
+      <p className="text-sm font-bold text-gray-500">Super Support</p>
+      <p className="mt-2 text-3xl font-black text-gray-900">
+        {superSupportTransactions.length}
       </p>
+
+      <p className="mt-2 text-xs text-gray-500">
+        Highlighted live support transactions
+      </p>
+    </div>
+
+    <div className="rounded-2xl bg-white p-5 shadow-sm">
+      <p className="text-sm font-bold text-gray-500">Payouts</p>
 
       <p className="mt-2 text-3xl font-black text-gray-900">
         {walletPendingPayouts}
       </p>
-
 
       <p className="mt-2 text-xs text-gray-500">
         Pending payout requests awaiting Super Admin approval
@@ -1644,11 +1685,101 @@ const sortedUploads = useMemo(() => {
     </div>
   </div>
 </div>
+<div className="mt-8 rounded-3xl bg-white p-6 shadow-sm">
+  <h2 className="text-2xl font-black text-gray-900">
+    Wallet Balances by Currency
+  </h2>
 
-         
-     
-        
-        <div className="mt-8 rounded-3xl bg-white p-6 shadow-sm">
+  <p className="mt-1 text-sm text-gray-600">
+    Currency holdings are calculated from the Creator Wallet Ledger and reconciled through the Creator Settlement Engine.
+  </p>
+
+  <div className="mt-6 overflow-x-auto">
+    <table className="w-full min-w-[640px] text-left text-sm">
+      <thead>
+        <tr className="border-b text-gray-500">
+          <th className="py-3 pr-4">Currency Held</th>
+          <th className="py-3 pr-4">Net Balance</th>
+          <th className="py-3 pr-4">USD Equivalent</th>
+        </tr>
+      </thead>
+
+      <tbody>
+        {!creatorSettlement || creatorSettlement.holdings.length === 0 ? (
+          <tr>
+            <td colSpan={3} className="py-5 text-gray-500">
+              No wallet activity yet.
+            </td>
+          </tr>
+        ) : (
+          creatorSettlement.holdings.map((holding) => (
+            <tr key={holding.currency} className="border-b last:border-b-0">
+              <td className="py-4 pr-4 font-black text-gray-900">
+                {holding.currency}
+              </td>
+
+              <td className="py-4 pr-4 font-black text-green-700">
+                {holding.currency} {formatAmount(holding.balance)}
+              </td>
+
+              <td className="py-4 pr-4 text-gray-700">
+                USD {formatAmount(holding.usdEquivalent)}
+              </td>
+            </tr>
+          ))
+        )}
+      </tbody>
+    </table>
+  </div>
+</div>
+
+<div className="mt-8 rounded-3xl border border-green-200 bg-green-50 p-6 shadow-sm">
+  <h2 className="text-2xl font-black text-gray-900">
+    Creator Settlement Summary
+  </h2>
+
+  <p className="mt-1 text-sm text-green-800">
+    This summary converts all wallet holdings into the creator’s local settlement currency for payout.
+  </p>
+
+  <div className="mt-6 grid gap-4 md:grid-cols-3">
+    <div className="rounded-2xl bg-white p-5 shadow-sm">
+      <p className="text-sm font-bold text-gray-500">
+        Total Settlement Value
+      </p>
+
+      <p className="mt-2 text-3xl font-black text-green-700">
+        USD {formatAmount(creatorSettlement?.totalSettlementUSD || 0)}
+      </p>
+    </div>
+
+    <div className="rounded-2xl bg-white p-5 shadow-sm">
+      <p className="text-sm font-bold text-gray-500">
+        Settlement Currency
+      </p>
+
+      <p className="mt-2 text-3xl font-black text-gray-900">
+        {creatorSettlement?.settlementCurrency || creatorCurrency}
+      </p>
+    </div>
+
+    <div className="rounded-2xl bg-white p-5 shadow-sm">
+      <p className="text-sm font-bold text-gray-500">
+        Available for Payout
+      </p>
+
+      <p className="mt-2 text-3xl font-black text-blue-700">
+        {creatorSettlement?.settlementCurrency || creatorCurrency}{" "}
+        {formatAmount(creatorSettlement?.availableWalletBalance || 0)}
+      </p>
+
+      <p className="mt-2 text-xs text-gray-500">
+        This is the balance used for local-currency payout requests.
+      </p>
+    </div>
+  </div>
+</div>
+     <div className="mt-8 rounded-3xl bg-white p-6 shadow-sm">
           <div className="flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
             <div>
               <h2 className="text-2xl font-black text-gray-900">
@@ -1826,9 +1957,7 @@ const sortedUploads = useMemo(() => {
   </div>
 </div>
 
-        <div className="mt-8 rounded-3xl bg-white p-6 shadow-sm">
-          <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-            <div className="mt-8 rounded-3xl bg-white p-6 shadow-sm">
+   <div className="mt-8 rounded-3xl bg-white p-6 shadow-sm">
   <h2 className="text-2xl font-black text-gray-900">
     Payment Settings
   </h2>
@@ -1872,13 +2001,16 @@ const sortedUploads = useMemo(() => {
         return;
       }
 
+      const payoutCurrency =
+        creatorSettlement?.settlementCurrency || creatorCurrency;
+
       const { error } = await supabase
         .from("creator_payout_profiles")
         .upsert(
           {
             creator_name: creatorName,
             country: creatorCountry,
-            payout_currency: selectedPayoutCurrency,
+            payout_currency: payoutCurrency,
             payout_method: payoutMethod,
             payout_details: payoutDetails.trim(),
             account_holder_name: accountHolderName.trim(),
@@ -1900,231 +2032,143 @@ const sortedUploads = useMemo(() => {
     Save Payment Settings
   </button>
 </div>
-           
-            <div>
-              <h2 className="text-2xl font-black text-gray-900">
-                Payout Requests
-              </h2>
 
-              <p className="mt-1 text-sm text-gray-600">
-                Request payouts by currency. Mixed-currency payouts require a
-                future FX/NiaCredit conversion layer.
-              </p>
-            </div>
+<div className="mt-8 rounded-3xl bg-white p-6 shadow-sm">
+  <h2 className="text-2xl font-black text-gray-900">
+    Payout Requests
+  </h2>
 
-            <div className="flex flex-col gap-3">
-  <div className="rounded-xl bg-gray-50 p-4">
+  <p className="mt-1 text-sm text-gray-600">
+    Request payouts from your available local-currency wallet balance.
+  </p>
+
+  <div className="mt-5 rounded-xl bg-gray-50 p-4">
     <p className="text-sm font-bold text-gray-600">
-      Available Wallet Balance
+      Available for Payout
     </p>
 
     <p className="mt-1 text-2xl font-black text-gray-900">
-      {creatorLocalCurrency}{" "}
-      {adjustedCreatorWalletBalance.toFixed(2)}
+      {creatorSettlement?.settlementCurrency || creatorCurrency}{" "}
+      {formatAmount(creatorSettlement?.availableWalletBalance || 0)}
     </p>
   </div>
 
-  <input
-    type="number"
-    min="0"
-    step="0.01"
-    value={payoutAmount}
-    onChange={(e) => setPayoutAmount(e.target.value)}
-    placeholder={`Enter payout amount in ${creatorLocalCurrency}`}
-    className="rounded-xl border px-4 py-3"
-  />
+  <div className="mt-5 grid gap-4 md:grid-cols-2">
+    <input
+      type="number"
+      min="0"
+      step="0.01"
+      value={payoutAmount}
+      onChange={(e) => setPayoutAmount(e.target.value)}
+      placeholder={`Enter payout amount in ${
+        creatorSettlement?.settlementCurrency || creatorCurrency
+      }`}
+      className="rounded-xl border px-4 py-3"
+    />
 
-  <button
-    onClick={async () => {
-      const amount = Number(payoutAmount);
+    <button
+      onClick={async () => {
+        const amount = Number(payoutAmount);
+        const payoutCurrency =
+          creatorSettlement?.settlementCurrency || creatorCurrency;
+        const availableAmount =
+          creatorSettlement?.availableWalletBalance || 0;
 
-      if (!amount || amount <= 0) {
-        alert("Enter a valid payout amount.");
-        return;
-      }
+        if (!amount || amount <= 0) {
+          alert("Enter a valid payout amount.");
+          return;
+        }
 
-      if (amount > availableWalletBalanceLocal) {
-        alert("Requested payout exceeds available wallet balance.");
-        return;
-      }
+        if (amount > availableAmount) {
+          alert("Requested payout exceeds available wallet balance.");
+          return;
+        }
 
-      if (!accountHolderName.trim()) {
-        alert("Please complete Payment Settings first.");
-        return;
-      }
+        if (!accountHolderName.trim() || !payoutDetails.trim()) {
+          alert("Please complete Payment Settings first.");
+          return;
+        }
 
-      if (!payoutDetails.trim()) {
-        alert("Please complete Payment Settings first.");
-        return;
-      }
-
-      const { error } = await supabase
-        .from("payout_requests")
-        .insert([
+        const { error } = await supabase.from("payout_requests").insert([
           {
             creator_name: creatorName,
             amount,
-            currency_code: creatorLocalCurrency,
+            currency_code: payoutCurrency,
             status: "pending",
           },
         ]);
 
-      if (error) {
-        console.error(error);
-        alert("Payout request failed.");
-        return;
-      }
+        if (error) {
+          console.error(error);
+          alert("Payout request failed.");
+          return;
+        }
 
-      await supabase.from("notifications").insert([
-        {
-          creator_name: creatorName,
-          type: "payout",
-          title: "Payout request submitted",
-          message: `Your payout request for ${creatorLocalCurrency} ${amount} has been submitted for review.`,
-        },
-      ]);
-const { data: refreshedPayouts } = await supabase
-  .from("payout_requests")
-  .select("*")
-  .eq("creator_name", creatorName)
-  .order("created_at", { ascending: false });
+        await supabase.from("notifications").insert([
+          {
+            creator_name: creatorName,
+            type: "payout",
+            title: "Payout request submitted",
+            message: `Your payout request for ${payoutCurrency} ${amount} has been submitted for review.`,
+          },
+        ]);
 
-setPayouts((refreshedPayouts || []) as PayoutRequest[]);
-setWalletPendingPayouts((prev) => prev + 1);
+        const { data: refreshedPayouts } = await supabase
+          .from("payout_requests")
+          .select("*")
+          .eq("creator_name", creatorName)
+          .order("created_at", { ascending: false });
 
-setPayoutAmount("");
+        setPayouts((refreshedPayouts || []) as PayoutRequest[]);
+        setWalletPendingPayouts((prev) => prev + 1);
+        setPayoutAmount("");
 
-alert(
-  `Payout request submitted for ${creatorLocalCurrency} ${amount}.`
-);
-    }}
-    className="rounded-xl bg-green-700 px-4 py-3 text-sm font-bold text-white hover:bg-green-800"
-  >
-    Request Payout ({creatorLocalCurrency})
-  </button>
-</div>
-          </div>
-          <div className="mt-6">
-  <h3 className="text-lg font-black text-gray-900">
-    Recent Payout Activity
-  </h3>
+        alert(`Payout request submitted for ${payoutCurrency} ${amount}.`);
+      }}
+      className="rounded-xl bg-green-700 px-4 py-3 text-sm font-bold text-white hover:bg-green-800"
+    >
+      Request Payout ({creatorSettlement?.settlementCurrency || creatorCurrency})
+    </button>
+  </div>
 
-  <p className="mt-1 text-sm text-gray-600">
-    Review the status of your payout requests.
-  </p>
-</div>
+  <div className="mt-6">
+    <h3 className="text-lg font-black text-gray-900">
+      Recent Payout Activity
+    </h3>
 
-          {payouts.length === 0 ? (
-            <p className="mt-4 text-gray-500">No payout requests yet.</p>
-          ) : (
-            <div className="mt-5 space-y-4">
-              {payouts.map((payout) => (
-                <div
-                  key={payout.id}
-                  className="rounded-2xl border bg-gray-50 p-5"
-                >
-                  <p className="font-bold">
-                    Amount: {payout.currency_code || "UNKNOWN"}{" "}
-                    {payout.amount}
-                  </p>
-                  <p
-  className={`text-sm font-bold ${
-    payout.status === "approved"
-      ? "text-green-700"
-      : payout.status === "rejected"
-      ? "text-red-700"
-      : payout.status === "paid"
-      ? "text-blue-700"
-      : "text-yellow-700"
-  }`}
->
-  Status: {payout.status || "pending"}
-</p>
-                </div>
-              ))}
-            </div>
-          )}
+    <p className="mt-1 text-sm text-gray-600">
+      Review the status of your payout requests.
+    </p>
+  </div>
+
+  {payouts.length === 0 ? (
+    <p className="mt-4 text-gray-500">No payout requests yet.</p>
+  ) : (
+    <div className="mt-5 space-y-4">
+      {payouts.map((payout) => (
+        <div key={payout.id} className="rounded-2xl border bg-gray-50 p-5">
+          <p className="font-bold">
+            Amount: {payout.currency_code || "UNKNOWN"} {payout.amount}
+          </p>
+
+          <p
+            className={`text-sm font-bold ${
+              payout.status === "approved"
+                ? "text-green-700"
+                : payout.status === "rejected"
+                ? "text-red-700"
+                : payout.status === "paid"
+                ? "text-blue-700"
+                : "text-yellow-700"
+            }`}
+          >
+            Status: {payout.status || "pending"}
+          </p>
         </div>
-         
- <div className="mt-8 rounded-3xl bg-white p-6 shadow-sm text-center">
-  <h2 className="text-2xl font-black text-gray-900 underline">
-    Wallet Balance Reconciliation
-  </h2>
-
-  <p className="mt-1 text-sm text-gray-600">
-    Preview how a payout request affects your wallet before submission.
-  </p>
-  </div>
-
-  <div className="mt-5 grid gap-4 md:grid-cols-2 max-w-4xl mx-auto">
-    
-     <div className="rounded-2xl border border-blue-200 bg-blue-50 p-5 text-center"> 
-      <p className="text-sm font-bold text-blue-700">
-        Adjusted Wallet Balance ({creatorLocalCurrency})
-      </p>
-
-      <p className="mt-2 text-3xl font-black text-blue-900">
-        {creatorLocalCurrency}{" "}
-        {previewAdjustedWalletBalance.toFixed(2)}
-      </p>
-
-      <p className="mt-1 text-xs text-blue-700">
-        Net Earnings less requested payout amount
-      </p>
+      ))}
     </div>
-
-    
-    <div className="rounded-2xl border border-green-200 bg-green-50 p-5 text-center">
-      <p className="text-sm font-bold text-green-700">
-        Adjusted Creator Net Earnings (USD)
-      </p>
-
-      <p className="mt-2 text-3xl font-black text-green-900">
-        USD {previewAdjustedCreatorNetUsd.toFixed(2)}
-      </p>
-
-      <p className="mt-1 text-xs text-green-700">
-        Converted from adjusted wallet balance
-      </p>
-    </div>
-  </div>
-
-
-        {topVideo && (
-          <div className="mt-8 rounded-3xl bg-white p-6 shadow-sm">
-            <h2 className="text-2xl font-black text-gray-900">
-              Top Performing Video
-            </h2>
-
-            <div className="mt-5 flex flex-col gap-5 md:flex-row md:items-center">
-              {topVideo.thumbnail_url && (
-                <img
-                  src={topVideo.thumbnail_url}
-                  alt={topVideo.title}
-                  className="h-40 w-full rounded-2xl object-cover md:w-64"
-                />
-              )}
-
-              <div>
-                <h3 className="text-xl font-black text-gray-900">
-                  {topVideo.title}
-                </h3>
-
-                <p className="mt-2 text-sm text-gray-600">
-                  {topVideo.views || 0} views • {topVideo.likes || 0} likes
-                </p>
-
-                <a
-                  href={`/watch/${topVideo.id}`}
-                  className="mt-4 inline-block rounded-xl bg-black px-4 py-2 text-sm font-bold text-white hover:bg-gray-800"
-                >
-                  Watch Top Video
-                </a>
-              </div>
-            </div>
-          </div>
-        )}
-
+  )}
+</div>
         <div className="mt-8 rounded-3xl bg-white p-6 shadow-sm">
           <h2 className="text-2xl font-black text-gray-900">Tips</h2>
 

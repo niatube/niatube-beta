@@ -661,8 +661,7 @@ if (Boolean(data.is_live)) {
     },
   ]);
 }
-
- async function sendTip() {
+async function sendTip() {
   if (!video?.creator) return;
 
   const amount = Number(tipAmount);
@@ -671,6 +670,9 @@ if (Boolean(data.is_live)) {
     setTipStatus("Please enter a valid tip amount.");
     return;
   }
+
+  const platformFee = amount * 0.05;
+  const netAmount = amount * 0.95;
 
   const reportingCurrency = "USD";
   let fxRateUsed = 1;
@@ -701,8 +703,8 @@ if (Boolean(data.is_live)) {
         creator_name: video.creator,
         amount,
         gross_amount: amount,
-        platform_fee: amount * 0.05,
-        net_amount: amount * 0.95,
+        platform_fee: platformFee,
+        net_amount: netAmount,
         fee_rate: 0.05,
         currency_code: tipCurrency,
         currency: tipCurrency,
@@ -718,6 +720,28 @@ if (Boolean(data.is_live)) {
   if (error) {
     console.error("Tip error:", error);
     setTipStatus("Tip failed. Please check Supabase policies.");
+    return;
+  }
+
+  const { error: walletError } = await supabase
+    .from("creator_wallet_ledger")
+    .insert([
+      {
+        creator_name: video.creator,
+        transaction_type: "tip",
+        reference_id: data?.id || null,
+        currency_code: tipCurrency,
+        amount: netAmount,
+        status: "completed",
+      },
+    ]);
+
+  if (walletError) {
+    console.error(
+      "Tip wallet ledger error:",
+      JSON.stringify(walletError, null, 2)
+    );
+    setTipStatus("Tip was recorded, but wallet ledger update failed.");
     return;
   }
 
@@ -739,24 +763,24 @@ if (Boolean(data.is_live)) {
   }
 }
 
-  async function sendComment() {
-    const finalComment = commentText.trim();
-    const finalName = commentName.trim() || "Viewer";
 
-    if (!id || !finalComment) return;
+async function sendComment() {
+  const finalComment = commentText.trim();
+  const finalName = commentName.trim() || "Viewer";
 
-    const { data, error } = await supabase
-      .from("video_comments")
-      .insert([{ video_id: id, username: finalName, comment: finalComment }])
-      .select()
-      .single();
+  if (!id || !finalComment) return;
 
-    if (error) return console.error("Comment error:", error);
+  const { data, error } = await supabase
+    .from("video_comments")
+    .insert([{ video_id: id, username: finalName, comment: finalComment }])
+    .select()
+    .single();
 
-    if (data) setComments((prev) => [data as VideoComment, ...prev]);
-    setCommentText("");
-  }
+  if (error) return console.error("Comment error:", error);
 
+  if (data) setComments((prev) => [data as VideoComment, ...prev]);
+  setCommentText("");
+}
  async function sendMessage() {
   if (chatRestricted) return;
 
@@ -807,32 +831,58 @@ async function sendSuperSupport() {
   const { data: preset } = await supabase
     .from("monetization_presets")
     .select("currency_code, amount, tier")
-    .eq("currency_code", viewerCurrency || "OTHER")
+    .eq("currency_code", viewerCurrency === "OTHER" ? tipCurrency : viewerCurrency)
     .eq("tier", supportTier)
     .eq("is_active", true)
     .maybeSingle();
 
-  const currencyCode = preset?.currency_code || viewerCurrency || "OTHER";
+ const currencyCode =
+  preset?.currency_code ||
+  (viewerCurrency === "OTHER" ? tipCurrency : viewerCurrency) ||
+  "OTHER";
   const supportAmount = Number(preset?.amount || 0);
 
-  const { error: transactionError } = await supabase
-    .from("super_support_transactions")
-    .insert([
-      {
-        live_video_id: id,
-        supporter_name: username,
-        creator_name: video.creator,
-        currency_code: currencyCode,
-        amount: supportAmount,
-        tier: supportTier,
-        message: finalMessage,
-        payment_status: "pending",
-      },
-    ]);
+ const { data: transactionData, error: transactionError } = await supabase
+  .from("super_support_transactions")
+  .insert([
+    {
+      live_video_id: id,
+      supporter_name: username,
+      creator_name: video.creator,
+      currency_code: currencyCode,
+      amount: supportAmount,
+      tier: supportTier,
+      message: finalMessage,
+      payment_status: "pending",
+    },
+  ])
+  .select()
+  .single();
+
 if (transactionError) {
   console.error(
     "Super Support transaction error:",
     JSON.stringify(transactionError, null, 2)
+  );
+  return;
+}
+const { error: walletError } = await supabase
+  .from("creator_wallet_ledger")
+  .insert([
+    {
+      creator_name: video.creator,
+      transaction_type: "super_support",
+      reference_id: transactionData.id,
+      currency_code: currencyCode,
+      amount: supportAmount,
+      status: "completed",
+    },
+  ]);
+
+if (walletError) {
+  console.error(
+    "Creator wallet ledger error:",
+    JSON.stringify(walletError, null, 2)
   );
   return;
 }
