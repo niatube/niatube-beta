@@ -11,6 +11,11 @@ import {
 } from "@/lib/creator-settlement";
 
 import {
+  buildWalletActivity,
+  type WalletActivityItem,
+} from "@/lib/wallet-activity";
+
+import {
   ResponsiveContainer,
   LineChart,
   Line,
@@ -186,6 +191,8 @@ const [subscriberRows, setSubscriberRows] = useState<any[]>([]);
   const [payoutMethod, setPayoutMethod] = useState("Bank Transfer");
 const [payoutDetails, setPayoutDetails] = useState("");
 const [accountHolderName, setAccountHolderName] = useState("");
+
+const [walletActivity, setWalletActivity] = useState<WalletActivityItem[]>([]);
 
   const videosPerPage = 6;
 
@@ -363,7 +370,9 @@ const { data: walletLedgerData } = await supabase
   .select("*")
   .ilike("creator_name", activeCreatorName);
 
-const settlementSummary = buildCreatorSettlementSummary(
+  setWalletActivity(buildWalletActivity(walletLedgerData || []));
+
+  const settlementSummary = buildCreatorSettlementSummary(
   walletLedgerData || [],
   (fxData || []) as FxRate[],
   loadedCreatorCurrency
@@ -1724,6 +1733,77 @@ const sortedUploads = useMemo(() => {
 
               <td className="py-4 pr-4 text-gray-700">
                 USD {formatAmount(holding.usdEquivalent)}
+              </td>
+            </tr>
+          ))
+        )}
+      </tbody>
+    </table>
+  </div>
+</div>
+
+<div className="mt-8 rounded-3xl bg-white p-6 shadow-sm">
+  <h2 className="text-2xl font-black text-gray-900">
+    Wallet Activity
+  </h2>
+
+  <p className="mt-1 text-sm text-gray-600">
+    Every wallet entry shows where the money came from, its source, currency,
+    net amount, and status.
+  </p>
+
+  <div className="mt-6 overflow-x-auto">
+    <table className="w-full min-w-[760px] text-left text-sm">
+      <thead>
+        <tr className="border-b text-gray-500">
+          <th className="py-3 pr-4">Date</th>
+          <th className="py-3 pr-4">Source</th>
+          <th className="py-3 pr-4">Description</th>
+          <th className="py-3 pr-4">Currency</th>
+          <th className="py-3 pr-4">Net Amount</th>
+          <th className="py-3 pr-4">Status</th>
+        </tr>
+      </thead>
+
+      <tbody>
+        {walletActivity.length === 0 ? (
+          <tr>
+            <td colSpan={6} className="py-5 text-gray-500">
+              No wallet activity yet.
+            </td>
+          </tr>
+        ) : (
+          walletActivity.map((activity, index) => (
+            <tr
+              key={activity.id || `${activity.createdAt}-${index}`}
+              className="border-b last:border-b-0"
+            >
+              <td className="py-4 pr-4 text-gray-700">
+                {activity.createdAt
+                  ? new Date(activity.createdAt).toLocaleString()
+                  : "Not available"}
+              </td>
+
+              <td className="py-4 pr-4 font-black text-gray-900">
+                {activity.sourceLabel}
+              </td>
+
+              <td className="py-4 pr-4 text-gray-700">
+                {activity.description}
+              </td>
+
+              <td className="py-4 pr-4 font-bold text-gray-900">
+                {activity.currencyCode}
+              </td>
+
+              <td className="py-4 pr-4 font-black text-green-700">
+                {activity.currencyCode} {formatAmount(activity.netAmount)}
+              </td>
+
+              <td className="py-4 pr-4">
+                <span className="rounded-full bg-green-100 px-3 py-1 text-xs font-black text-green-700">
+                  {activity.status}
+                </span>
               </td>
             </tr>
           ))
