@@ -3,6 +3,15 @@
  * NiaTube Creator Economy™ (NCE)
  * Super Support Engine
  * ==========================================================
+ *
+ * Responsibility:
+ * - Validate Super Support input
+ * - Normalize currency
+ * - Calculate gross / fee / net
+ * - Return standardized Super Support result
+ *
+ * This engine does NOT write to the wallet.
+ * Wallet recording belongs to creator-wallet-engine.ts.
  */
 
 import {
@@ -12,41 +21,29 @@ import {
   TRANSACTION_STATUS,
 } from "@/lib/creator-economy";
 
-import { recordCreatorWalletEntry } from "@/lib/creator-wallet-engine";
-
-type SupabaseAdminClient = any;
-
-export interface ProcessSuperSupportInput {
-  supabaseAdmin: SupabaseAdminClient;
-
+export interface PrepareSuperSupportInput {
   creatorName: string;
-
   amount: number;
-
   currencyCode: string;
-
   referenceId?: string | null;
 }
 
-export interface ProcessSuperSupportResult {
+export interface PreparedSuperSupport {
+  creatorName: string;
+  referenceId?: string | null;
   grossAmount: number;
-
   platformFee: number;
-
   netAmount: number;
-
   currencyCode: string;
-
   status: string;
 }
 
-export async function processSuperSupport({
-  supabaseAdmin,
+export function prepareSuperSupport({
   creatorName,
   amount,
   currencyCode,
   referenceId = null,
-}: ProcessSuperSupportInput): Promise<ProcessSuperSupportResult> {
+}: PrepareSuperSupportInput): PreparedSuperSupport {
   if (!creatorName) {
     throw new Error("Creator name is required.");
   }
@@ -56,23 +53,14 @@ export async function processSuperSupport({
   }
 
   const normalizedCurrency = normalizeCurrencyCode(currencyCode);
-
-  const platformFee = calculatePlatformFee(amount);
-
-  const netAmount = calculateNetAmount(amount);
-
-  await recordCreatorWalletEntry({
-    supabaseAdmin,
-    creatorName,
-    transactionType: "super_support",
-    referenceId,
-    currencyCode: normalizedCurrency,
-    amount: netAmount,
-    status: TRANSACTION_STATUS.COMPLETED,
-  });
+  const grossAmount = Number(amount || 0);
+  const platformFee = calculatePlatformFee(grossAmount);
+  const netAmount = calculateNetAmount(grossAmount);
 
   return {
-    grossAmount: amount,
+    creatorName,
+    referenceId,
+    grossAmount,
     platformFee,
     netAmount,
     currencyCode: normalizedCurrency,

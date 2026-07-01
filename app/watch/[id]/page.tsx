@@ -5,6 +5,17 @@ import { useParams } from "next/navigation";
 import Navbar from "@/components/Navbar";
 import { supabase } from "@/lib/supabase-browser";
 import { fallbackVideos } from "@/lib/fallbackVideos";
+import { prepareSuperSupport } from "@/lib/super-support-engine";
+import {
+  SUPPORT_PROFILES,
+  getSupportProfileByCountry,
+  getDefaultSupportProfile,
+} from "@/lib/support-profiles";
+
+import {
+  resolveSupportContext,
+  getCountryFromBrowserLocale,
+} from "@/lib/support-context";
 
 type Video = {
   id: string;
@@ -151,11 +162,15 @@ const [debugCreatorEmail, setDebugCreatorEmail] = useState("");
   useState(false);
 
   const [liveAd, setLiveAd] = useState<any | null>(null);
-  const [superChatAmount, setSuperChatAmount] = useState("5");
-
-const [viewerCurrency, setViewerCurrency] = useState("OTHER");
-const [monetizationPresets, setMonetizationPresets] = useState<any[]>([]);
-
+  
+  const [superChatAmount, setSuperChatAmount] = useState("Support");
+  const [viewerCountry, setViewerCountry] = useState("Mali");
+  const [viewerCurrency, setViewerCurrency] = useState("OTHER");
+  const [monetizationPresets, setMonetizationPresets] = useState<any[]>([]);
+const activeSupportProfile =
+  getSupportProfileByCountry(viewerCountry) ??
+  getDefaultSupportProfile();
+ 
   const chatEndRef = useRef<HTMLDivElement | null>(null);
 
   const visibleMessages = messages.filter(
@@ -182,11 +197,33 @@ const [monetizationPresets, setMonetizationPresets] = useState<any[]>([]);
       setLiveViewerId(`live-${crypto.randomUUID()}`);
 
       setViewerCurrency("OTHER");
-await loadMonetizationPresets("OTHER");
+      await loadMonetizationPresets("OTHER");
     }
 
     loadViewer();
   }, []);
+
+useEffect(() => {
+  if (!viewerCurrency || viewerCurrency === "OTHER") return;
+
+  console.log("Loading Super Support presets for:", viewerCurrency);
+
+  loadMonetizationPresets(viewerCurrency);
+}, [viewerCurrency]);
+
+useEffect(() => {
+  const profile =
+    getSupportProfileByCountry(viewerCountry) ??
+    getDefaultSupportProfile();
+
+  if (!profile) {
+    setViewerCurrency("USD");
+    return;
+  }
+
+  setViewerCurrency(profile.currencyCode);
+  loadMonetizationPresets(profile.currencyCode);
+}, [viewerCountry]);
 
   useEffect(() => {
     async function loadVideo() {
@@ -200,10 +237,10 @@ await loadMonetizationPresets("OTHER");
         .single();
 
       if (data) {
-  const currentViews = data.views || 0;
-  const updatedViews = currentViews + 1;
+       const currentViews = data.views || 0;
+       const updatedViews = currentViews + 1;
 
-  setVideo({ ...data, views: updatedViews });
+        setVideo({ ...data, views: updatedViews });
 
  const { data: creatorProfile } = await supabase
   .from("creator_profiles")
@@ -231,6 +268,21 @@ console.log("MODERATION CHECK", {
   creatorEmail,
   creatorProfile,
 });
+
+useEffect(() => {
+  if (typeof window === "undefined") return;
+
+  const locale = navigator.language;
+
+  const detectedCountry = getCountryFromBrowserLocale(locale);
+
+  const context = resolveSupportContext(detectedCountry ?? undefined);
+
+  setViewerCountry(context.country);
+  setViewerCurrency(context.currencyCode);
+
+  console.log("Support Context:", context);
+}, []);
 
 const isCreatorOwner =
   Boolean(loggedInEmail && creatorEmail && loggedInEmail === creatorEmail);
@@ -827,20 +879,52 @@ async function sendSuperSupport() {
   }
 
   const supportTier = superChatAmount || "Support";
+  const selectedCurrency =
+  viewerCurrency && viewerCurrency !== "OTHER"
+    ? viewerCurrency
+    : tipCurrency && tipCurrency !== "OTHER"
+    ? tipCurrency
+    : "USD";
+
+  console.log("Super Support preset lookup:", {
+  selectedCurrency,
+  supportTier,
+});
 
   const { data: preset } = await supabase
     .from("monetization_presets")
     .select("currency_code, amount, tier")
-    .eq("currency_code", viewerCurrency === "OTHER" ? tipCurrency : viewerCurrency)
-    .eq("tier", supportTier)
-    .eq("is_active", true)
+    .ilike(
+  "currency_code",
+  viewerCurrency === "OTHER" ? tipCurrency : viewerCurrency
+)
+.ilike("tier", supportTier)
+.eq("is_active", true)
     .maybeSingle();
 
- const currencyCode =
-  preset?.currency_code ||
-  (viewerCurrency === "OTHER" ? tipCurrency : viewerCurrency) ||
-  "OTHER";
-  const supportAmount = Number(preset?.amount || 0);
+
+const currencyCode =
+  preset?.currency_code || selectedCurrency || "OTHER";
+ const fallbackSupportAmounts: Record<string, number> = {
+  Support: 5,
+  Champion: 20,
+  Legend: 100,
+};
+
+const supportAmount = Number(
+  preset?.amount || fallbackSupportAmounts[supportTier] || 5
+);
+
+if (!supportAmount || supportAmount <= 0) {
+  console.error("Invalid Super Support amount.");
+  return;
+}
+
+  const preparedSupport = prepareSuperSupport({
+  creatorName: video.creator,
+  amount: supportAmount,
+  currencyCode,
+});
 
  const { data: transactionData, error: transactionError } = await supabase
   .from("super_support_transactions")
@@ -849,8 +933,8 @@ async function sendSuperSupport() {
       live_video_id: id,
       supporter_name: username,
       creator_name: video.creator,
-      currency_code: currencyCode,
-      amount: supportAmount,
+      currency_code: preparedSupport.currencyCode,
+      amount: preparedSupport.grossAmount,
       tier: supportTier,
       message: finalMessage,
       payment_status: "pending",
@@ -873,9 +957,9 @@ const { error: walletError } = await supabase
       creator_name: video.creator,
       transaction_type: "super_support",
       reference_id: transactionData.id,
-      currency_code: currencyCode,
-      amount: supportAmount,
-      status: "completed",
+      currency_code: preparedSupport.currencyCode,
+amount: preparedSupport.netAmount,
+status: preparedSupport.status,
     },
   ]);
 
@@ -990,25 +1074,27 @@ const recordWatchAdClick = async () => {
   }
 };
 async function loadMonetizationPresets(currency: string) {
-  let { data } = await supabase
-    .from("monetization_presets")
-    .select("*")
-    .eq("currency_code", currency)
-    .eq("is_active", true)
-    .order("display_order");
+  const cleanCurrency = String(currency || "USD").trim().toUpperCase();
 
-  if (!data || data.length === 0) {
-    const fallback = await supabase
-      .from("monetization_presets")
-      .select("*")
-      .eq("currency_code", "OTHER")
-      .eq("is_active", true)
-      .order("display_order");
-
-    data = fallback.data || [];
+  const { data, error } = await supabase
+  .from("monetization_presets")
+  .select("*");
+  if (error) {
+    console.error("Monetization presets load error:", error);
+    setMonetizationPresets([]);
+    return;
   }
 
-  setMonetizationPresets(data);
+  const filteredPresets = (data || []).filter(
+    (preset) =>
+      String(preset.currency_code || "").trim().toUpperCase() === cleanCurrency &&
+      Number(preset.amount || 0) > 0
+  );
+
+  console.log("Loaded all presets:", data);
+  console.log("Filtered presets for:", cleanCurrency, filteredPresets);
+
+  setMonetizationPresets(filteredPresets);
 }
 
 if (loading) {
@@ -1535,20 +1621,64 @@ if (loading) {
   <p className="mt-1 text-sm text-yellow-800">
     Support the creator during this live stream.
   </p>
+  <label className="mt-4 block text-sm font-bold text-gray-700">
+  Viewing From
+</label>
+
+<select
+  value={viewerCountry}
+  onChange={(e) => setViewerCountry(e.target.value)}
+  className="mt-2 w-full rounded-xl border px-4 py-3"
+>
+  <option value="Benin">Benin</option>
+  <option value="Burkina Faso">Burkina Faso</option>
+  <option value="Côte d'Ivoire">Côte d'Ivoire</option>
+  <option value="Guinea-Bissau">Guinea-Bissau</option>
+  <option value="Mali">Mali</option>
+  <option value="Niger">Niger</option>
+  <option value="Senegal">Senegal</option>
+  <option value="Togo">Togo</option>
+  <option value="Cameroon">Cameroon</option>
+  <option value="Rwanda">Rwanda</option>
+  <option value="Kenya">Kenya</option>
+  <option value="Ghana">Ghana</option>
+  <option value="Nigeria">Nigeria</option>
+  <option value="Tanzania">Tanzania</option>
+  <option value="Uganda">Uganda</option>
+  <option value="South Africa">South Africa</option>
+  <option value="United States">United States</option>
+  <option value="United Kingdom">United Kingdom</option>
+  <option value="France">France</option>
+</select>
+<p className="mt-3 text-sm font-bold text-yellow-900">
+  Support Currency: {viewerCurrency}
+</p>
+
+
 
   <label className="mt-4 block text-sm font-bold text-gray-700">
     Support Level
   </label>
 
   <select
-    value={superChatAmount}
-    onChange={(e) => setSuperChatAmount(e.target.value)}
-    className="mt-2 w-full rounded-xl border px-4 py-3"
-  >
-    <option value="Support">⭐ Support</option>
-    <option value="Champion">🏆 Champion</option>
-    <option value="Legend">👑 Legend</option>
-  </select>
+  value={superChatAmount}
+  onChange={(e) => setSuperChatAmount(e.target.value)}
+  className="mt-2 w-full rounded-xl border px-4 py-3"
+>
+  {activeSupportProfile?.supportLevels.map((level) => (
+  <option key={level.tier} value={level.tier}>
+    {level.tier === "Support"
+      ? "⭐"
+      : level.tier === "Champion"
+      ? "🏆"
+      : "👑"}{" "}
+    {level.tier} — {activeSupportProfile.currencyCode}{" "}
+    {level.amount.toLocaleString()}
+  </option>
+))}
+</select>
+
+ 
 </div>
 
       <textarea
