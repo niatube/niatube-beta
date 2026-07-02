@@ -900,21 +900,7 @@ async function sendSuperSupport() {
     return;
   }
 
-  const country =
-    currencyCode === "USD"
-      ? "United States"
-      : currencyCode === "EUR"
-      ? "France"
-      : currencyCode === "GHS"
-      ? "Ghana"
-      : currencyCode === "KES"
-      ? "Kenya"
-      : currencyCode === "NGN"
-      ? "Nigeria"
-      : currencyCode === "RWF"
-      ? "Rwanda"
-      : "United States";
-
+ const country = viewerCountry || "United States";
   const response = await fetch("/api/super-support", {
     method: "POST",
     headers: {
