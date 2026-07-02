@@ -876,21 +876,16 @@ async function sendSuperSupport() {
       : "USD";
 
   const { data: preset } = await supabase
-    .from("monetization_presets")
-    .select("currency_code, amount, tier")
-    .ilike("currency_code", selectedCurrency)
-    .ilike("tier", supportTier)
-    .eq("is_active", true)
-    .maybeSingle();
+  .from("monetization_presets")
+  .select("currency_code, amount, tier")
+  .ilike("currency_code", selectedCurrency)
+  .ilike("tier", supportTier)
+  .eq("is_active", true)
+  .maybeSingle();
 
-  const currencyCode = preset?.currency_code || selectedCurrency || "USD";
+const currencyCode = preset?.currency_code || selectedCurrency || "USD";
 
-  
-
-const fallbackSupportAmountsByCurrency: Record<
-  string,
-  Record<string, number>
-> = {
+const fallbackSupportAmountsByCurrency: Record<string, Record<string, number>> = {
   USD: { Support: 5, Champion: 20, Legend: 100 },
   EUR: { Support: 5, Champion: 20, Legend: 100 },
   XOF: { Support: 2500, Champion: 10000, Legend: 50000 },
@@ -906,31 +901,32 @@ const supportAmount = Number(
     5
 );
 
-    if (!supportAmount || supportAmount <= 0) {
-    console.error("Invalid Super Support amount.");
-    return;
-  }
+if (!supportAmount || supportAmount <= 0) {
+  console.error("Invalid Super Support amount.");
+  return;
+}
 
- const country = viewerCountry || "United States";
-  const response = await fetch("/api/super-support", {
-    method: "POST",
-    headers: {
-      "Content-Type": "application/json",
-    },
-    body: JSON.stringify({
-      live_video_id: id,
-      supporter_name: username,
-      creator_name: video.creator,
-      amount: supportAmount,
-      currency_code: currencyCode,
-      tier: supportTier,
-      message: finalMessage,
-      country,
-      payment_method: "CARD",
-    }),
-  });
+const country = viewerCountry || "United States";
 
- const resultText = await response.text();
+const response = await fetch("/api/super-support", {
+  method: "POST",
+  headers: {
+    "Content-Type": "application/json",
+  },
+  body: JSON.stringify({
+    live_video_id: id,
+    supporter_name: username,
+    creator_name: video.creator,
+    amount: supportAmount,
+    currency_code: currencyCode,
+    tier: supportTier,
+    message: finalMessage,
+    country,
+    payment_method: "CARD",
+  }),
+});
+
+const resultText = await response.text();
 
 let result: any = {};
 try {
