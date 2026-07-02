@@ -885,17 +885,28 @@ async function sendSuperSupport() {
 
   const currencyCode = preset?.currency_code || selectedCurrency || "USD";
 
-  const fallbackSupportAmounts: Record<string, number> = {
-    Support: 5,
-    Champion: 20,
-    Legend: 100,
-  };
+  
 
-  const supportAmount = Number(
-    preset?.amount || fallbackSupportAmounts[supportTier] || 5
-  );
+const fallbackSupportAmountsByCurrency: Record<
+  string,
+  Record<string, number>
+> = {
+  USD: { Support: 5, Champion: 20, Legend: 100 },
+  EUR: { Support: 5, Champion: 20, Legend: 100 },
+  XOF: { Support: 2500, Champion: 10000, Legend: 50000 },
+  NGN: { Support: 1500, Champion: 7500, Legend: 30000 },
+  GHS: { Support: 20, Champion: 100, Legend: 500 },
+  KES: { Support: 150, Champion: 750, Legend: 3000 },
+  RWF: { Support: 2000, Champion: 10000, Legend: 50000 },
+};
 
-  if (!supportAmount || supportAmount <= 0) {
+const supportAmount = Number(
+  preset?.amount ||
+    fallbackSupportAmountsByCurrency[currencyCode]?.[supportTier] ||
+    5
+);
+
+    if (!supportAmount || supportAmount <= 0) {
     console.error("Invalid Super Support amount.");
     return;
   }
@@ -919,9 +930,16 @@ async function sendSuperSupport() {
     }),
   });
 
-  const result = await response.json();
+ const resultText = await response.text();
 
-  if (!response.ok) {
+let result: any = {};
+try {
+  result = resultText ? JSON.parse(resultText) : {};
+} catch {
+  result = { raw: resultText };
+}
+
+if (!response.ok) {
   alert(
     `Super Support failed.\nStatus: ${response.status}\nStatus Text: ${response.statusText}\nResponse: ${JSON.stringify(result)}`
   );
