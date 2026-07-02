@@ -933,12 +933,23 @@ async function sendSuperSupport() {
     }),
   });
 
-  const result = await response.json();
+  const resultText = await response.text();
 
-  if (!response.ok) {
-    console.error("Super Support API error:", result);
-    return;
-  }
+let result: any = {};
+try {
+  result = resultText ? JSON.parse(resultText) : {};
+} catch {
+  result = { raw: resultText };
+}
+
+if (!response.ok) {
+  console.error("Super Support API error:", {
+    status: response.status,
+    statusText: response.statusText,
+    result,
+  });
+  return;
+}
 
   const { data, error } = await supabase
     .from("live_chat")
