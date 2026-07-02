@@ -9,6 +9,7 @@ import {
   SOURCE_TYPES,
   TRANSACTION_STATUS,
 } from "@/lib/creator-economy";
+import { authorizePayment } from "@/lib/payment-authorization";
 
 export async function GET(req: Request) {
   try {
@@ -68,6 +69,45 @@ export async function POST(req: Request) {
       return NextResponse.json(
         { error: "Tip amount must be greater than zero." },
         { status: 400 }
+      );
+    }
+
+        const creatorId = body.creator_id || body.creatorId || creatorName;
+    const viewerId =
+      body.viewer_id ||
+      body.viewerId ||
+      body.from_user ||
+      body.fromUser ||
+      "anonymous-viewer";
+
+    const country =
+      body.country ||
+      body.country_name ||
+      body.countryName ||
+      "United States";
+
+    const paymentMethod = String(
+      body.payment_method || body.paymentMethod || "CARD"
+    ).toUpperCase();
+
+    const authorization = await authorizePayment({
+      viewerId,
+      creatorId,
+      country,
+      currency: currencyCode,
+      paymentMethod,
+      amount,
+    });
+
+    if (!authorization.approved) {
+      return NextResponse.json(
+        {
+          error: authorization.message,
+          authorization_code: authorization.code,
+          authorization_reason: authorization.reason,
+          risk_score: authorization.riskScore,
+        },
+        { status: 403 }
       );
     }
 
