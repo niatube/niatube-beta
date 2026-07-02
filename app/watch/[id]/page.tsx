@@ -5,7 +5,7 @@ import { useParams } from "next/navigation";
 import Navbar from "@/components/Navbar";
 import { supabase } from "@/lib/supabase-browser";
 import { fallbackVideos } from "@/lib/fallbackVideos";
-import { prepareSuperSupport } from "@/lib/super-support-engine";
+
 import {
   SUPPORT_PROFILES,
   getSupportProfileByCountry,
@@ -879,97 +879,79 @@ async function sendSuperSupport() {
   }
 
   const supportTier = superChatAmount || "Support";
-  const selectedCurrency =
-  viewerCurrency && viewerCurrency !== "OTHER"
-    ? viewerCurrency
-    : tipCurrency && tipCurrency !== "OTHER"
-    ? tipCurrency
-    : "USD";
 
-  console.log("Super Support preset lookup:", {
-  selectedCurrency,
-  supportTier,
-});
+  const selectedCurrency =
+    viewerCurrency && viewerCurrency !== "OTHER"
+      ? viewerCurrency
+      : tipCurrency && tipCurrency !== "OTHER"
+      ? tipCurrency
+      : "USD";
 
   const { data: preset } = await supabase
     .from("monetization_presets")
     .select("currency_code, amount, tier")
-    .ilike(
-  "currency_code",
-  viewerCurrency === "OTHER" ? tipCurrency : viewerCurrency
-)
-.ilike("tier", supportTier)
-.eq("is_active", true)
+    .ilike("currency_code", selectedCurrency)
+    .ilike("tier", supportTier)
+    .eq("is_active", true)
     .maybeSingle();
 
+  const currencyCode = preset?.currency_code || selectedCurrency || "USD";
 
-const currencyCode =
-  preset?.currency_code || selectedCurrency || "OTHER";
- const fallbackSupportAmounts: Record<string, number> = {
-  Support: 5,
-  Champion: 20,
-  Legend: 100,
-};
+  const fallbackSupportAmounts: Record<string, number> = {
+    Support: 5,
+    Champion: 20,
+    Legend: 100,
+  };
 
-const supportAmount = Number(
-  preset?.amount || fallbackSupportAmounts[supportTier] || 5
-);
+  const supportAmount = Number(
+    preset?.amount || fallbackSupportAmounts[supportTier] || 5
+  );
 
-if (!supportAmount || supportAmount <= 0) {
-  console.error("Invalid Super Support amount.");
-  return;
-}
+  if (!supportAmount || supportAmount <= 0) {
+    console.error("Invalid Super Support amount.");
+    return;
+  }
 
-  const preparedSupport = prepareSuperSupport({
-  creatorName: video.creator,
-  amount: supportAmount,
-  currencyCode,
-});
+  const country =
+    currencyCode === "USD"
+      ? "United States"
+      : currencyCode === "EUR"
+      ? "France"
+      : currencyCode === "GHS"
+      ? "Ghana"
+      : currencyCode === "KES"
+      ? "Kenya"
+      : currencyCode === "NGN"
+      ? "Nigeria"
+      : currencyCode === "RWF"
+      ? "Rwanda"
+      : "United States";
 
- const { data: transactionData, error: transactionError } = await supabase
-  .from("super_support_transactions")
-  .insert([
-    {
+  const response = await fetch("/api/super-support", {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+    },
+    body: JSON.stringify({
       live_video_id: id,
       supporter_name: username,
       creator_name: video.creator,
-      currency_code: preparedSupport.currencyCode,
-      amount: preparedSupport.grossAmount,
+      amount: supportAmount,
+      currency_code: currencyCode,
       tier: supportTier,
       message: finalMessage,
-      payment_status: "pending",
-    },
-  ])
-  .select()
-  .single();
+      country,
+      payment_method: "CARD",
+    }),
+  });
 
-if (transactionError) {
-  console.error(
-    "Super Support transaction error:",
-    JSON.stringify(transactionError, null, 2)
-  );
-  return;
-}
-const { error: walletError } = await supabase
-  .from("creator_wallet_ledger")
-  .insert([
-    {
-      creator_name: video.creator,
-      transaction_type: "super_support",
-      reference_id: transactionData.id,
-      currency_code: preparedSupport.currencyCode,
-amount: preparedSupport.netAmount,
-status: preparedSupport.status,
-    },
-  ]);
+  const result = await response.json();
 
-if (walletError) {
-  console.error(
-    "Creator wallet ledger error:",
-    JSON.stringify(walletError, null, 2)
-  );
-  return;
-}
+  if (!response.ok) {
+    console.error("Super Support API error:", result);
+    return;
+  }
+
   const { data, error } = await supabase
     .from("live_chat")
     .insert([
