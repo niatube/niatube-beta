@@ -933,24 +933,21 @@ async function sendSuperSupport() {
     }),
   });
 
-  const resultText = await response.text();
+  const result = await response.json();
 
-let result: any = {};
-try {
-  result = resultText ? JSON.parse(resultText) : {};
-} catch {
-  result = { raw: resultText };
-}
+  if (!response.ok) {
+  alert(
+    `Super Support failed.\nStatus: ${response.status}\nStatus Text: ${response.statusText}\nResponse: ${JSON.stringify(result)}`
+  );
 
-if (!response.ok) {
-  console.error("Super Support API error:", {
-    status: response.status,
-    statusText: response.statusText,
-    result,
-  });
+  console.error(
+    `Super Support API error | Status: ${response.status} | Status Text: ${
+      response.statusText
+    } | Response: ${JSON.stringify(result)}`
+  );
+
   return;
 }
-
   const { data, error } = await supabase
     .from("live_chat")
     .insert([
