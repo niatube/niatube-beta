@@ -225,18 +225,6 @@ useEffect(() => {
   loadMonetizationPresets(profile.currencyCode);
 }, [viewerCountry]);
 
- useEffect(() => {
-  if (typeof window === "undefined") return;
-
-  const locale = navigator.language;
-  const detectedCountry = getCountryFromBrowserLocale(locale);
-  const context = resolveSupportContext(detectedCountry ?? undefined);
-
-  setViewerCountry(context.country);
-  setViewerCurrency(context.currencyCode);
-
-  console.log("Support Context:", context);
-}, []);
  
   useEffect(() => {
     async function loadVideo() {
