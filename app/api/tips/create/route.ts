@@ -1,3 +1,4 @@
+import { authorizePayment } from "@/lib/payment-authorization";
 import { getSupabaseAdmin } from "@/lib/supabase-server";
 import { NextResponse } from "next/server";
 
@@ -6,6 +7,27 @@ export const runtime = "nodejs";
 
 const REPORTING_CURRENCY = "USD";
 
+function inferCountryFromCurrency(currency: string) {
+  const map: Record<string, string> = {
+    USD: "United States",
+    EUR: "France",
+    GHS: "Ghana",
+    KES: "Kenya",
+    NGN: "Nigeria",
+    RWF: "Rwanda",
+  };
+
+  return map[currency] || "United States";
+}
+
+function inferPaymentMethodFromCurrency(currency: string) {
+  const mobileMoneyCurrencies = ["GHS", "KES", "RWF"];
+
+  return mobileMoneyCurrencies.includes(currency)
+    ? "MOBILE_MONEY"
+    : "CARD";
+}
+
 export async function POST(req: Request) {
   try {
     const supabaseAdmin = getSupabaseAdmin();
@@ -13,10 +35,30 @@ export async function POST(req: Request) {
     const body = await req.json();
 
     const creatorName = body.creator_name || body.creatorName;
+    const creatorId = body.creator_id || body.creatorId || creatorName;
+    const viewerId =
+      body.viewer_id ||
+      body.viewerId ||
+      body.from_user ||
+      body.fromUser ||
+      "anonymous-viewer";
+
     const videoId = body.video_id || body.videoId || null;
     const amount = Number(body.amount || 0);
     const currency = String(
       body.currency || body.currency_code || "USD"
+    ).toUpperCase();
+
+    const country =
+      body.country ||
+      body.country_name ||
+      body.countryName ||
+      inferCountryFromCurrency(currency);
+
+    const paymentMethod = String(
+      body.payment_method ||
+        body.paymentMethod ||
+        inferPaymentMethodFromCurrency(currency)
     ).toUpperCase();
 
     if (!creatorName) {
@@ -30,6 +72,27 @@ export async function POST(req: Request) {
       return NextResponse.json(
         { error: "Tip amount must be greater than zero." },
         { status: 400 }
+      );
+    }
+
+    const authorization = await authorizePayment({
+      viewerId,
+      creatorId,
+      country,
+      currency,
+      paymentMethod,
+      amount,
+    });
+
+    if (!authorization.approved) {
+      return NextResponse.json(
+        {
+          error: authorization.message,
+          authorization_code: authorization.code,
+          authorization_reason: authorization.reason,
+          risk_score: authorization.riskScore,
+        },
+        { status: 403 }
       );
     }
 
@@ -71,7 +134,7 @@ export async function POST(req: Request) {
           amount,
           currency,
           currency_code: currency,
-          from_user: "Anonymous",
+          from_user: body.from_user || body.fromUser || "Anonymous",
 
           original_amount: amount,
           original_currency: currency,
@@ -90,7 +153,17 @@ export async function POST(req: Request) {
       return NextResponse.json({ error: error.message }, { status: 500 });
     }
 
-    return NextResponse.json(data, { status: 201 });
+    return NextResponse.json(
+      {
+        ...data,
+        payment_authorization: {
+          approved: authorization.approved,
+          message: authorization.message,
+          risk_score: authorization.riskScore,
+        },
+      },
+      { status: 201 }
+    );
   } catch (error: any) {
     console.error("Tip create API error:", error);
 
