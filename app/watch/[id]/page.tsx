@@ -970,6 +970,7 @@ if (!response.ok) {
   }
 
   setInput("");
+  setSuperChatAmount("Support");
 }
 async function deleteLiveChatMessage(messageId: string) {
   const { error } = await supabase
