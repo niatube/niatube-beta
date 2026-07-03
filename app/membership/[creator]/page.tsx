@@ -3,46 +3,56 @@
 import { useState } from "react";
 import { useParams } from "next/navigation";
 import Navbar from "@/components/Navbar";
+import { supabase } from "@/lib/supabase-browser";
 
 export default function MembershipPage() {
   const params = useParams();
   const creator = decodeURIComponent(params?.creator as string);
 
   const [joining, setJoining] = useState(false);
-const [statusMessage, setStatusMessage] = useState("");
+  const [statusMessage, setStatusMessage] = useState("");
 
-async function joinMembership() {
-  setJoining(true);
-  setStatusMessage("");
+  async function joinMembership() {
+    setJoining(true);
+    setStatusMessage("");
 
-  const response = await fetch("/api/membership/join", {
-    method: "POST",
-    headers: {
-      "Content-Type": "application/json",
-    },
-    body: JSON.stringify({
-      creator_name: creator,
-      viewer_name: "Member",
-      tier: "Supporter",
-      amount: 5,
-      currency_code: "USD",
-      country: "United States",
-      payment_method: "CARD",
-    }),
-  });
+    const {
+      data: { user },
+    } = await supabase.auth.getUser();
 
-  const result = await response.json();
+    if (!user?.id) {
+      setStatusMessage("Please sign in before joining a membership.");
+      setJoining(false);
+      return;
+    }
 
-  if (!response.ok) {
-    setStatusMessage(result?.error || "Membership signup failed.");
+    const response = await fetch("/api/membership/join", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        creator_name: creator,
+        viewer_id: user.id,
+        viewer_name: user.email || "Member",
+        tier: "Supporter",
+        amount: 5,
+        currency_code: "USD",
+        country: "United States",
+        payment_method: "CARD",
+      }),
+    });
+
+    const result = await response.json();
+
+    if (!response.ok) {
+      setStatusMessage(result?.error || "Membership signup failed.");
+      setJoining(false);
+      return;
+    }
+
+    setStatusMessage("Membership started successfully.");
     setJoining(false);
-    return;
   }
 
-  setStatusMessage("Membership started successfully.");
-  setJoining(false);
-}
- 
   return (
     <main className="min-h-screen bg-gray-50">
       <Navbar />
@@ -55,7 +65,7 @@ async function joinMembership() {
             </p>
 
             <h1 className="mt-3 text-4xl font-black">
-              Join {creator}'s Community
+              Join {creator}&apos;s Community
             </h1>
 
             <p className="mt-4 max-w-2xl text-lg text-purple-100">
@@ -92,47 +102,19 @@ async function joinMembership() {
                 </h2>
 
                 <div className="mt-5 grid gap-4 md:grid-cols-2">
-                  <div className="rounded-xl bg-white p-4 shadow-sm">
-                    <h3 className="text-lg font-black text-gray-900">
-                      Exclusive Content
-                    </h3>
-
-                    <p className="mt-2 text-sm text-gray-600">
-                      Access premium creator videos, livestreams, and special
-                      releases.
-                    </p>
-                  </div>
-
-                  <div className="rounded-xl bg-white p-4 shadow-sm">
-                    <h3 className="text-lg font-black text-gray-900">
-                      Community Access
-                    </h3>
-
-                    <p className="mt-2 text-sm text-gray-600">
-                      Join deeper creator discussions and future private member
-                      spaces.
-                    </p>
-                  </div>
-
-                  <div className="rounded-xl bg-white p-4 shadow-sm">
-                    <h3 className="text-lg font-black text-gray-900">
-                      Early Access
-                    </h3>
-
-                    <p className="mt-2 text-sm text-gray-600">
-                      Watch selected creator uploads before public release.
-                    </p>
-                  </div>
-
-                  <div className="rounded-xl bg-white p-4 shadow-sm">
-                    <h3 className="text-lg font-black text-gray-900">
-                      Direct Support
-                    </h3>
-
-                    <p className="mt-2 text-sm text-gray-600">
-                      Help creators grow independently on NiaTube.
-                    </p>
-                  </div>
+                  {[
+                    ["Exclusive Content", "Access premium creator videos, livestreams, and special releases."],
+                    ["Community Access", "Join deeper creator discussions and future private member spaces."],
+                    ["Early Access", "Watch selected creator uploads before public release."],
+                    ["Direct Support", "Help creators grow independently on NiaTube."],
+                  ].map(([title, text]) => (
+                    <div key={title} className="rounded-xl bg-white p-4 shadow-sm">
+                      <h3 className="text-lg font-black text-gray-900">
+                        {title}
+                      </h3>
+                      <p className="mt-2 text-sm text-gray-600">{text}</p>
+                    </div>
+                  ))}
                 </div>
               </div>
             </div>
@@ -159,23 +141,23 @@ async function joinMembership() {
                 </ul>
 
                 <button
-  type="button"
-  onClick={joinMembership}
-  disabled={joining}
-  className="mt-8 w-full rounded-2xl bg-purple-600 px-6 py-4 text-sm font-black text-white transition hover:bg-purple-700 disabled:cursor-not-allowed disabled:opacity-60"
->
-  {joining ? "Starting Membership..." : "Continue to Membership Signup"}
-</button>
+                  type="button"
+                  onClick={joinMembership}
+                  disabled={joining}
+                  className="mt-8 w-full rounded-2xl bg-purple-600 px-6 py-4 text-sm font-black text-white transition hover:bg-purple-700 disabled:cursor-not-allowed disabled:opacity-60"
+                >
+                  {joining ? "Starting Membership..." : "Continue to Membership Signup"}
+                </button>
 
-{statusMessage && (
-  <p className="mt-4 text-center text-sm font-bold text-purple-700">
-    {statusMessage}
-  </p>
-)}
+                {statusMessage && (
+                  <p className="mt-4 text-center text-sm font-bold text-purple-700">
+                    {statusMessage}
+                  </p>
+                )}
 
                 <p className="mt-4 text-center text-xs text-gray-500">
-                  Payment integration and recurring billing will be connected
-                  in the next phase.
+                  Payment integration and recurring billing will be connected in
+                  the next phase.
                 </p>
               </div>
 

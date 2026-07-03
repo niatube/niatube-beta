@@ -90,26 +90,30 @@ export async function POST(req: Request) {
     nextBillingDate.setMonth(nextBillingDate.getMonth() + 1);
 
     const { data: membershipData, error: membershipError } =
-      await supabaseAdmin
-        .from("creator_memberships")
-        .insert([
-          {
-            creator_name: creatorName,
-            viewer_id: viewerId,
-            viewer_name: viewerName,
-            tier,
-            currency_code: currencyCode,
-            gross_amount: amount,
-            platform_fee: platformFee,
-            net_amount: netAmount,
-            status: "active",
-            billing_period: "monthly",
-            started_at: now.toISOString(),
-            next_billing_date: nextBillingDate.toISOString(),
-          },
-        ])
-        .select()
-        .single();
+  await supabaseAdmin
+    .from("creator_memberships")
+    .insert([
+      {
+        creator_name: creatorName,
+        member_id: viewerId,
+        viewer_id: viewerId,
+        viewer_name: viewerName,
+        tier_name: tier,
+        tier,
+        monthly_price: amount,
+        currency_code: currencyCode,
+        gross_amount: amount,
+        platform_fee: platformFee,
+        net_amount: netAmount,
+        status: "active",
+        billing_period: "monthly",
+        started_at: now.toISOString(),
+        renews_at: nextBillingDate.toISOString(),
+        next_billing_date: nextBillingDate.toISOString(),
+      },
+    ])
+    .select()
+    .single();
 
     if (membershipError) {
       console.error("Membership insert error:", membershipError);
