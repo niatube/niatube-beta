@@ -37,7 +37,19 @@ const SUPPORTED_PAYMENT_METHODS = [
   "NIACREDIT",
 ];
 
-const DAILY_LIMIT = 2000;
+const DAILY_LIMIT_BY_CURRENCY: Record<string, number> = {
+  USD: 2000,
+  EUR: 2000,
+  XOF: 500000,
+  NGN: 2000000,
+  GHS: 25000,
+  KES: 250000,
+  RWF: 2500000,
+};
+
+function getDailyLimit(currency: string) {
+  return DAILY_LIMIT_BY_CURRENCY[currency] || 2000;
+}
 
 function normalizeValue(value: string) {
   return value.trim().toUpperCase();
@@ -153,7 +165,7 @@ export async function authorizePayment(
     );
   }
 
-  if (request.amount > DAILY_LIMIT) {
+  if (request.amount > getDailyLimit(requestedCurrency)) {
     return deny(
       "DAILY_LIMIT_EXCEEDED",
       "Daily limit exceeded",
