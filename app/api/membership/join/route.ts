@@ -123,17 +123,19 @@ export async function POST(req: Request) {
       );
     }
 
-    try {
-      await recordCreatorWalletEntry({
-        supabaseAdmin,
-        creatorName,
-        transactionType: "membership",
-        referenceId: membershipData.id,
-        currencyCode,
-        amount: netAmount,
-        status: TRANSACTION_STATUS.COMPLETED,
-      });
-    } catch (error: any) {
+    let walletEntry = null;
+
+try {
+  walletEntry = await recordCreatorWalletEntry({
+    supabaseAdmin,
+    creatorName,
+    transactionType: "membership",
+    referenceId: membershipData.id,
+    currencyCode,
+    amount: netAmount,
+    status: TRANSACTION_STATUS.COMPLETED,
+  });
+} catch (error: any) {
       console.error("Membership wallet error:", error);
 
       return NextResponse.json(
@@ -145,26 +147,38 @@ export async function POST(req: Request) {
       );
     }
 
-    await supabaseAdmin.from("notifications").insert([
-      {
-        creator_name: creatorName,
-        type: "membership",
-        title: "New membership started",
-        message: `${viewerName} joined your membership at ${currencyCode} ${amount}/month.`,
-      },
-    ]);
+   const { error: notificationError } = await supabaseAdmin
+  .from("notifications")
+  .insert([
+    {
+      creator_name: creatorName,
+      type: "membership",
+      title: "New membership started",
+      message: `${viewerName} joined your membership at ${currencyCode} ${amount}/month.`,
+    },
+  ]);
 
-    return NextResponse.json(
-      {
-        membership: membershipData,
-        payment_authorization: {
-          approved: authorization.approved,
-          message: authorization.message,
-          risk_score: authorization.riskScore,
-        },
-      },
-      { status: 201 }
-    );
+if (notificationError) {
+  console.error("Membership notification error:", notificationError);
+
+  return NextResponse.json(
+    { error: notificationError.message },
+    { status: 500 }
+  );
+}
+
+return NextResponse.json(
+  {
+    membership: membershipData,
+    wallet_entry: walletEntry,
+    payment_authorization: {
+      approved: authorization.approved,
+      message: authorization.message,
+      risk_score: authorization.riskScore,
+    },
+  },
+  { status: 201 }
+);
   } catch (error: any) {
     console.error("Membership join API error:", error);
 
