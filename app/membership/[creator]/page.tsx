@@ -1,6 +1,6 @@
 "use client";
 
-import Link from "next/link";
+import { useState } from "react";
 import { useParams } from "next/navigation";
 import Navbar from "@/components/Navbar";
 
@@ -8,6 +8,41 @@ export default function MembershipPage() {
   const params = useParams();
   const creator = decodeURIComponent(params?.creator as string);
 
+  const [joining, setJoining] = useState(false);
+const [statusMessage, setStatusMessage] = useState("");
+
+async function joinMembership() {
+  setJoining(true);
+  setStatusMessage("");
+
+  const response = await fetch("/api/membership/join", {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+    },
+    body: JSON.stringify({
+      creator_name: creator,
+      viewer_name: "Member",
+      tier: "Supporter",
+      amount: 5,
+      currency_code: "USD",
+      country: "United States",
+      payment_method: "CARD",
+    }),
+  });
+
+  const result = await response.json();
+
+  if (!response.ok) {
+    setStatusMessage(result?.error || "Membership signup failed.");
+    setJoining(false);
+    return;
+  }
+
+  setStatusMessage("Membership started successfully.");
+  setJoining(false);
+}
+ 
   return (
     <main className="min-h-screen bg-gray-50">
       <Navbar />
@@ -123,9 +158,20 @@ export default function MembershipPage() {
                   <li>✔ Support creator growth directly</li>
                 </ul>
 
-                <button className="mt-8 w-full rounded-2xl bg-purple-600 px-6 py-4 text-sm font-black text-white transition hover:bg-purple-700">
-                  Continue to Membership Signup
-                </button>
+                <button
+  type="button"
+  onClick={joinMembership}
+  disabled={joining}
+  className="mt-8 w-full rounded-2xl bg-purple-600 px-6 py-4 text-sm font-black text-white transition hover:bg-purple-700 disabled:cursor-not-allowed disabled:opacity-60"
+>
+  {joining ? "Starting Membership..." : "Continue to Membership Signup"}
+</button>
+
+{statusMessage && (
+  <p className="mt-4 text-center text-sm font-bold text-purple-700">
+    {statusMessage}
+  </p>
+)}
 
                 <p className="mt-4 text-center text-xs text-gray-500">
                   Payment integration and recurring billing will be connected
