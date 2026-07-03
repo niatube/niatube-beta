@@ -36,6 +36,7 @@ export async function POST(req: Request) {
 
     const tier = body.tier || "Supporter";
     const amount = Number(body.amount || 5);
+
     const currencyCode = normalizeCurrencyCode(
       body.currency_code || body.currency || "USD"
     );
@@ -90,33 +91,34 @@ export async function POST(req: Request) {
     nextBillingDate.setMonth(nextBillingDate.getMonth() + 1);
 
     const { data: membershipData, error: membershipError } =
-  await supabaseAdmin
-    .from("creator_memberships")
-    .insert([
-      {
-        creator_name: creatorName,
-        member_id: viewerId,
-        viewer_id: viewerId,
-        viewer_name: viewerName,
-        tier_name: tier,
-        tier,
-        monthly_price: amount,
-        currency_code: currencyCode,
-        gross_amount: amount,
-        platform_fee: platformFee,
-        net_amount: netAmount,
-        status: "active",
-        billing_period: "monthly",
-        started_at: now.toISOString(),
-        renews_at: nextBillingDate.toISOString(),
-        next_billing_date: nextBillingDate.toISOString(),
-      },
-    ])
-    .select()
-    .single();
+      await supabaseAdmin
+        .from("creator_memberships")
+        .insert([
+          {
+            creator_name: creatorName,
+            member_id: viewerId,
+            viewer_id: viewerId,
+            viewer_name: viewerName,
+            tier_name: tier,
+            tier,
+            monthly_price: amount,
+            currency_code: currencyCode,
+            gross_amount: amount,
+            platform_fee: platformFee,
+            net_amount: netAmount,
+            status: "active",
+            billing_period: "monthly",
+            started_at: now.toISOString(),
+            renews_at: nextBillingDate.toISOString(),
+            next_billing_date: nextBillingDate.toISOString(),
+          },
+        ])
+        .select()
+        .single();
 
     if (membershipError) {
       console.error("Membership insert error:", membershipError);
+
       return NextResponse.json(
         { error: membershipError.message },
         { status: 500 }
@@ -125,17 +127,17 @@ export async function POST(req: Request) {
 
     let walletEntry = null;
 
-try {
-  walletEntry = await recordCreatorWalletEntry({
-    supabaseAdmin,
-    creatorName,
-    transactionType: "membership",
-    referenceId: membershipData.id,
-    currencyCode,
-    amount: netAmount,
-    status: TRANSACTION_STATUS.COMPLETED,
-  });
-} catch (error: any) {
+    try {
+      walletEntry = await recordCreatorWalletEntry({
+        supabaseAdmin,
+        creatorName,
+        transactionType: "subscription",
+        referenceId: membershipData.id,
+        currencyCode,
+        amount: netAmount,
+        status: TRANSACTION_STATUS.COMPLETED,
+      });
+    } catch (error: any) {
       console.error("Membership wallet error:", error);
 
       return NextResponse.json(
@@ -147,38 +149,39 @@ try {
       );
     }
 
-   const { error: notificationError } = await supabaseAdmin
-  .from("notifications")
-  .insert([
-    {
-      creator_name: creatorName,
-      type: "membership",
-      title: "New membership started",
-      message: `${viewerName} joined your membership at ${currencyCode} ${amount}/month.`,
-    },
-  ]);
+    const { error: notificationError } = await supabaseAdmin
+      .from("notifications")
+      .insert([
+        {
+          creator_name: creatorName,
+          type: "membership",
+          title: "New membership started",
+          message: `${viewerName} joined your membership at ${currencyCode} ${amount}/month.`,
+        },
+      ]);
 
-if (notificationError) {
-  console.error("Membership notification error:", notificationError);
+    if (notificationError) {
+      console.error("Membership notification error:", notificationError);
 
-  return NextResponse.json(
-    { error: notificationError.message },
-    { status: 500 }
-  );
-}
+      return NextResponse.json(
+        { error: notificationError.message },
+        { status: 500 }
+      );
+    }
 
-return NextResponse.json(
-  {
-    membership: membershipData,
-    wallet_entry: walletEntry,
-    payment_authorization: {
-      approved: authorization.approved,
-      message: authorization.message,
-      risk_score: authorization.riskScore,
-    },
-  },
-  { status: 201 }
-);
+    return NextResponse.json(
+      {
+        success: true,
+        membership: membershipData,
+        wallet_entry: walletEntry,
+        payment_authorization: {
+          approved: authorization.approved,
+          message: authorization.message,
+          risk_score: authorization.riskScore,
+        },
+      },
+      { status: 201 }
+    );
   } catch (error: any) {
     console.error("Membership join API error:", error);
 
