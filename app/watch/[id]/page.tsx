@@ -970,9 +970,10 @@ if (!response.ok) {
   }
 
   setInput("");
-  setSuperChatAmount(
-  activeSupportProfile?.supportLevels?.[0]?.tier || "Support"
-);
+ setSuperChatAmount("");
+setTimeout(() => {
+  setSuperChatAmount("Support");
+}, 0);
 }
 async function deleteLiveChatMessage(messageId: string) {
   const { error } = await supabase
