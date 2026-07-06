@@ -1,6 +1,10 @@
 "use client";
 
 import { useState } from "react";
+import {
+  getDefaultSupportProfile,
+  getSupportProfileByCountry,
+} from "@/lib/support-profiles";
 import { useParams } from "next/navigation";
 import Navbar from "@/components/Navbar";
 import { supabase } from "@/lib/supabase-browser";
@@ -11,6 +15,34 @@ export default function MembershipPage() {
 
   const [joining, setJoining] = useState(false);
   const [statusMessage, setStatusMessage] = useState("");
+
+  const [viewerCountry, setViewerCountry] = useState("Mali");
+const [viewerCurrency] = useState("OTHER");
+
+const activeSupportProfile =
+  getSupportProfileByCountry(viewerCountry) ?? getDefaultSupportProfile();
+
+const membershipCurrency =
+  viewerCurrency && viewerCurrency !== "OTHER"
+    ? viewerCurrency
+    : activeSupportProfile?.currencyCode || "USD";
+const membershipAmountByCurrency: Record<string, number> = {
+  USD: 5,
+  EUR: 5,
+  GBP: 5,
+  XOF: 2500,
+  XAF: 2500,
+  NGN: 1500,
+  GHS: 20,
+  KES: 150,
+  RWF: 2000,
+  UGX: 7500,
+  TZS: 12000,
+  ZAR: 90,
+  AOA: 4500,
+};
+
+const membershipAmount = membershipAmountByCurrency[membershipCurrency] || 5;
 
   async function joinMembership() {
     setJoining(true);
@@ -34,9 +66,9 @@ export default function MembershipPage() {
         viewer_id: user.id,
         viewer_name: user.email || "Member",
         tier: "Supporter",
-        amount: 5,
-        currency_code: "USD",
-        country: "United States",
+        amount: membershipAmount,
+        currency_code: membershipCurrency,
+         country: viewerCountry,
         payment_method: "CARD",
       }),
     });
@@ -120,7 +152,53 @@ export default function MembershipPage() {
             </div>
 
             <aside>
+              <div className="mb-6">
+  <label className="text-sm font-black text-gray-700">
+    Viewing From
+  </label>
+
+  <select
+    value={viewerCountry}
+    onChange={(e) => setViewerCountry(e.target.value)}
+    className="mt-2 w-full rounded-xl border px-4 py-3"
+  >
+    <option value="Benin">Benin</option>
+    <option value="Burkina Faso">Burkina Faso</option>
+    <option value="Côte d'Ivoire">Côte d'Ivoire</option>
+    <option value="Guinea-Bissau">Guinea-Bissau</option>
+    <option value="Mali">Mali</option>
+    <option value="Niger">Niger</option>
+    <option value="Senegal">Senegal</option>
+    <option value="Togo">Togo</option>
+
+    <option value="Cameroon">Cameroon</option>
+    <option value="Central African Republic">Central African Republic</option>
+    <option value="Chad">Chad</option>
+    <option value="Republic of the Congo">Republic of the Congo</option>
+    <option value="Equatorial Guinea">Equatorial Guinea</option>
+    <option value="Gabon">Gabon</option>
+
+    <option value="Rwanda">Rwanda</option>
+    <option value="Kenya">Kenya</option>
+    <option value="Uganda">Uganda</option>
+    <option value="Tanzania">Tanzania</option>
+
+    <option value="Ghana">Ghana</option>
+    <option value="Nigeria">Nigeria</option>
+
+    <option value="South Africa">South Africa</option>
+
+    <option value="United States">United States</option>
+    <option value="United Kingdom">United Kingdom</option>
+    <option value="France">France</option>
+  </select>
+
+  <p className="mt-3 text-sm font-bold text-gray-600">
+    Membership Currency: {membershipCurrency}
+  </p>
+</div>
               <div className="rounded-2xl border bg-white p-6 shadow-sm">
+
                 <p className="text-sm font-black uppercase text-purple-600">
                   Membership Tier
                 </p>
@@ -129,10 +207,10 @@ export default function MembershipPage() {
                   Supporter
                 </h2>
 
-                <p className="mt-2 text-4xl font-black text-purple-700">
-                  $5<span className="text-lg text-gray-500">/month</span>
-                </p>
-
+               <p className="mt-2 text-4xl font-black text-purple-700">
+  {membershipCurrency} {membershipAmount.toLocaleString()}
+  <span className="text-lg text-gray-500">/month</span>
+</p>
                 <ul className="mt-6 space-y-3 text-sm text-gray-700">
                   <li>✔ Exclusive creator updates</li>
                   <li>✔ Future premium content access</li>

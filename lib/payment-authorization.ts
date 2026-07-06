@@ -37,14 +37,37 @@ const SUPPORTED_PAYMENT_METHODS = [
   "NIACREDIT",
 ];
 
+const SUPPORTED_CURRENCIES = Array.from(
+  new Set([
+    ...COUNTRY_REGISTRY.map((country) => country.currencyCode),
+    "USD",
+    "EUR",
+    "GBP",
+    "XOF",
+    "XAF",
+    "NGN",
+    "GHS",
+    "KES",
+    "RWF",
+    "UGX",
+    "TZS",
+    "ZAR",
+  ])
+);
+
 const DAILY_LIMIT_BY_CURRENCY: Record<string, number> = {
   USD: 2000,
   EUR: 2000,
+  GBP: 2000,
   XOF: 500000,
+  XAF: 500000,
   NGN: 2000000,
   GHS: 25000,
   KES: 250000,
   RWF: 2500000,
+  UGX: 7500000,
+  TZS: 5000000,
+  ZAR: 40000,
 };
 
 function getDailyLimit(currency: string) {
@@ -52,16 +75,13 @@ function getDailyLimit(currency: string) {
 }
 
 function normalizeValue(value: string) {
-  return value.trim().toUpperCase();
+  return String(value || "").trim().toUpperCase();
 }
 
 function findCountry(countryInput: string) {
-  const cleaned = countryInput.trim();
+  const cleaned = String(countryInput || "").trim();
 
-  return (
-    getCountryByIsoCode(cleaned) ||
-    getCountryByName(cleaned)
-  );
+  return getCountryByIsoCode(cleaned) || getCountryByName(cleaned);
 }
 
 export async function authorizePayment(
@@ -127,23 +147,11 @@ export async function authorizePayment(
 
   const requestedCurrency = normalizeValue(request.currency);
 
-  const supportedCurrencies = COUNTRY_REGISTRY.map(
-    (country) => country.currencyCode
-  );
-
-  if (!supportedCurrencies.includes(requestedCurrency)) {
+  if (!SUPPORTED_CURRENCIES.includes(requestedCurrency)) {
     return deny(
       "UNSUPPORTED_CURRENCY",
       "Currency not supported",
       "This currency is not currently supported."
-    );
-  }
-
-  if (countryRecord.currencyCode !== requestedCurrency) {
-    return deny(
-      "COUNTRY_CURRENCY_MISMATCH",
-      "Country and currency mismatch",
-      `Payments from ${countryRecord.country} must use ${countryRecord.currencyCode}.`
     );
   }
 

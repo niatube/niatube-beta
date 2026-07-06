@@ -22,18 +22,32 @@ export async function POST(req: Request) {
       body.viewer_id || body.viewerId || body.supporter_id || supporterName;
 
     const tier = body.tier || "Support";
-    const message = body.message || "";
-    const amount = Number(body.amount || 0);
-    const currencyCode = String(
-      body.currency_code || body.currencyCode || body.currency || "USD"
-    ).toUpperCase();
+const message = body.message || "";
+const amount = Number(body.amount || 0);
 
-    const country =
-      body.country || body.country_name || body.countryName || "United States";
+const country = String(
+  body.country || body.country_name || body.countryName || "United States"
+).trim();
 
-    const paymentMethod = String(
-      body.payment_method || body.paymentMethod || "CARD"
-    ).toUpperCase();
+const rawCurrencyCode = String(
+  body.currency_code || body.currencyCode || body.currency || "USD"
+)
+  .trim()
+  .toUpperCase();
+
+let currencyCode = rawCurrencyCode;
+
+if (
+  rawCurrencyCode.includes("XOF") ||
+  rawCurrencyCode.includes("FCFA") ||
+  rawCurrencyCode.includes("CFA") ||
+  rawCurrencyCode === "OTHER"
+) {
+  currencyCode = "XOF";
+}
+const paymentMethod = String(
+  body.payment_method || body.paymentMethod || "CARD"
+).toUpperCase();
 
     if (!creatorName) {
       return NextResponse.json(
@@ -66,16 +80,18 @@ export async function POST(req: Request) {
     });
 
     if (!authorization.approved) {
-      return NextResponse.json(
-        {
-          error: authorization.message,
-          authorization_code: authorization.code,
-          authorization_reason: authorization.reason,
-          risk_score: authorization.riskScore,
-        },
-        { status: 403 }
-      );
-    }
+  return NextResponse.json(
+    {
+      error: authorization.message,
+      authorization_code: authorization.code,
+      authorization_reason: authorization.reason,
+      risk_score: authorization.riskScore,
+      received_currency: currencyCode,
+      raw_currency: rawCurrencyCode,
+    },
+    { status: 403 }
+  );
+}
 
     const preparedSupport = prepareSuperSupport({
       creatorName,

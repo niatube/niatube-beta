@@ -868,12 +868,38 @@ async function sendSuperSupport() {
 
   const supportTier = superChatAmount || "Support";
 
-  const selectedCurrency =
-    viewerCurrency && viewerCurrency !== "OTHER"
-      ? viewerCurrency
-      : tipCurrency && tipCurrency !== "OTHER"
-      ? tipCurrency
-      : "USD";
+ const cfaXofCountries = [
+  "Benin",
+  "Burkina Faso",
+  "Côte d'Ivoire",
+  "Guinea-Bissau",
+  "Mali",
+  "Niger",
+  "Senegal",
+  "Togo",
+];
+
+const cfaXafCountries = [
+  "Cameroon",
+  "Central African Republic",
+  "Chad",
+  "Republic of the Congo",
+  "Equatorial Guinea",
+  "Gabon",
+];
+
+const country = viewerCountry || "United States";
+
+const selectedCurrency =
+  viewerCurrency && viewerCurrency !== "OTHER"
+    ? viewerCurrency
+    : cfaXofCountries.includes(country)
+    ? "XOF"
+    : cfaXafCountries.includes(country)
+    ? "XAF"
+    : tipCurrency && tipCurrency !== "OTHER"
+    ? tipCurrency
+    : "USD";
 
   const { data: preset } = await supabase
   .from("monetization_presets")
@@ -889,6 +915,7 @@ const fallbackSupportAmountsByCurrency: Record<string, Record<string, number>> =
   USD: { Support: 5, Champion: 20, Legend: 100 },
   EUR: { Support: 5, Champion: 20, Legend: 100 },
   XOF: { Support: 2500, Champion: 10000, Legend: 50000 },
+  XAF: { Support: 2500, Champion: 10000, Legend: 50000 },
   NGN: { Support: 1500, Champion: 7500, Legend: 30000 },
   GHS: { Support: 20, Champion: 100, Legend: 500 },
   KES: { Support: 150, Champion: 750, Legend: 3000 },
@@ -906,24 +933,28 @@ if (!supportAmount || supportAmount <= 0) {
   return;
 }
 
-const country = viewerCountry || "United States";
+
+  
 
 const response = await fetch("/api/super-support", {
   method: "POST",
   headers: {
     "Content-Type": "application/json",
   },
-  body: JSON.stringify({
-    live_video_id: id,
-    supporter_name: username,
-    creator_name: video.creator,
-    amount: supportAmount,
-    currency_code: currencyCode,
-    tier: supportTier,
-    message: finalMessage,
-    country,
-    payment_method: "CARD",
-  }),
+ body: JSON.stringify({
+  live_video_id: id,
+  supporter_name: username,
+  creator_name: video.creator,
+  amount: supportAmount,
+  currency_code:
+    selectedCurrency === "OTHER" || currencyCode === "AOA"
+      ? "XOF"
+      : selectedCurrency,
+  tier: supportTier,
+  message: finalMessage,
+  country,
+  payment_method: "CARD",
+}),
 });
 
 const resultText = await response.text();

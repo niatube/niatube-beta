@@ -1,4 +1,4 @@
-/**
+ /**
  * ==========================================================
  * NiaTube Creator Economy™ (NCE)
  * Country Registry
@@ -20,6 +20,23 @@ export type CountryRecord = {
 };
 
 export const COUNTRY_REGISTRY: CountryRecord[] = [
+
+    // ---------- North Africa ----------
+  {
+    isoCode: "MA",
+    country: "Morocco",
+    region: "North Africa",
+    currencyCode: "MAD",
+    supportProfileCode: "MA_MAD",
+  },
+  {
+    isoCode: "DZ",
+    country: "Algeria",
+    region: "North Africa",
+    currencyCode: "DZD",
+    supportProfileCode: "DZ_DZD",
+  },
+
   // ---------- West Africa ----------
   {
     isoCode: "BJ",
@@ -122,6 +139,15 @@ export const COUNTRY_REGISTRY: CountryRecord[] = [
     supportProfileCode: "CA_XAF",
   },
 
+    {
+    isoCode: "CD",
+    country: "Democratic Republic of Congo",
+    region: "Central Africa",
+    currencyCode: "CDF",
+    supportProfileCode: "CD_CDF",
+  },
+  
+
   // ---------- East Africa ----------
   {
     isoCode: "RW",
@@ -169,6 +195,14 @@ export const COUNTRY_REGISTRY: CountryRecord[] = [
   },
 
   // ---------- Southern Africa ----------
+    {
+    isoCode: "MZ",
+    country: "Mozambique",
+    region: "Southern Africa",
+    currencyCode: "MZN",
+    supportProfileCode: "MZ_MZN",
+  },
+  
   {
     isoCode: "ZA",
     country: "South Africa",
@@ -213,3 +247,4 @@ export function getCountryByName(name: string) {
       country.country.toLowerCase() === name.trim().toLowerCase()
   );
 }
+
