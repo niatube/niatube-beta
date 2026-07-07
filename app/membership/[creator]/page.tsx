@@ -1,10 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import {
-  getDefaultSupportProfile,
-  getSupportProfileByCountry,
-} from "@/lib/support-profiles";
+import { getPricingProfileForCountry } from "@/lib/pan-african-monetization-config";
 import { useParams } from "next/navigation";
 import Navbar from "@/components/Navbar";
 import { supabase } from "@/lib/supabase-browser";
@@ -16,33 +13,16 @@ export default function MembershipPage() {
   const [joining, setJoining] = useState(false);
   const [statusMessage, setStatusMessage] = useState("");
 
-  const [viewerCountry, setViewerCountry] = useState("Mali");
-const [viewerCurrency] = useState("OTHER");
+ const [viewerCountry, setViewerCountry] = useState("Mali");
 
-const activeSupportProfile =
-  getSupportProfileByCountry(viewerCountry) ?? getDefaultSupportProfile();
+const membershipPricingProfile =
+  getPricingProfileForCountry(viewerCountry);
 
 const membershipCurrency =
-  viewerCurrency && viewerCurrency !== "OTHER"
-    ? viewerCurrency
-    : activeSupportProfile?.currencyCode || "USD";
-const membershipAmountByCurrency: Record<string, number> = {
-  USD: 5,
-  EUR: 5,
-  GBP: 5,
-  XOF: 2500,
-  XAF: 2500,
-  NGN: 1500,
-  GHS: 20,
-  KES: 150,
-  RWF: 2000,
-  UGX: 7500,
-  TZS: 12000,
-  ZAR: 90,
-  AOA: 4500,
-};
+  membershipPricingProfile?.currencyCode || "USD";
 
-const membershipAmount = membershipAmountByCurrency[membershipCurrency] || 5;
+const membershipAmount =
+  membershipPricingProfile?.membershipPrice || 5;
 
   async function joinMembership() {
     setJoining(true);
@@ -158,41 +138,84 @@ const membershipAmount = membershipAmountByCurrency[membershipCurrency] || 5;
   </label>
 
   <select
-    value={viewerCountry}
-    onChange={(e) => setViewerCountry(e.target.value)}
-    className="mt-2 w-full rounded-xl border px-4 py-3"
-  >
+  value={viewerCountry}
+  onChange={(e) => setViewerCountry(e.target.value)}
+  className="mt-2 w-full rounded-xl border px-4 py-3"
+>
+  <optgroup label="North Africa">
+    <option value="Algeria">Algeria</option>
+    <option value="Egypt">Egypt</option>
+    <option value="Libya">Libya</option>
+    <option value="Morocco">Morocco</option>
+    <option value="Sudan">Sudan</option>
+    <option value="Tunisia">Tunisia</option>
+  </optgroup>
+
+  <optgroup label="West Africa">
     <option value="Benin">Benin</option>
     <option value="Burkina Faso">Burkina Faso</option>
+    <option value="Cabo Verde">Cabo Verde</option>
     <option value="Côte d'Ivoire">Côte d'Ivoire</option>
+    <option value="Gambia">Gambia</option>
+    <option value="Ghana">Ghana</option>
+    <option value="Guinea">Guinea</option>
     <option value="Guinea-Bissau">Guinea-Bissau</option>
+    <option value="Liberia">Liberia</option>
     <option value="Mali">Mali</option>
     <option value="Niger">Niger</option>
+    <option value="Nigeria">Nigeria</option>
     <option value="Senegal">Senegal</option>
+    <option value="Sierra Leone">Sierra Leone</option>
     <option value="Togo">Togo</option>
+  </optgroup>
 
+  <optgroup label="Central Africa">
+    <option value="Angola">Angola</option>
     <option value="Cameroon">Cameroon</option>
     <option value="Central African Republic">Central African Republic</option>
     <option value="Chad">Chad</option>
-    <option value="Republic of the Congo">Republic of the Congo</option>
+    <option value="Democratic Republic of the Congo">Democratic Republic of the Congo</option>
     <option value="Equatorial Guinea">Equatorial Guinea</option>
     <option value="Gabon">Gabon</option>
+    <option value="Republic of the Congo">Republic of the Congo</option>
+    <option value="São Tomé and Príncipe">São Tomé and Príncipe</option>
+  </optgroup>
 
-    <option value="Rwanda">Rwanda</option>
+  <optgroup label="East Africa">
+    <option value="Burundi">Burundi</option>
+    <option value="Comoros">Comoros</option>
+    <option value="Djibouti">Djibouti</option>
+    <option value="Eritrea">Eritrea</option>
+    <option value="Ethiopia">Ethiopia</option>
     <option value="Kenya">Kenya</option>
-    <option value="Uganda">Uganda</option>
+    <option value="Mauritius">Mauritius</option>
+    <option value="Rwanda">Rwanda</option>
+    <option value="Seychelles">Seychelles</option>
+    <option value="Somalia">Somalia</option>
+    <option value="South Sudan">South Sudan</option>
     <option value="Tanzania">Tanzania</option>
+    <option value="Uganda">Uganda</option>
+  </optgroup>
 
-    <option value="Ghana">Ghana</option>
-    <option value="Nigeria">Nigeria</option>
-
+  <optgroup label="Southern Africa">
+    <option value="Botswana">Botswana</option>
+    <option value="Eswatini">Eswatini</option>
+    <option value="Lesotho">Lesotho</option>
+    <option value="Madagascar">Madagascar</option>
+    <option value="Malawi">Malawi</option>
+    <option value="Mozambique">Mozambique</option>
+    <option value="Namibia">Namibia</option>
     <option value="South Africa">South Africa</option>
+    <option value="Zambia">Zambia</option>
+    <option value="Zimbabwe">Zimbabwe</option>
+  </optgroup>
 
+  <optgroup label="Diaspora">
     <option value="United States">United States</option>
     <option value="United Kingdom">United Kingdom</option>
     <option value="France">France</option>
-  </select>
-
+  </optgroup>
+</select>
   <p className="mt-3 text-sm font-bold text-gray-600">
     Membership Currency: {membershipCurrency}
   </p>
