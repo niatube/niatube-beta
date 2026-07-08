@@ -1651,9 +1651,9 @@ const sortedUploads = useMemo(() => {
   </h2>
 
   <p className="mt-2 text-sm text-gray-700">
-    This summary shows net creator wallet activity after NiaTube’s platform fee.
-    FX conversion happens only when a payout or NiaCredit conversion is requested.
-  </p>
+  This summary shows net creator wallet activity after NiaTube’s platform fee.
+  FX conversion happens only when a payout or NiaCredit conversion is requested.
+</p>
 
   <div className="mt-5 grid gap-4 md:grid-cols-4">
     <div className="rounded-2xl bg-white p-5 shadow-sm">
@@ -1664,9 +1664,13 @@ const sortedUploads = useMemo(() => {
     </div>
 
     <div className="rounded-2xl bg-white p-5 shadow-sm">
-      <p className="text-sm font-bold text-gray-500">Lifetime Tips</p>
+      <p className="text-sm font-bold text-gray-500">
+        Active Earning Currencies
+       </p>
       <p className="mt-2 text-3xl font-black text-gray-900">
-        {creatorSettlement?.holdings.reduce((sum, holding) => sum + Number(holding.balance > 0 ? 1 : 0), 0) || tips.length}
+        {creatorSettlement?.holdings.filter(
+  (holding) => holding.balance > 0
+).length || 0}
       </p>
     </div>
 
