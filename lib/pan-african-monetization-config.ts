@@ -4,6 +4,7 @@
  * Pan-African Monetization Configuration Engine (PMCE)
  * ==========================================================
  */
+import { getCountryByIsoCode } from "@/lib/country-registry";
 
 export type NiaRegion =
   | "North Africa"
@@ -954,8 +955,20 @@ export function hasPricingProfile(pricingProfileCode: string) {
   );
 }
 
-export function getPricingProfileForCountry(countryName: string) {
-  const countryProfile = getMonetizationProfileByCountry(countryName);
+export function getPricingProfileForCountry(countryOrIso: string) {
+  let countryProfile =
+    getMonetizationProfileByCountry(countryOrIso) ||
+    getMonetizationProfileByIsoCode(countryOrIso);
+
+  if (!countryProfile) {
+    const registryCountry = getCountryByIsoCode(countryOrIso);
+
+    if (registryCountry) {
+      countryProfile = getMonetizationProfileByCountry(
+        registryCountry.country
+      );
+    }
+  }
 
   if (!countryProfile) {
     return null;
@@ -963,7 +976,6 @@ export function getPricingProfileForCountry(countryName: string) {
 
   return getPricingProfile(countryProfile.pricingProfileCode) || null;
 }
-
 export function getMembershipPriceForCountry(countryName: string) {
   return getPricingProfileForCountry(countryName)?.membershipPrice || 5;
 }
