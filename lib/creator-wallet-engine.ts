@@ -35,24 +35,50 @@ export async function recordCreatorWalletEntry({
   }
 
   if (!safeAmount || safeAmount <= 0) {
-    throw new Error("Wallet entry amount must be greater than zero.");
+  throw new Error("Wallet entry amount must be greater than zero.");
+}
+
+if (referenceId) {
+  const { data: existingEntry, error: existingEntryError } =
+    await supabaseAdmin
+      .from("creator_wallet_ledger")
+      .select("*")
+      .eq("transaction_type", transactionType)
+      .eq("reference_id", referenceId)
+      .maybeSingle();
+
+  if (existingEntryError) {
+    console.error(
+      "Creator wallet ledger duplicate check error:",
+      existingEntryError
+    );
+
+    throw new Error(
+      existingEntryError.message ||
+        "Failed to check existing wallet entry."
+    );
   }
 
-  const { data, error } = await supabaseAdmin
-    .from("creator_wallet_ledger")
-    .insert([
-      {
-        creator_name: creatorName,
-        transaction_type: transactionType,
-        reference_id: referenceId,
-        currency_code: normalizeCurrencyCode(currencyCode),
-        amount: safeAmount,
-        status,
-      },
-    ])
-    .select()
-    .single();
+  if (existingEntry) {
+    return existingEntry;
+  }
+}
 
+const { data, error } = await supabaseAdmin
+  .from("creator_wallet_ledger")
+  .insert([
+    {
+      creator_name: creatorName,
+      transaction_type: transactionType,
+      reference_id: referenceId,
+      currency_code: normalizeCurrencyCode(currencyCode),
+      amount: safeAmount,
+      status,
+    },
+  ])
+  .select()
+  .single();
+  
   if (error) {
     console.error("Creator wallet ledger insert error:", error);
     throw new Error(error.message || "Failed to record creator wallet entry.");
