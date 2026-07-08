@@ -621,22 +621,25 @@ const previewAdjustedCreatorNetUsd = convertAmount(
 );
 
 
-  const selectedCurrencyTotal =
-    tipTotalsByCurrency.find(
-      (item) => item.currency === selectedPayoutCurrency
-    )?.amount || 0;
+  const payoutCurrencyHoldings =
+  creatorSettlement?.holdings.filter((holding) => holding.balance > 0) || [];
 
-  useEffect(() => {
-    if (tipTotalsByCurrency.length === 0) return;
+const selectedCurrencyTotal =
+  payoutCurrencyHoldings.find(
+    (item) => item.currency === selectedPayoutCurrency
+  )?.balance || 0;
 
-    const selectedCurrencyExists = tipTotalsByCurrency.some(
-      (item) => item.currency === selectedPayoutCurrency
-    );
+useEffect(() => {
+  if (payoutCurrencyHoldings.length === 0) return;
 
-    if (!selectedCurrencyExists) {
-      setSelectedPayoutCurrency(tipTotalsByCurrency[0].currency);
-    }
-  }, [tipTotalsByCurrency, selectedPayoutCurrency]);
+  const selectedCurrencyExists = payoutCurrencyHoldings.some(
+    (item) => item.currency === selectedPayoutCurrency
+  );
+
+  if (!selectedCurrencyExists) {
+    setSelectedPayoutCurrency(payoutCurrencyHoldings[0].currency);
+  }
+}, [payoutCurrencyHoldings, selectedPayoutCurrency]);
 
   const topVideo = uploads.reduce<Upload | null>((top, upload) => {
     if (!top) return upload;
