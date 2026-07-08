@@ -153,6 +153,44 @@ export const COUNTRY_REGISTRY: CountryRecord[] = [
   supportProfileCode: "GH_GHS",
   
 },
+
+{
+  isoCode: "GM",
+  country: "Gambia",
+  region: "West Africa",
+  currencyCode: "GMD",
+  supportProfileCode: "GM_GMD",
+},
+{
+  isoCode: "CV",
+  country: "Cabo Verde",
+  region: "West Africa",
+  currencyCode: "CVE",
+  supportProfileCode: "CV_CVE",
+},
+{
+  isoCode: "GN",
+  country: "Guinea",
+  region: "West Africa",
+  currencyCode: "GNF",
+  supportProfileCode: "GN_GNF",
+},
+{
+  isoCode: "LR",
+  country: "Liberia",
+  region: "West Africa",
+  currencyCode: "LRD",
+  supportProfileCode: "LR_LRD",
+},
+{
+  isoCode: "SL",
+  country: "Sierra Leone",
+  region: "West Africa",
+  currencyCode: "SLE",
+  supportProfileCode: "SL_SLE",
+},
+
+
   // ---------- Central Africa ----------
 {
   isoCode: "CM",
@@ -218,7 +256,13 @@ export const COUNTRY_REGISTRY: CountryRecord[] = [
   supportProfileCode: "CD_CDF",
   
 },
-  
+  {
+  isoCode: "ST",
+  country: "Sao Tome and Principe",
+  region: "Central Africa",
+  currencyCode: "STN",
+  supportProfileCode: "ST_STN",
+},
 
   // ---------- East Africa ----------
 {
@@ -301,7 +345,27 @@ export const COUNTRY_REGISTRY: CountryRecord[] = [
   supportProfileCode: "UG_UGX",
   
 },
-
+{
+  isoCode: "KM",
+  country: "Comoros",
+  region: "East Africa",
+  currencyCode: "KMF",
+  supportProfileCode: "KM_KMF",
+},
+{
+  isoCode: "MU",
+  country: "Mauritius",
+  region: "East Africa",
+  currencyCode: "MUR",
+  supportProfileCode: "MU_MUR",
+},
+{
+  isoCode: "SC",
+  country: "Seychelles",
+  region: "East Africa",
+  currencyCode: "SCR",
+  supportProfileCode: "SC_SCR",
+},
  
 
   // ---------- Southern Africa ----------

@@ -59,15 +59,58 @@ const DAILY_LIMIT_BY_CURRENCY: Record<string, number> = {
   USD: 2000,
   EUR: 2000,
   GBP: 2000,
-  XOF: 500000,
-  XAF: 500000,
+
+  // North Africa
+  DZD: 270000,
+  EGP: 100000,
+  LYD: 10000,
+  MAD: 20000,
+  SDG: 1200000,
+  TND: 6000,
+
+  // West Africa
+  XOF: 1200000,
   NGN: 2000000,
   GHS: 25000,
+  GMD: 135000,
+  CVE: 220000,
+  GNF: 17000000,
+  LRD: 380000,
+  SLE: 45000,
+
+  // Central Africa
+  XAF: 1200000,
+  AOA: 1800000,
+  CDF: 5600000,
+  STN: 45000,
+
+  // East Africa
   KES: 250000,
   RWF: 2500000,
   UGX: 7500000,
   TZS: 5000000,
+  ETB: 250000,
+  SOS: 1100000,
+  BIF: 5800000,
+  DJF: 350000,
+  ERN: 30000,
+  SSP: 2600000,
+  
+
+  // Southern Africa
   ZAR: 40000,
+  BWP: 27000,
+  LSL: 40000,
+  NAD: 40000,
+  SZL: 40000,
+  MWK: 3500000,
+  MZN: 125000,
+  ZMW: 52000,
+  ZWL: 6500000,
+  MGA: 9000000,
+  MUR: 90000,
+  SCR: 27000,
+  KMF: 900000,
 };
 
 function getDailyLimit(currency: string) {
