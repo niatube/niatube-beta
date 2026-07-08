@@ -13,7 +13,7 @@ export default function MembershipPage() {
   const [joining, setJoining] = useState(false);
   const [statusMessage, setStatusMessage] = useState("");
 
- const [viewerCountry, setViewerCountry] = useState("Mali");
+ const [viewerCountry, setViewerCountry] = useState("ML");
 
 const membershipPricingProfile =
   getPricingProfileForCountry(viewerCountry);
@@ -143,77 +143,77 @@ const membershipAmount =
   className="mt-2 w-full rounded-xl border px-4 py-3"
 >
   <optgroup label="North Africa">
-    <option value="Algeria">Algeria</option>
-    <option value="Egypt">Egypt</option>
-    <option value="Libya">Libya</option>
-    <option value="Morocco">Morocco</option>
-    <option value="Sudan">Sudan</option>
-    <option value="Tunisia">Tunisia</option>
+    <option value="DZ">Algeria</option>
+    <option value="EG">Egypt</option>
+    <option value="LY">Libya</option>
+    <option value="MA">Morocco</option>
+    <option value="SD">Sudan</option>
+    <option value="TN">Tunisia</option>
   </optgroup>
 
   <optgroup label="West Africa">
-    <option value="Benin">Benin</option>
-    <option value="Burkina Faso">Burkina Faso</option>
-    <option value="Cabo Verde">Cabo Verde</option>
-    <option value="Côte d'Ivoire">Côte d'Ivoire</option>
-    <option value="Gambia">Gambia</option>
-    <option value="Ghana">Ghana</option>
-    <option value="Guinea">Guinea</option>
-    <option value="Guinea-Bissau">Guinea-Bissau</option>
-    <option value="Liberia">Liberia</option>
-    <option value="Mali">Mali</option>
-    <option value="Niger">Niger</option>
-    <option value="Nigeria">Nigeria</option>
-    <option value="Senegal">Senegal</option>
-    <option value="Sierra Leone">Sierra Leone</option>
-    <option value="Togo">Togo</option>
+    <option value="BJ">Benin</option>
+    <option value="BF">Burkina Faso</option>
+    <option value="CV">Cabo Verde</option>
+    <option value="CI">Côte d'Ivoire</option>
+    <option value="GM">Gambia</option>
+    <option value="GH">Ghana</option>
+    <option value="GN">Guinea</option>
+    <option value="GW">Guinea-Bissau</option>
+    <option value="LR">Liberia</option>
+    <option value="ML">Mali</option>
+    <option value="NE">Niger</option>
+    <option value="NG">Nigeria</option>
+    <option value="SN">Senegal</option>
+    <option value="SL">Sierra Leone</option>
+    <option value="TG">Togo</option>
   </optgroup>
 
   <optgroup label="Central Africa">
-    <option value="Angola">Angola</option>
-    <option value="Cameroon">Cameroon</option>
-    <option value="Central African Republic">Central African Republic</option>
-    <option value="Chad">Chad</option>
-    <option value="Democratic Republic of the Congo">Democratic Republic of the Congo</option>
-    <option value="Equatorial Guinea">Equatorial Guinea</option>
-    <option value="Gabon">Gabon</option>
-    <option value="Republic of the Congo">Republic of the Congo</option>
-    <option value="São Tomé and Príncipe">São Tomé and Príncipe</option>
+    <option value="AO">Angola</option>
+    <option value="CM">Cameroon</option>
+    <option value="CF">Central African Republic</option>
+    <option value="TD">Chad</option>
+    <option value="CD">Democratic Republic of the Congo</option>
+    <option value="GQ">Equatorial Guinea</option>
+    <option value="GA">Gabon</option>
+    <option value="CG">Republic of the Congo</option>
+    <option value="ST">São Tomé and Príncipe</option>
   </optgroup>
 
   <optgroup label="East Africa">
-    <option value="Burundi">Burundi</option>
-    <option value="Comoros">Comoros</option>
-    <option value="Djibouti">Djibouti</option>
-    <option value="Eritrea">Eritrea</option>
-    <option value="Ethiopia">Ethiopia</option>
-    <option value="Kenya">Kenya</option>
-    <option value="Mauritius">Mauritius</option>
-    <option value="Rwanda">Rwanda</option>
-    <option value="Seychelles">Seychelles</option>
-    <option value="Somalia">Somalia</option>
-    <option value="South Sudan">South Sudan</option>
-    <option value="Tanzania">Tanzania</option>
-    <option value="Uganda">Uganda</option>
+    <option value="BI">Burundi</option>
+    <option value="KM">Comoros</option>
+    <option value="DJ">Djibouti</option>
+    <option value="ER">Eritrea</option>
+    <option value="ET">Ethiopia</option>
+    <option value="KE">Kenya</option>
+    <option value="MU">Mauritius</option>
+    <option value="RW">Rwanda</option>
+    <option value="SC">Seychelles</option>
+    <option value="SO">Somalia</option>
+    <option value="SS">South Sudan</option>
+    <option value="TZ">Tanzania</option>
+    <option value="UG">Uganda</option>
   </optgroup>
 
   <optgroup label="Southern Africa">
-    <option value="Botswana">Botswana</option>
-    <option value="Eswatini">Eswatini</option>
-    <option value="Lesotho">Lesotho</option>
-    <option value="Madagascar">Madagascar</option>
-    <option value="Malawi">Malawi</option>
-    <option value="Mozambique">Mozambique</option>
-    <option value="Namibia">Namibia</option>
-    <option value="South Africa">South Africa</option>
-    <option value="Zambia">Zambia</option>
-    <option value="Zimbabwe">Zimbabwe</option>
+    <option value="BW">Botswana</option>
+    <option value="SZ">Eswatini</option>
+    <option value="LS">Lesotho</option>
+    <option value="MG">Madagascar</option>
+    <option value="MW">Malawi</option>
+    <option value="MZ">Mozambique</option>
+    <option value="NA">Namibia</option>
+    <option value="ZA">South Africa</option>
+    <option value="ZM">Zambia</option>
+    <option value="ZW">Zimbabwe</option>
   </optgroup>
 
   <optgroup label="Diaspora">
-    <option value="United States">United States</option>
-    <option value="United Kingdom">United Kingdom</option>
-    <option value="France">France</option>
+    <option value="US">United States</option>
+    <option value="GB">United Kingdom</option>
+    <option value="FR">France</option>
   </optgroup>
 </select>
   <p className="mt-3 text-sm font-bold text-gray-600">
