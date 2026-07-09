@@ -74,6 +74,7 @@ export default function SignupPage() {
   const [password, setPassword] = useState("");
   const [message, setMessage] = useState("");
   const [loading, setLoading] = useState(false);
+  const [acceptedTerms, setAcceptedTerms] = useState(false);
 
   async function handleSignup(e: React.FormEvent) {
     e.preventDefault();
@@ -88,17 +89,28 @@ export default function SignupPage() {
       return;
     }
 
+    if (!acceptedTerms) {
+  setMessage(
+    "You must read and accept the Terms of Service, Privacy Policy, and Creator Monetization & Payout Terms before creating an account."
+  );
+  setLoading(false);
+  return;
+}
+
     const { error: signupError } = await supabase.auth.signUp({
       email: email.trim(),
       password,
       options: {
         emailRedirectTo: `${window.location.origin}/login/creator`,
         data: {
-          creator_name: creatorName.trim(),
-          creator_country: country,
-          currency_code: currencyCode,
-          creator_interest: interest,
-        },
+  creator_name: creatorName.trim(),
+  creator_country: country,
+  currency_code: currencyCode,
+  creator_interest: interest,
+  accepted_terms: true,
+  accepted_terms_at: new Date().toISOString(),
+  accepted_creator_monetization_terms: true,
+},
       },
     });
 
@@ -119,6 +131,9 @@ export default function SignupPage() {
         currency_code: currencyCode,
         migrated_subscribers: 0,
         verified: false,
+        accepted_terms: true,
+        accepted_terms_at: new Date().toISOString(),
+        accepted_creator_monetization_terms: true,
       },
     ],
     { onConflict: "creator_name" }
@@ -216,6 +231,27 @@ export default function SignupPage() {
               onChange={(e) => setPassword(e.target.value)}
               className="w-full rounded-xl border px-4 py-3 text-sm"
             />
+
+            <label className="flex gap-3 rounded-2xl border border-yellow-200 bg-yellow-50 p-4 text-sm text-gray-700">
+  <input
+    type="checkbox"
+    checked={acceptedTerms}
+    onChange={(e) => setAcceptedTerms(e.target.checked)}
+    className="mt-1"
+  />
+
+  <span>
+    I have read and agree to NiaTube&apos;s{" "}
+    <Link href="/terms" className="font-bold text-yellow-700 hover:underline">
+      Terms of Service
+    </Link>
+    ,{" "}
+    <Link href="/privacy" className="font-bold text-yellow-700 hover:underline">
+      Privacy Policy
+    </Link>
+    , and Creator Monetization &amp; Payout Terms, including that creator payouts are made in the creator&apos;s registered local payout currency and may involve FX conversion at payout.
+  </span>
+</label>
 
             <button
               type="submit"
