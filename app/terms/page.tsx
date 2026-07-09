@@ -272,6 +272,151 @@ export default function TermsPage() {
   </div>
 </section>
 
+<section className="mt-12 border-t border-gray-200 pt-10">
+  <h2 className="text-2xl font-black text-gray-900">
+    5. Creator Responsibilities
+  </h2>
+
+  <p className="mt-5 leading-8 text-gray-700">
+    NiaTube is committed to empowering creators through technology,
+    transparent monetization, and responsible governance. Creators who
+    publish content on the Platform play an essential role in maintaining
+    a trusted and inclusive community.
+  </p>
+
+  <p className="mt-5 leading-8 text-gray-700">
+    As a creator, you agree to publish content responsibly, respect the
+    rights of others, and comply with these Terms, the Community
+    Guidelines, and all applicable laws and regulations.
+  </p>
+
+  <ul className="mt-5 list-disc space-y-3 pl-6 leading-8 text-gray-700">
+    <li>Provide accurate and truthful account information.</li>
+    <li>Publish only content that you own or are authorized to use.</li>
+    <li>Respect copyrights, trademarks, privacy rights, and other intellectual property.</li>
+    <li>Avoid misleading, fraudulent, deceptive, or harmful conduct.</li>
+    <li>Cooperate with reasonable compliance, moderation, and security reviews.</li>
+    <li>Maintain the integrity of the NiaTube creator ecosystem.</li>
+  </ul>
+
+  <p className="mt-5 leading-8 text-gray-700">
+    Creators who choose to participate in monetization programs,
+    memberships, Super Support, advertising, wallet services, payouts,
+    or other financial products may be required to satisfy additional
+    eligibility, identity verification (KYC), tax, compliance, or policy
+    requirements.
+  </p>
+
+  <p className="mt-5 leading-8 text-gray-700">
+    Participation in creator monetization programs is also governed by
+    the Creator Monetization &amp; Payout Terms and other applicable
+    NiaTube financial policies. Those documents provide the authoritative
+    rules governing creator earnings, payouts, wallet balances,
+    settlements, and related financial services.
+  </p>
+
+  <div className="mt-8 rounded-2xl border border-yellow-200 bg-yellow-50 p-6">
+    <h3 className="text-lg font-black text-gray-900">
+      Our Commitment to Creators
+    </h3>
+
+    <p className="mt-3 leading-8 text-gray-700">
+      NiaTube was founded to help creators build sustainable businesses.
+      We are committed to transparent monetization, responsible financial
+      stewardship, fair application of our policies, and continuous
+      investment in tools that help creators grow their audiences and
+      strengthen Africa's digital creator economy.
+    </p>
+  </div>
+
+  <div className="mt-8 rounded-2xl border border-green-200 bg-green-50 p-6">
+    <h3 className="text-lg font-black text-gray-900">
+      Governance Note
+    </h3>
+
+    <p className="mt-3 leading-8 text-gray-700">
+      This section establishes the general responsibilities of creators.
+      Detailed rules governing monetization, creator wallets, payouts,
+      settlements, foreign exchange conversion, and financial operations
+      are contained in separate NiaTube governance documents. This
+      structure helps ensure that every policy has one authoritative
+      source while remaining consistent across the Platform.
+    </p>
+  </div>
+</section>
+
+<section className="mt-12 border-t border-gray-200 pt-10">
+  <h2 className="text-2xl font-black text-gray-900">
+    6. Monetization Overview
+  </h2>
+
+  <p className="mt-5 leading-8 text-gray-700">
+    NiaTube offers eligible creators opportunities to earn revenue through
+    creator monetization programs made available on the Platform. These
+    opportunities are intended to help creators build sustainable businesses
+    while providing audiences with meaningful ways to support the content
+    they value.
+  </p>
+
+  <p className="mt-5 leading-8 text-gray-700">
+    Available monetization features may include, but are not limited to,
+    advertising revenue, channel memberships, Super Support, viewer tips,
+    sponsorship tools, digital products, subscriptions, and other creator
+    economy services introduced by NiaTube from time to time.
+  </p>
+
+  <p className="mt-5 leading-8 text-gray-700">
+    Participation in monetization programs is subject to eligibility
+    requirements, verification procedures, compliance reviews, applicable
+    laws, and acceptance of additional NiaTube policies governing financial
+    services.
+  </p>
+
+  <p className="mt-5 leading-8 text-gray-700">
+    Creator earnings may be received in one or more supported currencies,
+    depending on the source of the revenue. NiaTube maintains creator wallet
+    balances and settlement records in accordance with the Platform's
+    financial policies.
+  </p>
+
+  <p className="mt-5 leading-8 text-gray-700">
+    Detailed rules governing creator eligibility, earnings, platform fees,
+    payout schedules, wallet balances, settlement calculations, currency
+    conversion, withdrawals, tax obligations, and payment processing are
+    contained in the Creator Monetization &amp; Payout Terms and related
+    financial policies, which are incorporated into these Terms by reference
+    for creators who participate in monetization programs.
+  </p>
+
+  <div className="mt-8 rounded-2xl border border-yellow-200 bg-yellow-50 p-6">
+    <h3 className="text-lg font-black text-gray-900">
+      Our Commitment
+    </h3>
+
+    <p className="mt-3 leading-8 text-gray-700">
+      NiaTube is committed to transparent creator monetization. We believe
+      creators should understand how earnings are generated, how balances are
+      maintained, and how payouts are processed. Our financial policies are
+      designed to promote clarity, fairness, accountability, and trust across
+      the NiaTube creator ecosystem.
+    </p>
+  </div>
+
+  <div className="mt-8 rounded-2xl border border-blue-200 bg-blue-50 p-6">
+    <h3 className="text-lg font-black text-gray-900">
+      Single Source of Truth
+    </h3>
+
+    <p className="mt-3 leading-8 text-gray-700">
+      This section provides a general overview of creator monetization.
+      The authoritative rules governing creator earnings, wallets,
+      settlements, payouts, and related financial services are published
+      separately in the Creator Monetization &amp; Payout Terms and related
+      NiaTube financial policies.
+    </p>
+  </div>
+</section>
+
                 <div className="mt-12 rounded-2xl border border-gray-200 bg-gray-50 p-6 text-sm text-gray-700">
           <p className="font-black text-gray-900">
             Questions about these Terms?
