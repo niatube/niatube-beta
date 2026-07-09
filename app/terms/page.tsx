@@ -113,6 +113,165 @@ export default function TermsPage() {
             certain services.
           </p>
         </section>
+
+        <section className="mt-12">
+  <h2 className="text-2xl font-black text-gray-900">
+    2. Eligibility and Accounts
+  </h2>
+
+  <p className="mt-5 leading-8 text-gray-700">
+    To access certain features of the Platform, including content creation,
+    memberships, monetization, live streaming, and other creator services,
+    you may be required to create a NiaTube account.
+  </p>
+
+  <p className="mt-5 leading-8 text-gray-700">
+    By creating an account, you represent and warrant that all information
+    you provide is truthful, accurate, complete, and kept up to date.
+    You agree not to impersonate another individual or organization or
+    misrepresent your identity in connection with your use of the Platform.
+  </p>
+
+  <p className="mt-5 leading-8 text-gray-700">
+    You are responsible for maintaining the confidentiality of your account
+    credentials and for all activities that occur under your account.
+    If you believe your account has been accessed without authorization,
+    you should notify NiaTube promptly using the official support channels.
+  </p>
+
+  <p className="mt-5 leading-8 text-gray-700">
+    Certain Platform features, including creator monetization, payouts,
+    advertising services, memberships, financial products, or future premium
+    services, may require additional eligibility verification, identity
+    verification (KYC), compliance review, or acceptance of supplemental
+    agreements before access is granted.
+  </p>
+
+  <p className="mt-5 leading-8 text-gray-700">
+    NiaTube reserves the right to suspend, restrict, or terminate accounts
+    that violate these Terms, compromise Platform security, engage in
+    fraudulent activity, or otherwise present unacceptable operational,
+    financial, or legal risk to the Platform or its users.
+  </p>
+
+  <div className="mt-8 rounded-2xl border border-yellow-200 bg-yellow-50 p-6">
+    <h3 className="text-lg font-black text-gray-900">
+      Our Commitment
+    </h3>
+
+    <p className="mt-3 leading-8 text-gray-700">
+      NiaTube is committed to providing creators and audiences with a trusted,
+      transparent, and secure platform. Account verification and compliance
+      measures are designed to protect our community, safeguard creator
+      earnings, and maintain the integrity of the NiaTube ecosystem.
+    </p>
+  </div>
+</section>
+<section className="mt-12 border-t border-gray-200 pt-10">
+  <h2 className="text-2xl font-black text-gray-900">
+    3. Acceptable Use
+  </h2>
+
+  <p className="mt-5 leading-8 text-gray-700">
+    NiaTube is built to support creativity, education, culture,
+    journalism, entrepreneurship, entertainment, and meaningful
+    community engagement. You agree to use the Platform in a lawful,
+    respectful, and responsible manner.
+  </p>
+
+  <p className="mt-5 leading-8 text-gray-700">
+    You may not use NiaTube to engage in activity that harms users,
+    creators, communities, the Platform, payment systems, or the
+    integrity of the NiaTube ecosystem.
+  </p>
+
+  <ul className="mt-5 list-disc space-y-3 pl-6 leading-8 text-gray-700">
+    <li>Use the Platform for unlawful, fraudulent, or deceptive purposes.</li>
+    <li>Impersonate another person, creator, business, or organization.</li>
+    <li>Upload or distribute content that infringes intellectual property rights.</li>
+    <li>Harass, threaten, exploit, abuse, or intimidate other users.</li>
+    <li>Artificially manipulate views, likes, comments, subscriptions, payments, or monetization activity.</li>
+    <li>Attempt to bypass security, payment, identity, moderation, or compliance systems.</li>
+    <li>Distribute malware, harmful code, spam, scams, or misleading content.</li>
+    <li>Use the Platform in a way that violates sanctions, financial regulations, or applicable law.</li>
+  </ul>
+
+  <div className="mt-8 rounded-2xl border border-gray-200 bg-gray-50 p-6">
+    <h3 className="text-lg font-black text-gray-900">
+      Platform Integrity
+    </h3>
+
+    <p className="mt-3 leading-8 text-gray-700">
+      NiaTube may investigate suspected misuse of the Platform and take
+      reasonable action to protect creators, viewers, payment partners,
+      advertisers, and the broader community. This may include limiting
+      features, removing content, suspending monetization, restricting
+      accounts, or terminating access where appropriate.
+    </p>
+  </div>
+</section>
+
+<section className="mt-12 border-t border-gray-200 pt-10">
+  <h2 className="text-2xl font-black text-gray-900">
+    4. User Content
+  </h2>
+
+  <p className="mt-5 leading-8 text-gray-700">
+    NiaTube enables users to publish, upload, stream, comment on, and share
+    content with the community. You retain ownership of the content that you
+    create and upload, subject to the rights granted under these Terms.
+  </p>
+
+  <p className="mt-5 leading-8 text-gray-700">
+    By submitting content to the Platform, you represent that you own the
+    necessary rights or have obtained all required permissions to publish
+    that content. You are responsible for ensuring that your content does
+    not violate the intellectual property, privacy, publicity, or other
+    legal rights of any person or organization.
+  </p>
+
+  <p className="mt-5 leading-8 text-gray-700">
+    By uploading content to NiaTube, you grant NiaTube a non-exclusive,
+    worldwide, royalty-free license to host, process, store, reproduce,
+    display, distribute, and make your content available solely for the
+    purpose of operating, improving, promoting, securing, and providing
+    the Platform and its services.
+  </p>
+
+  <p className="mt-5 leading-8 text-gray-700">
+    This license does not transfer ownership of your content to NiaTube.
+    Except as permitted by these Terms or applicable law, creators remain
+    the owners of the original content they publish on the Platform.
+  </p>
+
+  <div className="mt-8 rounded-2xl border border-yellow-200 bg-yellow-50 p-6">
+    <h3 className="text-lg font-black text-gray-900">
+      Our Commitment
+    </h3>
+
+    <p className="mt-3 leading-8 text-gray-700">
+      NiaTube was created to empower creators, not replace them. We respect
+      creator ownership and are committed to building a platform where
+      creators retain appropriate rights over the original works they create,
+      while granting NiaTube only the permissions reasonably necessary to
+      operate, improve, secure, and promote the Platform.
+    </p>
+  </div>
+
+  <div className="mt-8 rounded-2xl border border-blue-200 bg-blue-50 p-6">
+    <h3 className="text-lg font-black text-gray-900">
+      Why This Matters
+    </h3>
+
+    <p className="mt-3 leading-8 text-gray-700">
+      NiaTube believes that a healthy creator economy begins with respect
+      for creative ownership. Our Platform is designed to help creators
+      grow their audiences and businesses while maintaining transparency
+      regarding how their content is used within the NiaTube ecosystem.
+    </p>
+  </div>
+</section>
+
                 <div className="mt-12 rounded-2xl border border-gray-200 bg-gray-50 p-6 text-sm text-gray-700">
           <p className="font-black text-gray-900">
             Questions about these Terms?
