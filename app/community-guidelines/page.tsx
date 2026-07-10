@@ -521,6 +521,370 @@ export default function CommunityGuidelinesPage() {
   </div>
 </section>
 
+<section className="mt-12 border-t border-gray-200 pt-10">
+  <h2 className="text-2xl font-black text-gray-900">
+    6. Child Safety
+  </h2>
+
+  <p className="mt-5 leading-8 text-gray-700">
+    Protecting children and young people is one of NiaTube&apos;s highest
+    priorities. We do not permit content or conduct that exploits,
+    endangers, sexualizes, or otherwise harms children.
+  </p>
+
+  <p className="mt-5 leading-8 text-gray-700">
+    Users must not use the Platform to groom, exploit, harass, threaten,
+    or facilitate harm against minors. Content involving children should
+    always be shared responsibly, respectfully, and in accordance with
+    applicable law.
+  </p>
+
+  <h3 className="mt-8 text-lg font-black text-gray-900">
+    Prohibited Content and Conduct
+  </h3>
+
+  <ul className="mt-4 list-disc space-y-3 pl-6 leading-8 text-gray-700">
+    <li>
+      Child sexual abuse material or any content that exploits or
+      sexualizes children.
+    </li>
+
+    <li>
+      Grooming, coercion, solicitation, or attempts to establish
+      inappropriate relationships with minors.
+    </li>
+
+    <li>
+      Content that encourages children to participate in dangerous,
+      illegal, or harmful activities.
+    </li>
+
+    <li>
+      Sharing personal information about children in a manner that
+      creates privacy or safety risks.
+    </li>
+
+    <li>
+      Using children to promote scams, fraud, or deceptive commercial
+      practices.
+    </li>
+  </ul>
+
+  <p className="mt-5 leading-8 text-gray-700">
+    NiaTube may immediately remove content, restrict accounts, report
+    unlawful activity to appropriate authorities where required, and take
+    other protective measures consistent with applicable law and child
+    safety obligations.
+  </p>
+
+  <div className="mt-8 rounded-2xl border border-yellow-200 bg-yellow-50 p-6">
+    <h3 className="text-lg font-black text-gray-900">
+      Child Protection
+    </h3>
+
+    <p className="mt-3 leading-8 text-gray-700">
+      Every member of the NiaTube community shares responsibility for
+      protecting children. If you encounter content that appears to place
+      a child at risk, please report it immediately through the
+      appropriate Platform reporting tools.
+    </p>
+  </div>
+</section>
+
+<section className="mt-12 border-t border-gray-200 pt-10">
+  <h2 className="text-2xl font-black text-gray-900">
+    7. Creator Responsibilities
+  </h2>
+
+  <p className="mt-5 leading-8 text-gray-700">
+    Creators play a central role in the NiaTube community. In addition to
+    following these Community Guidelines, creators are expected to act
+    responsibly, maintain the trust of their audiences, and contribute
+    positively to the Platform.
+  </p>
+
+  <h3 className="mt-8 text-lg font-black text-gray-900">
+    Creators are expected to:
+  </h3>
+
+  <ul className="mt-4 list-disc space-y-3 pl-6 leading-8 text-gray-700">
+    <li>
+      Publish content honestly and respect the rights of others,
+      including intellectual property and privacy rights.
+    </li>
+
+    <li>
+      Clearly disclose sponsored content, paid promotions, affiliate
+      relationships, or other material commercial interests where
+      appropriate.
+    </li>
+
+    <li>
+      Engage with viewers respectfully and avoid abusive, deceptive, or
+      manipulative conduct.
+    </li>
+
+    <li>
+      Use monetization features, memberships, tips, advertising, and
+      other financial tools responsibly and in accordance with applicable
+      Platform policies.
+    </li>
+
+    <li>
+      Cooperate with reasonable verification, compliance, and safety
+      processes where required for participation in creator programs.
+    </li>
+  </ul>
+
+  <p className="mt-5 leading-8 text-gray-700">
+    Additional requirements governing creator monetization, payouts,
+    verification, advertising, and financial services are set out in the
+    NiaTube Creator Policy Suite. Those documents supplement these
+    Community Guidelines for creators participating in those programs.
+  </p>
+
+  <div className="mt-8 rounded-2xl border border-yellow-200 bg-yellow-50 p-6">
+    <h3 className="text-lg font-black text-gray-900">
+      Leadership by Example
+    </h3>
+
+    <p className="mt-3 leading-8 text-gray-700">
+      Creators help shape the culture of NiaTube. By acting with
+      integrity, professionalism, and respect, creators strengthen trust
+      within the community and contribute to a healthy creator economy.
+    </p>
+  </div>
+</section>
+
+<section className="mt-12 border-t border-gray-200 pt-10">
+  <h2 className="text-2xl font-black text-gray-900">
+    8. Enforcement
+  </h2>
+
+  <p className="mt-5 leading-8 text-gray-700">
+    NiaTube seeks to enforce these Community Guidelines fairly,
+    consistently, and proportionately. When evaluating potential
+    violations, we may consider the nature of the content or conduct, the
+    surrounding context, the severity of the violation, any prior history,
+    and the potential risk to users or the Platform.
+  </p>
+
+  <p className="mt-5 leading-8 text-gray-700">
+    Enforcement actions are intended to protect the community while
+    encouraging responsible participation and, where appropriate,
+    providing users with an opportunity to correct violations.
+  </p>
+
+  <h3 className="mt-8 text-lg font-black text-gray-900">
+    Possible Enforcement Actions
+  </h3>
+
+  <ul className="mt-4 list-disc space-y-3 pl-6 leading-8 text-gray-700">
+    <li>Educational notices or policy reminders.</li>
+
+    <li>Warnings for less serious or first-time violations.</li>
+
+    <li>Removal or restriction of specific content.</li>
+
+    <li>Temporary suspension of Platform features or monetization.</li>
+
+    <li>Temporary suspension of an account.</li>
+
+    <li>Permanent termination of an account for serious or repeated violations.</li>
+
+    <li>Referral to appropriate authorities where required by applicable law.</li>
+  </ul>
+
+  <p className="mt-5 leading-8 text-gray-700">
+    Certain violations, particularly those involving child safety,
+    terrorism, violent crime, fraud, or other serious unlawful conduct,
+    may result in immediate action without prior warning where permitted
+    by law and necessary to protect the community.
+  </p>
+
+  <div className="mt-8 rounded-2xl border border-yellow-200 bg-yellow-50 p-6">
+    <h3 className="text-lg font-black text-gray-900">
+      Fair and Proportionate Enforcement
+    </h3>
+
+    <p className="mt-3 leading-8 text-gray-700">
+      NiaTube's goal is not simply to remove content, but to encourage a
+      safe, respectful, and trustworthy environment through balanced and
+      consistent enforcement.
+    </p>
+  </div>
+
+  <div className="mt-8 rounded-2xl border border-blue-200 bg-blue-50 p-6">
+    <h3 className="text-lg font-black text-gray-900">
+      Governance in Practice
+    </h3>
+
+    <p className="mt-3 leading-8 text-gray-700">
+      Enforcement decisions form part of NiaTube's broader governance
+      framework and are designed to support community trust, platform
+      integrity, and responsible participation.
+    </p>
+  </div>
+</section>
+
+<section className="mt-12 border-t border-gray-200 pt-10">
+  <h2 className="text-2xl font-black text-gray-900">
+    9. Appeals
+  </h2>
+
+  <p className="mt-5 leading-8 text-gray-700">
+    NiaTube recognizes that moderation and enforcement decisions can have
+    a meaningful impact on users and creators. Where appropriate, users
+    may request a review of certain enforcement actions through the appeal
+    processes made available by the Platform.
+  </p>
+
+  <p className="mt-5 leading-8 text-gray-700">
+    Appeals should provide relevant information that helps explain why
+    the user believes the enforcement decision was incorrect or why
+    additional context should be considered. NiaTube may request
+    supporting information where reasonably necessary to evaluate an
+    appeal.
+  </p>
+
+  <h3 className="mt-8 text-lg font-black text-gray-900">
+    Appeal Principles
+  </h3>
+
+  <ul className="mt-4 list-disc space-y-3 pl-6 leading-8 text-gray-700">
+    <li>
+      Appeals are reviewed as fairly and consistently as reasonably
+      possible.
+    </li>
+
+    <li>
+      Additional context, new information, or evidence may be considered
+      during the review process.
+    </li>
+
+    <li>
+      Not every enforcement decision is eligible for appeal, particularly
+      where immediate action is required by law or to protect users from
+      serious harm.
+    </li>
+
+    <li>
+      Repeated or abusive appeals intended to disrupt Platform operations
+      may be declined.
+    </li>
+  </ul>
+
+  <p className="mt-5 leading-8 text-gray-700">
+    Following review, NiaTube may uphold, modify, or reverse an
+    enforcement decision where appropriate. Appeal outcomes are determined
+    based on the available information, applicable policies, and relevant
+    legal obligations.
+  </p>
+
+  <div className="mt-8 rounded-2xl border border-yellow-200 bg-yellow-50 p-6">
+    <h3 className="text-lg font-black text-gray-900">
+      Fair Review
+    </h3>
+
+    <p className="mt-3 leading-8 text-gray-700">
+      NiaTube is committed to applying its Community Guidelines
+      consistently while recognizing that context matters. The appeal
+      process is intended to improve fairness, accountability, and trust
+      across the Platform.
+    </p>
+  </div>
+</section>
+
+<section className="mt-12 border-t border-gray-200 pt-10">
+  <h2 className="text-2xl font-black text-gray-900">
+    10. Updates to These Guidelines
+  </h2>
+
+  <p className="mt-5 leading-8 text-gray-700">
+    NiaTube may update these Community Guidelines from time to time to
+    reflect changes in applicable law, Platform features, technology,
+    community needs, safety practices, enforcement standards, or
+    regulatory requirements.
+  </p>
+
+  <p className="mt-5 leading-8 text-gray-700">
+    When material changes are made, NiaTube may provide notice through the
+    Platform, by email, or through other reasonable communication channels,
+    where appropriate. The updated Guidelines will become effective on the
+    date identified in the revised version unless otherwise required by law.
+  </p>
+
+  <p className="mt-5 leading-8 text-gray-700">
+    Users are encouraged to review these Community Guidelines periodically
+    so they remain informed about the standards that apply when
+    participating in the NiaTube community.
+  </p>
+
+  <div className="mt-8 rounded-2xl border border-yellow-200 bg-yellow-50 p-6">
+    <h3 className="text-lg font-black text-gray-900">
+      Evolving With the Community
+    </h3>
+
+    <p className="mt-3 leading-8 text-gray-700">
+      As NiaTube grows, these Guidelines will evolve alongside the
+      Platform. Our goal is to preserve a safe, respectful, creative, and
+      trustworthy environment while responding responsibly to new risks,
+      technologies, and community needs.
+    </p>
+  </div>
+
+  <div className="mt-8 rounded-2xl border border-blue-200 bg-blue-50 p-6">
+    <h3 className="text-lg font-black text-gray-900">
+      Governance Commitment
+    </h3>
+
+    <p className="mt-3 leading-8 text-gray-700">
+      Updates to these Guidelines form part of NiaTube&apos;s broader
+      governance framework and are intended to support fairness,
+      transparency, accountability, and long-term community trust.
+    </p>
+  </div>
+</section>
+
+<section className="mt-12 border-t border-gray-200 pt-10">
+  <h2 className="text-2xl font-black text-gray-900">
+    11. Contact Information
+  </h2>
+
+  <p className="mt-5 leading-8 text-gray-700">
+    NiaTube welcomes questions, feedback, and reports relating to these
+    Community Guidelines. Users, creators, advertisers, partners, and
+    other members of the community may contact NiaTube through the
+    official support channels published on the Platform.
+  </p>
+
+  <p className="mt-5 leading-8 text-gray-700">
+    Reports of suspected Community Guidelines violations should be
+    submitted using the Platform's reporting tools or other designated
+    contact methods. Providing clear and accurate information helps
+    NiaTube review reports fairly and efficiently.
+  </p>
+
+  <p className="mt-5 leading-8 text-gray-700">
+    As the Platform grows, NiaTube may introduce additional reporting,
+    safety, creator support, and governance channels to better serve the
+    community and respond to emerging needs.
+  </p>
+
+  <div className="mt-8 rounded-2xl border border-green-200 bg-green-50 p-6">
+    <h3 className="text-lg font-black text-gray-900">
+      Our Commitment
+    </h3>
+
+    <p className="mt-3 leading-8 text-gray-700">
+      NiaTube is committed to fostering a community built on integrity,
+      respect, creativity, accountability, and opportunity. We value the
+      participation of every member of our community and are committed to
+      applying these Guidelines fairly, transparently, and responsibly.
+    </p>
+  </div>
+</section>
+
         <div className="mt-12 rounded-2xl border border-gray-200 bg-gray-50 p-6 text-sm text-gray-700">
           <p className="font-black text-gray-900">
             Questions about these Community Guidelines?
