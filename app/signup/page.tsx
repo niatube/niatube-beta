@@ -72,15 +72,19 @@ export default function SignupPage() {
   const [email, setEmail] = useState("");
   const [interest, setInterest] = useState("Culture");
   const [password, setPassword] = useState("");
-  const [message, setMessage] = useState("");
-  const [loading, setLoading] = useState(false);
+
+const [message, setMessage] = useState("");
+const [messageType, setMessageType] = useState<"success" | "error" | "">("");
+const [loading, setLoading] = useState(false);
+
   const [acceptedTerms, setAcceptedTerms] = useState(false);
 
   async function handleSignup(e: React.FormEvent) {
     e.preventDefault();
-    setMessage("");
-    setLoading(true);
-
+    alert("Create Account button is working");
+   setMessage("");
+setMessageType("");
+setLoading(true);
     const currencyCode = countryCurrencyMap[country];
 
     if (!creatorName.trim() || !country.trim() || !currencyCode || !email.trim() || !password.trim()) {
@@ -88,11 +92,11 @@ export default function SignupPage() {
       setLoading(false);
       return;
     }
-
-    if (!acceptedTerms) {
+if (!acceptedTerms) {
   setMessage(
-    "You must read and accept the Terms of Service, Privacy Policy, and Creator Monetization & Payout Terms before creating an account."
+    "You must read and accept the Terms of Service before creating an account."
   );
+  setMessageType("error");
   setLoading(false);
   return;
 }
@@ -107,18 +111,29 @@ export default function SignupPage() {
   creator_country: country,
   currency_code: currencyCode,
   creator_interest: interest,
-  accepted_terms: true,
-  accepted_terms_at: new Date().toISOString(),
-  accepted_creator_monetization_terms: true,
+ accepted_terms: true,
+accepted_terms_version: "1.0",
+accepted_terms_at: new Date().toISOString(),
 },
       },
     });
 
-    if (signupError) {
-      setMessage(`Signup error: ${signupError.message}`);
-      setLoading(false);
-      return;
-    }
+   if (signupError) {
+  if (
+    signupError.message.toLowerCase().includes("rate limit") ||
+    signupError.status === 429
+  ) {
+    setMessage(
+      "NiaTube has temporarily reached its confirmation-email limit. Your signup form is working, but Supabase cannot send another confirmation email yet. Please try again after the email limit resets."
+    );
+  } else {
+    setMessage(`Signup error: ${signupError.message}`);
+  }
+
+  setMessageType("error");
+  setLoading(false);
+  return;
+}
 
     const { error: profileError } = await supabase
   .from("creator_profiles")
@@ -132,9 +147,8 @@ export default function SignupPage() {
         migrated_subscribers: 0,
         verified: false,
         accepted_terms: true,
-        accepted_terms_at: new Date().toISOString(),
-        accepted_creator_monetization_terms: true,
-      },
+        accepted_terms_version: "1.0",
+        accepted_terms_at: new Date().toISOString(),      },
     ],
     { onConflict: "creator_name" }
   );
@@ -143,6 +157,7 @@ export default function SignupPage() {
 
     if (profileError) {
       setMessage(`Profile save error: ${profileError.message}`);
+      setMessageType("error");
       return;
     }
 
@@ -152,6 +167,7 @@ export default function SignupPage() {
     setPassword("");
     setInterest("Culture");
 
+    setMessageType("success");
     setMessage(
       "Congratulations. Your account was created. Please check your email to confirm your account, then return here to log in."
     );
@@ -232,26 +248,76 @@ export default function SignupPage() {
               className="w-full rounded-xl border px-4 py-3 text-sm"
             />
 
-            <label className="flex gap-3 rounded-2xl border border-yellow-200 bg-yellow-50 p-4 text-sm text-gray-700">
-  <input
-    type="checkbox"
-    checked={acceptedTerms}
-    onChange={(e) => setAcceptedTerms(e.target.checked)}
-    className="mt-1"
-  />
+   <div className="rounded-2xl border border-yellow-200 bg-yellow-50 p-5">
+  <label className="flex gap-3 text-sm text-gray-700">
+    <input
+      type="checkbox"
+      required
+      checked={acceptedTerms}
+      onChange={(e) => setAcceptedTerms(e.target.checked)}
+      className="mt-1"
+    />
 
-  <span>
-    I have read and agree to NiaTube&apos;s{" "}
-    <Link href="/terms" className="font-bold text-yellow-700 hover:underline">
-      Terms of Service
+    <span>
+      I have read and agree to the{" "}
+      <Link
+        href="/terms"
+        target="_blank"
+        className="font-bold text-yellow-700 hover:underline"
+      >
+        NiaTube Terms of Service
+      </Link>
+      .
+    </span>
+  </label>
+
+  <p className="mt-4 text-sm leading-6 text-gray-700">
+    Before creating your account, we encourage you to review our governance
+    documents:
+  </p>
+
+  <div className="mt-3 flex flex-wrap gap-3">
+    <Link
+      href="/legal"
+      target="_blank"
+      className="rounded-lg bg-black px-3 py-2 text-sm font-bold text-white hover:bg-gray-800"
+    >
+      📚 Legal Center
     </Link>
-    ,{" "}
-    <Link href="/privacy" className="font-bold text-yellow-700 hover:underline">
+
+    <Link
+      href="/privacy"
+      target="_blank"
+      className="font-bold text-yellow-700 hover:underline"
+    >
       Privacy Policy
     </Link>
-    , and Creator Monetization &amp; Payout Terms, including that creator payouts are made in the creator&apos;s registered local payout currency and may involve FX conversion at payout.
-  </span>
-</label>
+
+    <Link
+      href="/community-guidelines"
+      target="_blank"
+      className="font-bold text-yellow-700 hover:underline"
+    >
+      Community Guidelines
+    </Link>
+
+    <Link
+      href="/cookies"
+      target="_blank"
+      className="font-bold text-yellow-700 hover:underline"
+    >
+      Cookie Policy
+    </Link>
+
+    <Link
+      href="/copyright"
+      target="_blank"
+      className="font-bold text-yellow-700 hover:underline"
+    >
+      Copyright Policy
+    </Link>
+  </div>
+</div>
 
             <button
               type="submit"
@@ -260,6 +326,18 @@ export default function SignupPage() {
             >
               {loading ? "Creating account..." : "Create Account"}
             </button>
+
+            {message && (
+  <p
+    className={`rounded-xl p-4 text-sm font-semibold ${
+      messageType === "error"
+        ? "border border-red-200 bg-red-50 text-red-800"
+        : "border border-green-200 bg-green-50 text-green-800"
+    }`}
+  >
+    {message}
+  </p>
+)}
           </form>
 
           <div className="mt-10 border-t pt-8">
@@ -295,11 +373,7 @@ export default function SignupPage() {
             </div>
           </div>
 
-          {message && (
-            <p className="mt-5 rounded-xl bg-green-50 p-4 text-sm font-semibold text-green-800">
-              {message}
-            </p>
-          )}
+          
 
           <div className="mt-6 text-center">
             <Link
