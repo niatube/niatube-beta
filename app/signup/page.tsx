@@ -81,7 +81,7 @@ const [loading, setLoading] = useState(false);
 
   async function handleSignup(e: React.FormEvent) {
     e.preventDefault();
-    alert("Create Account button is working");
+    
    setMessage("");
 setMessageType("");
 setLoading(true);
