@@ -106,14 +106,14 @@ if (!acceptedTerms) {
       password,
       options: {
         emailRedirectTo: `${window.location.origin}/login/creator`,
-        data: {
+     data: {
   creator_name: creatorName.trim(),
   creator_country: country,
   currency_code: currencyCode,
   creator_interest: interest,
- accepted_terms: true,
-accepted_terms_version: "1.0",
-accepted_terms_at: new Date().toISOString(),
+  accepted_terms: true,
+  accepted_terms_version: "1.0",
+  accepted_terms_at: new Date().toISOString(),
 },
       },
     });

@@ -10,28 +10,31 @@ export default function CreatorLoginPage() {
   const [message, setMessage] = useState("");
   const [loading, setLoading] = useState(false);
 
-  async function handleLogin(e: React.FormEvent) {
-    e.preventDefault();
-    setMessage("");
-    setLoading(true);
+async function handleLogin(e: React.FormEvent) {
+  e.preventDefault();
+  setMessage("");
+  setLoading(true);
 
-    const { error } = await supabase.auth.signInWithPassword({
-      email,
-      password,
-    });
+  const { data, error } = await supabase.auth.signInWithPassword({
+    email: email.trim(),
+    password,
+  });
 
-    setLoading(false);
+  setLoading(false);
 
-    if (error) {
-      setMessage(
-        "Login failed. Please make sure you signed up first and confirmed your email."
-      );
-      return;
-    }
-
-    window.location.href = "/my-space";
+  if (error) {
+    console.error("Creator login error:", error);
+    setMessage(`Login failed: ${error.message}`);
+    return;
   }
 
+  if (!data.session) {
+    setMessage("Login succeeded, but no active session was created.");
+    return;
+  }
+
+  window.location.href = "/my-space";
+}
   return (
     <main className="min-h-screen bg-gray-50">
       <Navbar />
@@ -51,23 +54,25 @@ export default function CreatorLoginPage() {
           </p>
 
           <form onSubmit={handleLogin} className="mt-8 space-y-4">
-            <input
-              type="email"
-              required
-              placeholder="Email address"
-              value={email}
-              onChange={(e) => setEmail(e.target.value)}
-              className="w-full rounded-xl border px-4 py-3 text-sm"
-            />
+           <input
+  type="email"
+  autoComplete="email"
+  required
+  placeholder="Email address"
+  value={email}
+  onChange={(e) => setEmail(e.target.value)}
+  className="w-full rounded-xl border px-4 py-3 text-sm"
+/>
 
             <input
-              type="password"
-              required
-              placeholder="Password"
-              value={password}
-              onChange={(e) => setPassword(e.target.value)}
-              className="w-full rounded-xl border px-4 py-3 text-sm"
-            />
+  type="password"
+  autoComplete="current-password"
+  required
+  placeholder="Password"
+  value={password}
+  onChange={(e) => setPassword(e.target.value)}
+  className="w-full rounded-xl border px-4 py-3 text-sm"
+/>
 
             <button
               type="submit"
