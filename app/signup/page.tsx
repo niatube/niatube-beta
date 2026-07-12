@@ -65,6 +65,73 @@ const countryCurrencyMap: Record<string, string> = {
 };
 
 const countries = Object.keys(countryCurrencyMap);
+const reservedHandles = new Set([
+  "admin",
+  "administrator",
+  "api",
+  "help",
+  "legal",
+  "login",
+  "news",
+  "nia",
+  "niatube",
+  "official",
+  "privacy",
+  "signup",
+  "support",
+  "system",
+  "terms",
+  "trending",
+  "upload",
+  "verified",
+]);
+
+function normalizeChannelHandle(value: string) {
+  return value
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .toLowerCase()
+    .replace(/[^a-z0-9._]/g, "")
+    .replace(/^[._]+|[._]+$/g, "")
+    .slice(0, 30);
+}
+
+async function generateUniqueChannelHandle(creatorName: string) {
+  let baseHandle = normalizeChannelHandle(creatorName);
+
+  if (baseHandle.length < 3) {
+    baseHandle = "creator";
+  }
+
+  if (reservedHandles.has(baseHandle)) {
+    baseHandle = `${baseHandle}creator`;
+  }
+
+  let candidate = baseHandle;
+  let suffix = 2;
+
+  while (true) {
+    const { data, error } = await supabase
+      .from("creator_profiles")
+      .select("channel_handle")
+      .eq("channel_handle", candidate)
+      .maybeSingle();
+
+    if (error) {
+      throw new Error(`Unable to verify channel handle: ${error.message}`);
+    }
+
+    if (!data) {
+      return candidate;
+    }
+
+    const suffixText = String(suffix);
+    const maximumBaseLength = 30 - suffixText.length;
+
+    candidate = `${baseHandle.slice(0, maximumBaseLength)}${suffixText}`;
+    suffix += 1;
+  }
+}
 
 export default function SignupPage() {
   const [creatorName, setCreatorName] = useState("");
@@ -101,6 +168,23 @@ if (!acceptedTerms) {
   return;
 }
 
+let channelHandle = "";
+
+try {
+  channelHandle = await generateUniqueChannelHandle(creatorName);
+} catch (error) {
+  const message =
+    error instanceof Error
+      ? error.message
+      : "Unable to generate your creator channel handle.";
+
+  setMessage(message);
+  setMessageType("error");
+  setLoading(false);
+  return;
+}
+
+
     const { error: signupError } = await supabase.auth.signUp({
       email: email.trim(),
       password,
@@ -108,6 +192,7 @@ if (!acceptedTerms) {
         emailRedirectTo: `${window.location.origin}/login/creator`,
      data: {
   creator_name: creatorName.trim(),
+  channel_handle: channelHandle,
   creator_country: country,
   currency_code: currencyCode,
   creator_interest: interest,
@@ -135,24 +220,31 @@ if (!acceptedTerms) {
   return;
 }
 
-    const { error: profileError } = await supabase
+const { error: profileError } = await supabase
   .from("creator_profiles")
   .upsert(
     [
       {
         creator_name: creatorName.trim(),
+        channel_handle: channelHandle,
+        handle_updated_at: new Date().toISOString(),
+
         email: email.trim(),
         country,
         currency_code: currencyCode,
         migrated_subscribers: 0,
+
+        account_status: "pending_email",
+        verification_status: "not_requested",
         verified: false,
+
         accepted_terms: true,
         accepted_terms_version: "1.0",
-        accepted_terms_at: new Date().toISOString(),      },
+        accepted_terms_at: new Date().toISOString(),
+      },
     ],
     { onConflict: "creator_name" }
   );
-
     setLoading(false);
 
     if (profileError) {
