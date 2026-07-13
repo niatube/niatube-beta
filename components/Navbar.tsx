@@ -246,6 +246,12 @@ export default function Navbar({ simple = false }: { simple?: boolean }) {
               <Link className="block rounded-lg px-4 py-2 text-sm font-medium hover:bg-yellow-50 hover:text-yellow-700" href="/category/afrobeats">
                 Afrobeats
               </Link>
+              <Link
+               className="block rounded-lg px-4 py-2 text-sm font-medium hover:bg-yellow-50 hover:text-yellow-700"
+               href="/category/sports"
+               >
+               Sports
+             </Link>
               <Link className="block rounded-lg px-4 py-2 text-sm font-medium hover:bg-yellow-50 hover:text-yellow-700" href="/niamall">
                 NiaMALL
               </Link>
@@ -306,6 +312,7 @@ export default function Navbar({ simple = false }: { simple?: boolean }) {
               <Link href="/category/shorts">Shorts</Link>
               <Link href="/category/culture">Culture</Link>
               <Link href="/category/afrobeats">Afrobeats</Link>
+              <Link href="/category/sports">Sports</Link>
               <Link href="/niamall">NiaMALL</Link>
 
               <Link

@@ -476,7 +476,7 @@ export default function UploadPage() {
                 <option value="podcast">Podcast</option>
                 <option value="education">Education</option>
                 <option value="business">Business</option>
-                <option value="sport">Sport</option>
+                <option value="sports">Sports</option>
                 <option value="travel">Travel</option>
                 <option value="film">Film</option>
               </select>
