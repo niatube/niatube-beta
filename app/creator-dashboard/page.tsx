@@ -181,9 +181,15 @@ const [subscriberRows, setSubscriberRows] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [creatorSince, setCreatorSince] = useState("");
   
-  const [creatorCountry, setCreatorCountry] = useState("Not set");
-  const [creatorCurrency, setCreatorCurrency] = useState("Not set");
+ const [creatorCountry, setCreatorCountry] = useState("Not set");
+const [creatorCurrency, setCreatorCurrency] = useState("Not set");
 
+const [channelHandle, setChannelHandle] = useState("");
+const [accountStatus, setAccountStatus] = useState("pending_email");
+const [verificationStatus, setVerificationStatus] =
+  useState("not_requested");
+const [creatorVerified, setCreatorVerified] = useState(false);
+const [copyMessage, setCopyMessage] = useState("");
   
   const [currentPage, setCurrentPage] = useState(1);
   const [payoutAmount, setPayoutAmount] = useState("");
@@ -223,17 +229,25 @@ const [walletActivity, setWalletActivity] = useState<WalletActivityItem[]>([]);
         user.email?.split("@")[0] ||
         "Creator";
 
-      const { data: profileByEmail } = await supabase
-        .from("creator_profiles")
-       .select("creator_name,email,country,currency_code,migrated_subscribers")
-.ilike("email", user.email || "")
-.maybeSingle();
-
+    const { data: profileByEmail } = await supabase
+  .from("creator_profiles")
+  .select(
+    "creator_name,email,country,currency_code,migrated_subscribers,channel_handle,account_status,verification_status,verified"
+  )
+  .ilike("email", user.email || "")
+  .maybeSingle();
       if (profileByEmail?.creator_name) {
         activeCreatorName = profileByEmail.creator_name;
       }
 
       setCreatorName(activeCreatorName);
+
+      setChannelHandle(profileByEmail?.channel_handle || "");
+setAccountStatus(profileByEmail?.account_status || "pending_email");
+setVerificationStatus(
+  profileByEmail?.verification_status || "not_requested"
+);
+setCreatorVerified(Boolean(profileByEmail?.verified));
      
      const { data: migrationData } = await supabase
   .from("creator_migration_requests")
@@ -686,11 +700,13 @@ const interval = setInterval(() => {
       icon: "🌱",
     },
     {
-      title: "Verified Creator",
-      unlocked: subscriberCount >= 100,
-      description: "Unlocked after reaching 100 subscribers.",
-      icon: "✅",
-    },
+   
+  title: "Verified Creator",
+  unlocked: creatorVerified,
+  description:
+    "Activated after NiaTube completes creator identity verification.",
+  icon: "✅",
+},
     {
       title: "Trending Creator",
       unlocked: totalViews >= 1000,
@@ -886,6 +902,30 @@ const sortedUploads = useMemo(() => {
       </main>
     );
   }
+
+  const publicChannelPath = channelHandle
+  ? `/@${channelHandle}`
+  : "";
+
+const publicChannelUrl = channelHandle
+  ? `https://niatube.africa/@${channelHandle}`
+  : "Handle not available";
+
+async function copyPublicChannelLink() {
+  if (!channelHandle) return;
+
+  try {
+    await navigator.clipboard.writeText(publicChannelUrl);
+    setCopyMessage("Channel link copied.");
+
+    window.setTimeout(() => {
+      setCopyMessage("");
+    }, 2500);
+  } catch (error) {
+    console.error("Copy channel link error:", error);
+    setCopyMessage("Could not copy the channel link.");
+  }
+}
   const pendingPayouts = payouts.filter(
   (payout) =>
     String(payout.status || "pending").toLowerCase().trim() === "pending"
@@ -910,6 +950,111 @@ const sortedUploads = useMemo(() => {
             Creator Since: {creatorSince}
           </p>
         )}
+
+        <div className="mt-8 rounded-3xl border border-yellow-200 bg-white p-6 shadow-sm">
+  <div className="flex flex-col gap-5 lg:flex-row lg:items-start lg:justify-between">
+    <div>
+      <p className="text-sm font-black uppercase tracking-wide text-yellow-700">
+        Creator Identity
+      </p>
+
+      <h2 className="mt-2 text-2xl font-black text-gray-900">
+        Your Public NiaTube Identity
+      </h2>
+
+      <p className="mt-2 max-w-2xl text-sm leading-6 text-gray-600">
+        This is your official public creator identity on NiaTube Africa.
+        Share your channel link with viewers, partners, and communities.
+      </p>
+    </div>
+
+    <div className="flex flex-wrap gap-3">
+      {publicChannelPath && (
+        <a
+          href={publicChannelPath}
+          target="_blank"
+          rel="noreferrer"
+          className="rounded-xl bg-black px-5 py-3 text-sm font-black text-white hover:bg-gray-800"
+        >
+          View Public Channel
+        </a>
+      )}
+
+      <button
+        type="button"
+        onClick={copyPublicChannelLink}
+        disabled={!channelHandle}
+        className="rounded-xl bg-yellow-400 px-5 py-3 text-sm font-black text-black hover:bg-yellow-300 disabled:cursor-not-allowed disabled:bg-gray-200 disabled:text-gray-500"
+      >
+        Copy Channel Link
+      </button>
+    </div>
+  </div>
+
+  <div className="mt-6 grid gap-4 md:grid-cols-2 xl:grid-cols-4">
+    <div className="rounded-2xl bg-gray-50 p-5">
+      <p className="text-sm font-bold text-gray-500">
+        Display Name
+      </p>
+
+      <p className="mt-2 text-xl font-black text-gray-900">
+        {creatorName}
+      </p>
+    </div>
+
+    <div className="rounded-2xl bg-gray-50 p-5">
+      <p className="text-sm font-bold text-gray-500">
+        Channel Handle
+      </p>
+
+      <p className="mt-2 text-xl font-black text-gray-900">
+        {channelHandle ? `@${channelHandle}` : "Not available"}
+      </p>
+    </div>
+
+    <div className="rounded-2xl bg-gray-50 p-5">
+      <p className="text-sm font-bold text-gray-500">
+        Account Status
+      </p>
+
+      <p className="mt-2 text-xl font-black capitalize text-gray-900">
+        {accountStatus.replace(/_/g, " ")}
+      </p>
+    </div>
+
+    <div className="rounded-2xl bg-gray-50 p-5">
+      <p className="text-sm font-bold text-gray-500">
+        Verification
+      </p>
+
+      <p
+        className={`mt-2 text-xl font-black ${
+          creatorVerified ? "text-blue-700" : "text-gray-900"
+        }`}
+      >
+        {creatorVerified
+          ? "✓ Verified Creator"
+          : verificationStatus.replace(/_/g, " ")}
+      </p>
+    </div>
+  </div>
+
+  <div className="mt-5 rounded-2xl border border-gray-200 bg-gray-50 p-5">
+    <p className="text-sm font-bold text-gray-500">
+      Public Channel URL
+    </p>
+
+    <p className="mt-2 break-all text-base font-black text-gray-900">
+      {publicChannelUrl}
+    </p>
+
+    {copyMessage && (
+      <p className="mt-2 text-sm font-bold text-green-700">
+        {copyMessage}
+      </p>
+    )}
+  </div>
+</div>
            <div className="mt-5 grid gap-4 md:grid-cols-4">
   <div className="rounded-2xl bg-white p-5 shadow-sm">
     <p className="text-sm font-bold text-gray-500">Creator Country</p>
@@ -2378,9 +2523,11 @@ const sortedUploads = useMemo(() => {
                           </a>
 
                           <a
-                            href={`/channel/${encodeURIComponent(
-                              upload.creator || ""
-                            )}`}
+                          href={
+                         channelHandle
+                          ? `/@${channelHandle}`
+                             : `/channel/${encodeURIComponent(upload.creator || "")}`
+                            }
                             className="rounded-lg border border-gray-300 px-4 py-2 text-sm font-bold text-gray-700 hover:bg-gray-100"
                           >
                             View Channel
