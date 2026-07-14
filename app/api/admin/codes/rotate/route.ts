@@ -57,36 +57,43 @@ export async function POST(req: Request) {
       Date.now() + 30 * 24 * 60 * 60 * 1000
     ).toISOString();
 
-    const newCodes = [
-      {
-        code_name: "Community Admin",
-        code: generateAdminCode(),
-        redirect_path: "/admin/niacircle",
-      },
-      {
-        code_name: "Finance Admin",
-        code: generateAdminCode(),
-        redirect_path: "/admin/finance",
-      },
-      {
-        code_name: "Payout Admin",
-        code: generateAdminCode(),
-        redirect_path: "/admin/finance/payouts",
-      },
-     
- 
-{
-  code_name: "Advertising Intake Admin",
-  code: generateAdminCode(),
-  redirect_path: "/admin/advertising",
-},
-{
-  code_name: "Advertising Campaign Admin",
-  code: generateAdminCode(),
-  redirect_path: "/admin/advertising/assign",
-},
+ const newCodes = [
+  {
+    code_name: "Super Admin",
+    code: generateAdminCode(),
+    redirect_path: "/admin",
+  },
+  {
+    code_name: "Creator Governance & Trust",
+    code: generateAdminCode(),
+    redirect_path: "/admin/governance",
+  },
+  {
+    code_name: "Community Admin",
+    code: generateAdminCode(),
+    redirect_path: "/admin/niacircle",
+  },
+  {
+    code_name: "Finance Admin",
+    code: generateAdminCode(),
+    redirect_path: "/admin/finance",
+  },
+  {
+    code_name: "Payout Admin",
+    code: generateAdminCode(),
+    redirect_path: "/admin/finance/payouts",
+  },
+  {
+    code_name: "Advertising Intake Admin",
+    code: generateAdminCode(),
+    redirect_path: "/admin/advertising",
+  },
+  {
+    code_name: "Advertising Campaign Admin",
+    code: generateAdminCode(),
+    redirect_path: "/admin/advertising/assign",
+  },
 ];
-
 
     for (const item of newCodes) {
       await supabaseAdmin

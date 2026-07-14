@@ -118,7 +118,7 @@ const [creatorMonitoring, setCreatorMonitoring] = useState<
         !access?.sessionToken ||
         !expiresAt ||
         expiresAt < new Date() ||
-        allowedPath !== "/admin"
+        !["/admin", "/admin/governance"].includes(allowedPath)
       ) {
         sessionStorage.removeItem("niatube_admin_access");
         setHasAccess(false);
