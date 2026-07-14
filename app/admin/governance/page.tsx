@@ -1,0 +1,755 @@
+"use client";
+
+import { useEffect, useMemo, useState } from "react";
+import Link from "next/link";
+import { supabase } from "@/lib/supabase-browser";
+
+type GovernanceReport = {
+  id: string;
+  report_type: string;
+  creator_name?: string | null;
+  channel_handle?: string | null;
+  video_id?: string | null;
+  status: string;
+  priority: string;
+  description: string;
+  assigned_to?: string | null;
+  created_at: string;
+};
+
+type GovernanceAppeal = {
+  id: string;
+  creator_name: string;
+  channel_handle?: string | null;
+  status: string;
+  appeal_reason: string;
+  reviewed_by?: string | null;
+  created_at: string;
+};
+
+type GovernanceAction = {
+  id: string;
+  creator_name: string;
+  channel_handle?: string | null;
+  action_type: string;
+  action_reason: string;
+  severity: string;
+  performed_by: string;
+  created_at: string;
+};
+
+type AuditLogItem = {
+  id: string;
+  event_type: string;
+  actor: string;
+  actor_role?: string | null;
+  target_type: string;
+  target_id?: string | null;
+  target_creator_name?: string | null;
+  details?: Record<string, unknown> | null;
+  created_at: string;
+};
+
+type SuspendedCreator = {
+  id: string;
+  creator_name: string;
+  channel_handle?: string | null;
+  account_status?: string | null;
+  governance_status?: string | null;
+  suspension_until?: string | null;
+};
+
+export default function GovernanceOperationsPage() {
+  const [accessChecked, setAccessChecked] = useState(false);
+  const [hasAccess, setHasAccess] = useState(false);
+  const [loading, setLoading] = useState(true);
+
+  const [reports, setReports] = useState<GovernanceReport[]>([]);
+  const [appeals, setAppeals] = useState<GovernanceAppeal[]>([]);
+  const [actions, setActions] = useState<GovernanceAction[]>([]);
+  const [auditLog, setAuditLog] = useState<AuditLogItem[]>([]);
+  const [suspendedCreators, setSuspendedCreators] = useState<
+    SuspendedCreator[]
+  >([]);
+
+  const [loadError, setLoadError] = useState("");
+
+  useEffect(() => {
+    const rawAccess = sessionStorage.getItem("niatube_admin_access");
+
+    if (!rawAccess) {
+      setHasAccess(false);
+      setAccessChecked(true);
+      setLoading(false);
+      return;
+    }
+
+    try {
+      const access = JSON.parse(rawAccess);
+      const expiresAt = access?.expiresAt
+        ? new Date(access.expiresAt)
+        : null;
+
+      const allowedPath = access?.redirectPath;
+
+      if (
+        !access?.sessionToken ||
+        !expiresAt ||
+        expiresAt < new Date() ||
+        allowedPath !== "/admin"
+      ) {
+        sessionStorage.removeItem("niatube_admin_access");
+        setHasAccess(false);
+        setAccessChecked(true);
+        setLoading(false);
+        return;
+      }
+
+      setHasAccess(true);
+      setAccessChecked(true);
+    } catch {
+      sessionStorage.removeItem("niatube_admin_access");
+      setHasAccess(false);
+      setAccessChecked(true);
+      setLoading(false);
+    }
+  }, []);
+
+  useEffect(() => {
+    if (!hasAccess) return;
+
+    async function loadGovernanceCenter() {
+      setLoading(true);
+      setLoadError("");
+
+      const [
+        reportsResult,
+        appealsResult,
+        actionsResult,
+        auditResult,
+        suspendedResult,
+      ] = await Promise.all([
+        supabase
+          .from("creator_reports")
+          .select(
+            "id, report_type, creator_name, channel_handle, video_id, status, priority, description, assigned_to, created_at"
+          )
+          .order("created_at", { ascending: false }),
+
+        supabase
+          .from("creator_appeals")
+          .select(
+            "id, creator_name, channel_handle, status, appeal_reason, reviewed_by, created_at"
+          )
+          .order("created_at", { ascending: false }),
+
+        supabase
+          .from("creator_governance_actions")
+          .select(
+            "id, creator_name, channel_handle, action_type, action_reason, severity, performed_by, created_at"
+          )
+          .order("created_at", { ascending: false })
+          .limit(20),
+
+        supabase
+          .from("governance_audit_log")
+          .select(
+            "id, event_type, actor, actor_role, target_type, target_id, target_creator_name, details, created_at"
+          )
+          .order("created_at", { ascending: false })
+          .limit(20),
+
+        supabase
+          .from("creator_profiles")
+          .select(
+            "id, creator_name, channel_handle, account_status, governance_status, suspension_until"
+          )
+          .or(
+            "account_status.eq.suspended,account_status.eq.terminated,governance_status.eq.suspended,governance_status.eq.terminated"
+          )
+          .order("creator_name", { ascending: true }),
+      ]);
+
+      const errors = [
+        reportsResult.error,
+        appealsResult.error,
+        actionsResult.error,
+        auditResult.error,
+        suspendedResult.error,
+      ].filter(Boolean);
+
+      if (errors.length > 0) {
+        console.error("Governance dashboard load errors:", errors);
+        setLoadError(
+          "Some governance information could not be loaded. Please review the browser console and Supabase permissions."
+        );
+      }
+
+      setReports(
+        (reportsResult.data || []) as GovernanceReport[]
+      );
+
+      setAppeals(
+        (appealsResult.data || []) as GovernanceAppeal[]
+      );
+
+      setActions(
+        (actionsResult.data || []) as GovernanceAction[]
+      );
+
+      setAuditLog(
+        (auditResult.data || []) as AuditLogItem[]
+      );
+
+      setSuspendedCreators(
+        (suspendedResult.data || []) as SuspendedCreator[]
+      );
+
+      setLoading(false);
+    }
+
+    loadGovernanceCenter();
+  }, [hasAccess]);
+
+  const openReports = useMemo(
+    () =>
+      reports.filter((report) =>
+        ["open", "escalated"].includes(
+          String(report.status || "").toLowerCase()
+        )
+      ),
+    [reports]
+  );
+
+  const reportsUnderReview = useMemo(
+    () =>
+      reports.filter(
+        (report) =>
+          String(report.status || "").toLowerCase() ===
+          "under_review"
+      ),
+    [reports]
+  );
+
+  const activeAppeals = useMemo(
+    () =>
+      appeals.filter((appeal) =>
+        [
+          "submitted",
+          "under_review",
+          "additional_information_requested",
+        ].includes(String(appeal.status || "").toLowerCase())
+      ),
+    [appeals]
+  );
+
+  const urgentReports = useMemo(
+    () =>
+      reports.filter((report) =>
+        ["high", "urgent"].includes(
+          String(report.priority || "").toLowerCase()
+        )
+      ),
+    [reports]
+  );
+
+  if (!accessChecked) {
+    return (
+      <main className="min-h-screen bg-gray-50 px-6 py-16">
+        <p className="text-sm font-bold text-gray-600">
+          Checking governance access...
+        </p>
+      </main>
+    );
+  }
+
+  if (!hasAccess) {
+    return (
+      <main className="min-h-screen bg-gray-50 px-6 py-16">
+        <section className="mx-auto max-w-md rounded-3xl bg-white p-8 shadow-sm">
+          <h1 className="text-3xl font-black text-gray-900">
+            Governance Access Required
+          </h1>
+
+          <p className="mt-3 text-sm leading-6 text-gray-600">
+            Enter the authorized Admin access code before opening the
+            Creator Governance &amp; Trust Center.
+          </p>
+
+          <Link
+            href="/admin/access"
+            className="mt-5 inline-flex rounded-xl bg-black px-5 py-3 text-sm font-black text-white hover:bg-gray-800"
+          >
+            Enter Admin Code
+          </Link>
+        </section>
+      </main>
+    );
+  }
+
+  return (
+    <main className="min-h-screen bg-gray-50 px-6 py-10">
+      <section className="mx-auto max-w-7xl">
+        <div className="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
+          <div>
+            <p className="text-sm font-black uppercase tracking-widest text-purple-700">
+              Governance Operations
+            </p>
+
+            <h1 className="mt-2 text-4xl font-black text-gray-900">
+              Creator Governance &amp; Trust Center
+            </h1>
+
+            <p className="mt-3 max-w-3xl leading-7 text-gray-600">
+              Monitor creator standing, review reports, supervise
+              enforcement actions, manage appeals, and preserve a clear
+              governance audit trail.
+            </p>
+          </div>
+
+          <Link
+            href="/admin"
+            className="inline-flex rounded-xl border border-gray-300 bg-white px-5 py-3 text-sm font-black text-gray-700 hover:bg-gray-100"
+          >
+            ← Admin Control Center
+          </Link>
+        </div>
+
+        {loadError && (
+          <div className="mt-6 rounded-2xl border border-red-200 bg-red-50 p-5 text-sm font-bold text-red-800">
+            {loadError}
+          </div>
+        )}
+
+        {loading ? (
+          <div className="mt-8 rounded-3xl bg-white p-8 shadow-sm">
+            <p className="font-bold text-gray-600">
+              Loading governance operations...
+            </p>
+          </div>
+        ) : (
+          <>
+            <div className="mt-8 grid gap-5 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-6">
+              <MetricCard
+                title="Open Reports"
+                value={openReports.length}
+                description="Awaiting assessment"
+              />
+
+              <MetricCard
+                title="Under Review"
+                value={reportsUnderReview.length}
+                description="Currently being reviewed"
+              />
+
+              <MetricCard
+                title="Urgent Reports"
+                value={urgentReports.length}
+                description="High or urgent priority"
+              />
+
+              <MetricCard
+                title="Active Appeals"
+                value={activeAppeals.length}
+                description="Awaiting resolution"
+              />
+
+              <MetricCard
+                title="Suspended Creators"
+                value={suspendedCreators.length}
+                description="Restricted or terminated"
+              />
+
+              <MetricCard
+                title="Governance Actions"
+                value={actions.length}
+                description="Recent recorded actions"
+              />
+            </div>
+
+            <div className="mt-8 grid gap-6 xl:grid-cols-2">
+              <GovernancePanel
+                title="Recent Reports"
+                description="Newest reports requiring governance attention."
+              >
+                {reports.length === 0 ? (
+                  <EmptyState message="No creator reports have been submitted." />
+                ) : (
+                  <div className="space-y-4">
+                    {reports.slice(0, 8).map((report) => (
+                      <div
+                        key={report.id}
+                        className="rounded-2xl border border-gray-200 bg-gray-50 p-5"
+                      >
+                        <div className="flex flex-wrap items-start justify-between gap-3">
+                          <div>
+                            <p className="text-xs font-black uppercase tracking-wide text-purple-700">
+                              {report.report_type.replace(/_/g, " ")}
+                            </p>
+
+                            <h3 className="mt-1 text-lg font-black text-gray-900">
+                              {report.creator_name ||
+                                report.channel_handle ||
+                                "Unknown creator"}
+                            </h3>
+                          </div>
+
+                          <div className="flex flex-wrap gap-2">
+                            <StatusBadge value={report.status} />
+                            <PriorityBadge value={report.priority} />
+                          </div>
+                        </div>
+
+                        <p className="mt-3 line-clamp-3 text-sm leading-6 text-gray-700">
+                          {report.description}
+                        </p>
+
+                        <p className="mt-3 text-xs font-semibold text-gray-500">
+                          Submitted{" "}
+                          {new Date(
+                            report.created_at
+                          ).toLocaleString()}
+                        </p>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </GovernancePanel>
+
+              <GovernancePanel
+                title="Active Appeals"
+                description="Creator appeals awaiting governance review."
+              >
+                {activeAppeals.length === 0 ? (
+                  <EmptyState message="No active appeals are awaiting review." />
+                ) : (
+                  <div className="space-y-4">
+                    {activeAppeals.slice(0, 8).map((appeal) => (
+                      <div
+                        key={appeal.id}
+                        className="rounded-2xl border border-gray-200 bg-gray-50 p-5"
+                      >
+                        <div className="flex flex-wrap items-start justify-between gap-3">
+                          <div>
+                            <p className="text-xs font-black uppercase tracking-wide text-blue-700">
+                              Appeal
+                            </p>
+
+                            <h3 className="mt-1 text-lg font-black text-gray-900">
+                              {appeal.creator_name}
+                            </h3>
+                          </div>
+
+                          <StatusBadge value={appeal.status} />
+                        </div>
+
+                        <p className="mt-3 line-clamp-3 text-sm leading-6 text-gray-700">
+                          {appeal.appeal_reason}
+                        </p>
+
+                        <p className="mt-3 text-xs font-semibold text-gray-500">
+                          Submitted{" "}
+                          {new Date(
+                            appeal.created_at
+                          ).toLocaleString()}
+                        </p>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </GovernancePanel>
+            </div>
+
+            <div className="mt-8 grid gap-6 xl:grid-cols-2">
+              <GovernancePanel
+                title="Suspended or Terminated Creators"
+                description="Channels currently subject to serious governance restrictions."
+              >
+                {suspendedCreators.length === 0 ? (
+                  <EmptyState message="No creators are currently suspended or terminated." />
+                ) : (
+                  <div className="space-y-4">
+                    {suspendedCreators.map((creator) => (
+                      <div
+                        key={creator.id}
+                        className="rounded-2xl border border-red-200 bg-red-50 p-5"
+                      >
+                        <div className="flex flex-wrap items-start justify-between gap-3">
+                          <div>
+                            <h3 className="text-lg font-black text-gray-900">
+                              {creator.creator_name}
+                            </h3>
+
+                            <p className="mt-1 text-sm font-semibold text-gray-600">
+                              {creator.channel_handle
+                                ? `@${creator.channel_handle}`
+                                : "No channel handle"}
+                            </p>
+                          </div>
+
+                          <StatusBadge
+                            value={
+                              creator.governance_status ||
+                              creator.account_status ||
+                              "suspended"
+                            }
+                          />
+                        </div>
+
+                        <p className="mt-3 text-xs font-semibold text-gray-600">
+                          Suspension until:{" "}
+                          {creator.suspension_until
+                            ? new Date(
+                                creator.suspension_until
+                              ).toLocaleString()
+                            : "Indefinite"}
+                        </p>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </GovernancePanel>
+
+              <GovernancePanel
+                title="Recent Governance Actions"
+                description="Latest enforcement and trust actions recorded by governance operations."
+              >
+                {actions.length === 0 ? (
+                  <EmptyState message="No governance actions have been recorded." />
+                ) : (
+                  <div className="space-y-4">
+                    {actions.slice(0, 8).map((action) => (
+                      <div
+                        key={action.id}
+                        className="rounded-2xl border border-gray-200 bg-gray-50 p-5"
+                      >
+                        <div className="flex flex-wrap items-start justify-between gap-3">
+                          <div>
+                            <p className="text-xs font-black uppercase tracking-wide text-gray-500">
+                              {action.action_type.replace(/_/g, " ")}
+                            </p>
+
+                            <h3 className="mt-1 text-lg font-black text-gray-900">
+                              {action.creator_name}
+                            </h3>
+                          </div>
+
+                          <SeverityBadge value={action.severity} />
+                        </div>
+
+                        <p className="mt-3 text-sm leading-6 text-gray-700">
+                          {action.action_reason}
+                        </p>
+
+                        <p className="mt-3 text-xs font-semibold text-gray-500">
+                          By {action.performed_by} •{" "}
+                          {new Date(
+                            action.created_at
+                          ).toLocaleString()}
+                        </p>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </GovernancePanel>
+            </div>
+
+            <div className="mt-8">
+              <GovernancePanel
+                title="Recent Governance Audit Activity"
+                description="Immutable operational history for accountability and institutional memory."
+              >
+                {auditLog.length === 0 ? (
+                  <EmptyState message="No audit events have been recorded." />
+                ) : (
+                  <div className="overflow-x-auto">
+                    <table className="w-full min-w-[820px] text-left text-sm">
+                      <thead>
+                        <tr className="border-b text-gray-500">
+                          <th className="py-3 pr-4">Date</th>
+                          <th className="py-3 pr-4">Event</th>
+                          <th className="py-3 pr-4">Actor</th>
+                          <th className="py-3 pr-4">Target</th>
+                          <th className="py-3 pr-4">
+                            Creator
+                          </th>
+                        </tr>
+                      </thead>
+
+                      <tbody>
+                        {auditLog.map((item) => (
+                          <tr
+                            key={item.id}
+                            className="border-b last:border-b-0"
+                          >
+                            <td className="py-4 pr-4 text-gray-700">
+                              {new Date(
+                                item.created_at
+                              ).toLocaleString()}
+                            </td>
+
+                            <td className="py-4 pr-4 font-black text-gray-900">
+                              {item.event_type.replace(/_/g, " ")}
+                            </td>
+
+                            <td className="py-4 pr-4 text-gray-700">
+                              {item.actor}
+                              {item.actor_role
+                                ? ` (${item.actor_role})`
+                                : ""}
+                            </td>
+
+                            <td className="py-4 pr-4 text-gray-700">
+                              {item.target_type}
+                            </td>
+
+                            <td className="py-4 pr-4 font-semibold text-gray-900">
+                              {item.target_creator_name ||
+                                "Not specified"}
+                            </td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
+                )}
+              </GovernancePanel>
+            </div>
+          </>
+        )}
+      </section>
+    </main>
+  );
+}
+
+function MetricCard({
+  title,
+  value,
+  description,
+}: {
+  title: string;
+  value: number;
+  description: string;
+}) {
+  return (
+    <div className="rounded-2xl border border-gray-200 bg-white p-5 shadow-sm">
+      <p className="text-sm font-bold text-gray-500">{title}</p>
+
+      <p className="mt-2 text-3xl font-black text-gray-900">
+        {value.toLocaleString()}
+      </p>
+
+      <p className="mt-2 text-xs font-semibold text-gray-500">
+        {description}
+      </p>
+    </div>
+  );
+}
+
+function GovernancePanel({
+  title,
+  description,
+  children,
+}: {
+  title: string;
+  description: string;
+  children: React.ReactNode;
+}) {
+  return (
+    <section className="rounded-3xl border border-gray-200 bg-white p-6 shadow-sm">
+      <h2 className="text-2xl font-black text-gray-900">
+        {title}
+      </h2>
+
+      <p className="mt-2 text-sm leading-6 text-gray-600">
+        {description}
+      </p>
+
+      <div className="mt-6">{children}</div>
+    </section>
+  );
+}
+
+function EmptyState({ message }: { message: string }) {
+  return (
+    <div className="rounded-2xl border border-dashed border-gray-300 bg-gray-50 p-6 text-sm font-semibold text-gray-500">
+      {message}
+    </div>
+  );
+}
+
+function StatusBadge({ value }: { value: string }) {
+  const normalized = String(value || "unknown")
+    .toLowerCase()
+    .trim();
+
+  const classes =
+    normalized === "resolved" ||
+    normalized === "approved" ||
+    normalized === "active"
+      ? "bg-green-100 text-green-800"
+      : normalized === "dismissed" ||
+        normalized === "rejected" ||
+        normalized === "terminated"
+      ? "bg-red-100 text-red-800"
+      : normalized === "under_review"
+      ? "bg-blue-100 text-blue-800"
+      : normalized === "suspended" ||
+        normalized === "restricted"
+      ? "bg-orange-100 text-orange-800"
+      : "bg-yellow-100 text-yellow-800";
+
+  return (
+    <span
+      className={`rounded-full px-3 py-1 text-xs font-black capitalize ${classes}`}
+    >
+      {normalized.replace(/_/g, " ")}
+    </span>
+  );
+}
+
+function PriorityBadge({ value }: { value: string }) {
+  const normalized = String(value || "normal")
+    .toLowerCase()
+    .trim();
+
+  const classes =
+    normalized === "urgent"
+      ? "bg-red-600 text-white"
+      : normalized === "high"
+      ? "bg-orange-100 text-orange-800"
+      : normalized === "low"
+      ? "bg-gray-100 text-gray-700"
+      : "bg-blue-100 text-blue-800";
+
+  return (
+    <span
+      className={`rounded-full px-3 py-1 text-xs font-black capitalize ${classes}`}
+    >
+      {normalized}
+    </span>
+  );
+}
+
+function SeverityBadge({ value }: { value: string }) {
+  const normalized = String(value || "low")
+    .toLowerCase()
+    .trim();
+
+  const classes =
+    normalized === "critical"
+      ? "bg-red-600 text-white"
+      : normalized === "high"
+      ? "bg-red-100 text-red-800"
+      : normalized === "medium"
+      ? "bg-yellow-100 text-yellow-800"
+      : "bg-green-100 text-green-800";
+
+  return (
+    <span
+      className={`rounded-full px-3 py-1 text-xs font-black capitalize ${classes}`}
+    >
+      {normalized}
+    </span>
+  );
+}

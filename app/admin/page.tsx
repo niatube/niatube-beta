@@ -110,7 +110,26 @@ if (!hasAccess) {
   <a
   href="/admin/creators"
   className="rounded-xl border bg-white p-4 shadow-sm hover:bg-gray-50"
+  >
+
+    <a
+  href="/admin/governance"
+  className="rounded-xl border border-purple-200 bg-purple-50 p-4 shadow-sm hover:bg-purple-100"
 >
+  <p className="text-xs font-black uppercase tracking-wide text-purple-700">
+    Governance Operations
+  </p>
+
+  <h2 className="mt-2 text-lg font-black text-gray-900">
+    Creator Governance &amp; Trust
+  </h2>
+
+  <p className="mt-2 text-sm leading-6 text-gray-700">
+    Monitor channels, review reports, enforce Community Guidelines,
+    manage appeals, supervise copyright matters, apply account actions,
+    and maintain governance audit records.
+  </p>
+</a>
   <h2 className="text-lg font-black">Creator Management</h2>
   <p className="mt-2 text-sm text-gray-600">
     Monitor creator profiles, uploads, and creator growth activity.
