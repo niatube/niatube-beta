@@ -247,6 +247,182 @@ const [creatorMonitoring, setCreatorMonitoring] = useState<
     loadGovernanceCenter();
   }, [hasAccess]);
 
+  async function updateReportStatus(
+  report: GovernanceReport,
+  nextStatus: string
+) {
+  const rawAccess = sessionStorage.getItem("niatube_admin_access");
+
+  let actor = "Governance Administrator";
+
+  if (rawAccess) {
+    try {
+      const access = JSON.parse(rawAccess);
+      actor = access?.codeName || actor;
+    } catch {
+      // Keep the default actor name.
+    }
+  }
+
+  const now = new Date().toISOString();
+
+  const updatePayload: Record<string, string | null> = {
+    status: nextStatus,
+    reviewed_at: now,
+  };
+
+  if (nextStatus === "resolved" || nextStatus === "dismissed") {
+    updatePayload.resolved_at = now;
+  } else {
+    updatePayload.resolved_at = null;
+  }
+
+  const { error: reportError } = await supabase
+    .from("creator_reports")
+    .update(updatePayload)
+    .eq("id", report.id);
+
+  if (reportError) {
+    console.error("Report status update error:", reportError);
+    alert(`Could not update report: ${reportError.message}`);
+    return;
+  }
+
+  const { error: auditError } = await supabase
+    .from("governance_audit_log")
+    .insert([
+      {
+        event_type: `report_${nextStatus}`,
+        actor,
+        actor_role: "Creator Governance & Trust",
+        target_type: "creator_report",
+        target_id: report.id,
+        target_creator_name: report.creator_name || null,
+        details: {
+          report_type: report.report_type,
+          previous_status: report.status,
+          new_status: nextStatus,
+          priority: report.priority,
+          channel_handle: report.channel_handle,
+          video_id: report.video_id,
+        },
+      },
+    ]);
+
+  if (auditError) {
+    console.error("Governance audit log error:", auditError);
+    alert(
+      "The report was updated, but its audit record could not be saved."
+    );
+  }
+
+  setReports((currentReports) =>
+    currentReports.map((currentReport) =>
+      currentReport.id === report.id
+        ? {
+            ...currentReport,
+            status: nextStatus,
+          }
+        : currentReport
+    )
+  );
+
+  alert(
+    `Report status changed to ${nextStatus.replace(/_/g, " ")}.`
+  );
+}
+
+async function assignReportReviewer(report: GovernanceReport) {
+  const reviewerName = window.prompt(
+    "Enter the name or role of the governance reviewer:",
+    report.assigned_to || ""
+  );
+
+  if (!reviewerName?.trim()) {
+    return;
+  }
+
+  const cleanReviewerName = reviewerName.trim();
+
+  const rawAccess = sessionStorage.getItem("niatube_admin_access");
+
+  let actor = "Governance Administrator";
+
+  if (rawAccess) {
+    try {
+      const access = JSON.parse(rawAccess);
+      actor = access?.codeName || actor;
+    } catch {
+      // Keep the default actor name.
+    }
+  }
+
+  const { error: assignmentError } = await supabase
+    .from("creator_reports")
+    .update({
+      assigned_to: cleanReviewerName,
+      status:
+        report.status === "open"
+          ? "under_review"
+          : report.status,
+      reviewed_at: new Date().toISOString(),
+    })
+    .eq("id", report.id);
+
+  if (assignmentError) {
+    console.error("Report assignment error:", assignmentError);
+    alert(`Could not assign report: ${assignmentError.message}`);
+    return;
+  }
+
+  const { error: auditError } = await supabase
+    .from("governance_audit_log")
+    .insert([
+      {
+        event_type: "report_assigned",
+        actor,
+        actor_role: "Creator Governance & Trust",
+        target_type: "creator_report",
+        target_id: report.id,
+        target_creator_name: report.creator_name || null,
+        details: {
+          report_type: report.report_type,
+          assigned_to: cleanReviewerName,
+          previous_assignee: report.assigned_to,
+          previous_status: report.status,
+          new_status:
+            report.status === "open"
+              ? "under_review"
+              : report.status,
+        },
+      },
+    ]);
+
+  if (auditError) {
+    console.error("Governance audit log error:", auditError);
+    alert(
+      "The reviewer was assigned, but the audit record could not be saved."
+    );
+  }
+
+  setReports((currentReports) =>
+    currentReports.map((currentReport) =>
+      currentReport.id === report.id
+        ? {
+            ...currentReport,
+            assigned_to: cleanReviewerName,
+            status:
+              currentReport.status === "open"
+                ? "under_review"
+                : currentReport.status,
+          }
+        : currentReport
+    )
+  );
+
+  alert(`Report assigned to ${cleanReviewerName}.`);
+}
+
   const openReports = useMemo(
     () =>
       reports.filter((report) =>
@@ -426,53 +602,238 @@ const [creatorMonitoring, setCreatorMonitoring] = useState<
             </div>
 
             <div className="mt-8 grid gap-6 xl:grid-cols-2">
-              <GovernancePanel
-                title="Recent Reports"
-                description="Newest reports requiring governance attention."
-              >
-                {reports.length === 0 ? (
-                  <EmptyState message="No creator reports have been submitted." />
-                ) : (
-                  <div className="space-y-4">
-                    {reports.slice(0, 8).map((report) => (
-                      <div
-                        key={report.id}
-                        className="rounded-2xl border border-gray-200 bg-gray-50 p-5"
-                      >
-                        <div className="flex flex-wrap items-start justify-between gap-3">
-                          <div>
-                            <p className="text-xs font-black uppercase tracking-wide text-purple-700">
-                              {report.report_type.replace(/_/g, " ")}
-                            </p>
+             <GovernancePanel
+  title="Reports Management"
+  description="Review incoming creator and content reports, prioritize urgent cases, and track governance decisions."
+>
+  <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+    <MetricCard
+      title="Open"
+      value={
+        reports.filter(
+          (report) =>
+            String(report.status || "").toLowerCase() === "open"
+        ).length
+      }
+      description="Awaiting initial review"
+    />
 
-                            <h3 className="mt-1 text-lg font-black text-gray-900">
-                              {report.creator_name ||
-                                report.channel_handle ||
-                                "Unknown creator"}
-                            </h3>
-                          </div>
+    <MetricCard
+      title="Under Review"
+      value={
+        reports.filter(
+          (report) =>
+            String(report.status || "").toLowerCase() ===
+            "under_review"
+        ).length
+      }
+      description="Currently being assessed"
+    />
 
-                          <div className="flex flex-wrap gap-2">
-                            <StatusBadge value={report.status} />
-                            <PriorityBadge value={report.priority} />
-                          </div>
-                        </div>
+    <MetricCard
+      title="Escalated"
+      value={
+        reports.filter(
+          (report) =>
+            String(report.status || "").toLowerCase() ===
+            "escalated"
+        ).length
+      }
+      description="Requires senior attention"
+    />
 
-                        <p className="mt-3 line-clamp-3 text-sm leading-6 text-gray-700">
-                          {report.description}
-                        </p>
+    <MetricCard
+      title="Resolved"
+      value={
+        reports.filter(
+          (report) =>
+            String(report.status || "").toLowerCase() ===
+            "resolved"
+        ).length
+      }
+      description="Governance action completed"
+    />
 
-                        <p className="mt-3 text-xs font-semibold text-gray-500">
-                          Submitted{" "}
-                          {new Date(
-                            report.created_at
-                          ).toLocaleString()}
-                        </p>
-                      </div>
-                    ))}
-                  </div>
-                )}
-              </GovernancePanel>
+    <MetricCard
+      title="Dismissed"
+      value={
+        reports.filter(
+          (report) =>
+            String(report.status || "").toLowerCase() ===
+            "dismissed"
+        ).length
+      }
+      description="Closed without enforcement"
+    />
+
+    <MetricCard
+      title="Urgent"
+      value={
+        reports.filter(
+          (report) =>
+            String(report.priority || "").toLowerCase() ===
+            "urgent"
+        ).length
+      }
+      description="Immediate attention required"
+    />
+  </div>
+
+  <div className="mt-8 overflow-x-auto">
+    <table className="w-full min-w-[1050px] text-left text-sm">
+      <thead>
+        <tr className="border-b text-gray-500">
+          <th className="py-3 pr-4">Report Type</th>
+          <th className="py-3 pr-4">Creator</th>
+          <th className="py-3 pr-4">Handle</th>
+          <th className="py-3 pr-4">Status</th>
+          <th className="py-3 pr-4">Priority</th>
+          <th className="py-3 pr-4">Assigned To</th>
+          <th className="py-3 pr-4">Submitted</th>
+          <th className="py-3 pr-4">Governance Actions</th>
+        </tr>
+      </thead>
+
+      <tbody>
+        {reports.length === 0 ? (
+          <tr>
+            <td
+              colSpan={8}
+              className="py-10 text-center font-semibold text-gray-500"
+            >
+              No creator reports have been submitted.
+            </td>
+          </tr>
+        ) : (
+          reports.map((report) => (
+            <tr
+              key={report.id}
+              className="border-b align-top last:border-b-0"
+            >
+              <td className="py-4 pr-4">
+                <p className="font-black capitalize text-gray-900">
+                  {report.report_type.replace(/_/g, " ")}
+                </p>
+
+                <p className="mt-1 max-w-xs line-clamp-2 text-xs leading-5 text-gray-500">
+                  {report.description}
+                </p>
+              </td>
+
+              <td className="py-4 pr-4 font-bold text-gray-900">
+                {report.creator_name || "Unknown creator"}
+              </td>
+
+              <td className="py-4 pr-4 text-gray-700">
+                {report.channel_handle
+                  ? `@${report.channel_handle}`
+                  : "Not available"}
+              </td>
+
+              <td className="py-4 pr-4">
+                <StatusBadge value={report.status} />
+              </td>
+
+              <td className="py-4 pr-4">
+                <PriorityBadge value={report.priority} />
+              </td>
+
+              <td className="py-4 pr-4 text-gray-700">
+                {report.assigned_to || "Unassigned"}
+              </td>
+
+              <td className="py-4 pr-4 text-gray-700">
+                {new Date(report.created_at).toLocaleString()}
+              </td>
+
+            <td className="py-4 pr-4">
+  <div className="flex min-w-[260px] flex-wrap gap-2">
+    <button
+      type="button"
+      onClick={() => assignReportReviewer(report)}
+      className="rounded-lg border border-purple-300 bg-purple-50 px-3 py-2 text-xs font-black text-purple-800 hover:bg-purple-100"
+    >
+      Assign
+    </button>
+
+    <button
+      type="button"
+      onClick={() =>
+        updateReportStatus(report, "under_review")
+      }
+      disabled={report.status === "under_review"}
+      className="rounded-lg border border-blue-300 bg-blue-50 px-3 py-2 text-xs font-black text-blue-800 hover:bg-blue-100 disabled:cursor-not-allowed disabled:opacity-40"
+    >
+      Review
+    </button>
+
+    <button
+      type="button"
+      onClick={() => updateReportStatus(report, "escalated")}
+      disabled={report.status === "escalated"}
+      className="rounded-lg border border-orange-300 bg-orange-50 px-3 py-2 text-xs font-black text-orange-800 hover:bg-orange-100 disabled:cursor-not-allowed disabled:opacity-40"
+    >
+      Escalate
+    </button>
+
+    <button
+      type="button"
+      onClick={() => updateReportStatus(report, "resolved")}
+      disabled={report.status === "resolved"}
+      className="rounded-lg border border-green-300 bg-green-50 px-3 py-2 text-xs font-black text-green-800 hover:bg-green-100 disabled:cursor-not-allowed disabled:opacity-40"
+    >
+      Resolve
+    </button>
+
+    <button
+      type="button"
+      onClick={() => updateReportStatus(report, "dismissed")}
+      disabled={report.status === "dismissed"}
+      className="rounded-lg border border-gray-300 bg-white px-3 py-2 text-xs font-black text-gray-700 hover:bg-gray-100 disabled:cursor-not-allowed disabled:opacity-40"
+    >
+      Dismiss
+    </button>
+
+    <button
+      type="button"
+      onClick={() =>
+        alert(
+          [
+            `Report type: ${report.report_type.replace(
+              /_/g,
+              " "
+            )}`,
+            `Creator: ${
+              report.creator_name || "Unknown creator"
+            }`,
+            `Handle: ${
+              report.channel_handle
+                ? `@${report.channel_handle}`
+                : "Not available"
+            }`,
+            `Status: ${report.status}`,
+            `Priority: ${report.priority}`,
+            `Assigned to: ${
+              report.assigned_to || "Unassigned"
+            }`,
+            "",
+            report.description,
+          ].join("\n")
+        )
+      }
+      className="rounded-lg bg-black px-3 py-2 text-xs font-black text-white hover:bg-gray-800"
+    >
+      Details
+    </button>
+  </div>
+</td>
+            </tr>
+          ))
+        )}
+      </tbody>
+    </table>
+  </div>
+</GovernancePanel>
 
               <GovernancePanel
                 title="Active Appeals"
