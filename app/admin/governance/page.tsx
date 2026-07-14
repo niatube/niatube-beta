@@ -59,6 +59,20 @@ type SuspendedCreator = {
   suspension_until?: string | null;
 };
 
+type CreatorMonitoringItem = {
+  id: string;
+  creator_name: string;
+  channel_handle?: string | null;
+  country?: string | null;
+  account_status?: string | null;
+  governance_status?: string | null;
+  active_strikes?: number | null;
+  last_warning_at?: string | null;
+  last_governance_review_at?: string | null;
+  suspension_until?: string | null;
+  created_at?: string | null;
+};
+
 export default function GovernanceOperationsPage() {
   const [accessChecked, setAccessChecked] = useState(false);
   const [hasAccess, setHasAccess] = useState(false);
@@ -67,10 +81,18 @@ export default function GovernanceOperationsPage() {
   const [reports, setReports] = useState<GovernanceReport[]>([]);
   const [appeals, setAppeals] = useState<GovernanceAppeal[]>([]);
   const [actions, setActions] = useState<GovernanceAction[]>([]);
-  const [auditLog, setAuditLog] = useState<AuditLogItem[]>([]);
-  const [suspendedCreators, setSuspendedCreators] = useState<
-    SuspendedCreator[]
-  >([]);
+ const [auditLog, setAuditLog] = useState<AuditLogItem[]>([]);
+
+const [suspendedCreators, setSuspendedCreators] = useState<
+  SuspendedCreator[]
+>([]);
+
+
+
+const [creatorMonitoring, setCreatorMonitoring] = useState<
+  CreatorMonitoringItem[]
+>([]);
+  
 
   const [loadError, setLoadError] = useState("");
 
@@ -123,13 +145,15 @@ export default function GovernanceOperationsPage() {
       setLoadError("");
 
       const [
-        reportsResult,
-        appealsResult,
-        actionsResult,
-        auditResult,
-        suspendedResult,
-      ] = await Promise.all([
-        supabase
+  reportsResult,
+  appealsResult,
+  actionsResult,
+  auditResult,
+  suspendedResult,
+  creatorMonitoringResult,
+] = await Promise.all([
+      
+       supabase
           .from("creator_reports")
           .select(
             "id, report_type, creator_name, channel_handle, video_id, status, priority, description, assigned_to, created_at"
@@ -168,15 +192,23 @@ export default function GovernanceOperationsPage() {
             "account_status.eq.suspended,account_status.eq.terminated,governance_status.eq.suspended,governance_status.eq.terminated"
           )
           .order("creator_name", { ascending: true }),
+
+          supabase
+  .from("creator_profiles")
+  .select(
+    "id, creator_name, channel_handle, country, account_status, governance_status, active_strikes, last_warning_at, last_governance_review_at, suspension_until, created_at"
+  )
+  .order("created_at", { ascending: false }),
       ]);
 
-      const errors = [
-        reportsResult.error,
-        appealsResult.error,
-        actionsResult.error,
-        auditResult.error,
-        suspendedResult.error,
-      ].filter(Boolean);
+     const errors = [
+  reportsResult.error,
+  appealsResult.error,
+  actionsResult.error,
+  auditResult.error,
+  suspendedResult.error,
+  creatorMonitoringResult.error,
+].filter(Boolean);
 
       if (errors.length > 0) {
         console.error("Governance dashboard load errors:", errors);
@@ -204,6 +236,10 @@ export default function GovernanceOperationsPage() {
       setSuspendedCreators(
         (suspendedResult.data || []) as SuspendedCreator[]
       );
+
+      setCreatorMonitoring(
+  (creatorMonitoringResult.data || []) as CreatorMonitoringItem[]
+);
 
       setLoading(false);
     }
@@ -299,6 +335,28 @@ export default function GovernanceOperationsPage() {
             <h1 className="mt-2 text-4xl font-black text-gray-900">
               Creator Governance &amp; Trust Center
             </h1>
+
+            <div className="mt-6 flex flex-wrap gap-3">
+  <span className="rounded-full bg-purple-100 px-4 py-2 text-sm font-black text-purple-800">
+    Overview
+  </span>
+
+  <span className="rounded-full bg-gray-100 px-4 py-2 text-sm font-bold text-gray-700">
+    Creator Monitoring
+  </span>
+
+  <span className="rounded-full bg-gray-100 px-4 py-2 text-sm font-bold text-gray-700">
+    Reports
+  </span>
+
+  <span className="rounded-full bg-gray-100 px-4 py-2 text-sm font-bold text-gray-700">
+    Appeals
+  </span>
+
+  <span className="rounded-full bg-gray-100 px-4 py-2 text-sm font-bold text-gray-700">
+    Audit Log
+  </span>
+</div>
 
             <p className="mt-3 max-w-3xl leading-7 text-gray-600">
               Monitor creator standing, review reports, supervise
@@ -554,7 +612,7 @@ export default function GovernanceOperationsPage() {
               </GovernancePanel>
             </div>
 
-            <div className="mt-8">
+                      <div className="mt-8">
               <GovernancePanel
                 title="Recent Governance Audit Activity"
                 description="Immutable operational history for accountability and institutional memory."
@@ -570,9 +628,7 @@ export default function GovernanceOperationsPage() {
                           <th className="py-3 pr-4">Event</th>
                           <th className="py-3 pr-4">Actor</th>
                           <th className="py-3 pr-4">Target</th>
-                          <th className="py-3 pr-4">
-                            Creator
-                          </th>
+                          <th className="py-3 pr-4">Creator</th>
                         </tr>
                       </thead>
 
@@ -583,9 +639,7 @@ export default function GovernanceOperationsPage() {
                             className="border-b last:border-b-0"
                           >
                             <td className="py-4 pr-4 text-gray-700">
-                              {new Date(
-                                item.created_at
-                              ).toLocaleString()}
+                              {new Date(item.created_at).toLocaleString()}
                             </td>
 
                             <td className="py-4 pr-4 font-black text-gray-900">
@@ -604,8 +658,7 @@ export default function GovernanceOperationsPage() {
                             </td>
 
                             <td className="py-4 pr-4 font-semibold text-gray-900">
-                              {item.target_creator_name ||
-                                "Not specified"}
+                              {item.target_creator_name || "Not specified"}
                             </td>
                           </tr>
                         ))}
@@ -613,6 +666,143 @@ export default function GovernanceOperationsPage() {
                     </table>
                   </div>
                 )}
+              </GovernancePanel>
+            </div>
+
+            <div className="mt-8">
+              <GovernancePanel
+                title="Creator Monitoring"
+                description="Monitor creator standing across the platform and identify creators requiring governance attention."
+              >
+                <div className="overflow-x-auto">
+                  <table className="w-full min-w-[900px] text-left text-sm">
+                    <thead>
+                      <tr className="border-b text-gray-500">
+                        <th className="py-3 pr-4">Creator</th>
+                        <th className="py-3 pr-4">Handle</th>
+                        <th className="py-3 pr-4">
+                          Governance Status
+                        </th>
+                        <th className="py-3 pr-4">Warnings</th>
+                        <th className="py-3 pr-4">Strikes</th>
+                        <th className="py-3 pr-4">Last Review</th>
+                        <th className="py-3 pr-4">Attention</th>
+                      </tr>
+                    </thead>
+
+                    <tbody>
+                      {creatorMonitoring.length === 0 ? (
+                        <tr>
+                          <td
+                            colSpan={7}
+                            className="py-10 text-center font-semibold text-gray-500"
+                          >
+                            No creators are available for monitoring.
+                          </td>
+                        </tr>
+                      ) : (
+                        creatorMonitoring.map((creator) => {
+                          const governanceStatus = String(
+                            creator.governance_status || "active"
+                          )
+                            .toLowerCase()
+                            .trim();
+
+                          const accountStatus = String(
+                            creator.account_status || "active"
+                          )
+                            .toLowerCase()
+                            .trim();
+
+                          const strikes = Number(
+                            creator.active_strikes || 0
+                          );
+
+                          const attentionLevel =
+                            accountStatus === "terminated" ||
+                            governanceStatus === "terminated"
+                              ? "Immediate Action"
+                              : accountStatus === "suspended" ||
+                                governanceStatus === "suspended" ||
+                                strikes >= 3
+                              ? "Immediate Action"
+                              : accountStatus === "restricted" ||
+                                governanceStatus === "restricted" ||
+                                strikes === 2
+                              ? "Review"
+                              : governanceStatus === "warning" ||
+                                strikes === 1 ||
+                                creator.last_warning_at
+                              ? "Monitor"
+                              : "Normal";
+
+                          const attentionClasses =
+                            attentionLevel === "Immediate Action"
+                              ? "bg-red-100 text-red-800"
+                              : attentionLevel === "Review"
+                              ? "bg-orange-100 text-orange-800"
+                              : attentionLevel === "Monitor"
+                              ? "bg-yellow-100 text-yellow-800"
+                              : "bg-green-100 text-green-800";
+
+                          return (
+                            <tr
+                              key={creator.id}
+                              className="border-b last:border-b-0"
+                            >
+                              <td className="py-4 pr-4">
+                                <p className="font-black text-gray-900">
+                                  {creator.creator_name}
+                                </p>
+
+                                <p className="mt-1 text-xs font-semibold text-gray-500">
+                                  {creator.country ||
+                                    "Country not set"}
+                                </p>
+                              </td>
+
+                              <td className="py-4 pr-4 font-semibold text-gray-700">
+                                {creator.channel_handle
+                                  ? `@${creator.channel_handle}`
+                                  : "No handle"}
+                              </td>
+
+                              <td className="py-4 pr-4">
+                                <StatusBadge
+                                  value={governanceStatus}
+                                />
+                              </td>
+
+                              <td className="py-4 pr-4 text-gray-700">
+                                {creator.last_warning_at ? "1+" : "0"}
+                              </td>
+
+                              <td className="py-4 pr-4 font-black text-gray-900">
+                                {strikes}
+                              </td>
+
+                              <td className="py-4 pr-4 text-gray-700">
+                                {creator.last_governance_review_at
+                                  ? new Date(
+                                      creator.last_governance_review_at
+                                    ).toLocaleString()
+                                  : "Never reviewed"}
+                              </td>
+
+                              <td className="py-4 pr-4">
+                                <span
+                                  className={`rounded-full px-3 py-1 text-xs font-black ${attentionClasses}`}
+                                >
+                                  {attentionLevel}
+                                </span>
+                              </td>
+                            </tr>
+                          );
+                        })
+                      )}
+                    </tbody>
+                  </table>
+                </div>
               </GovernancePanel>
             </div>
           </>
@@ -665,11 +855,12 @@ function GovernancePanel({
         {description}
       </p>
 
-      <div className="mt-6">{children}</div>
+      <div className="mt-6">
+        {children}
+      </div>
     </section>
   );
 }
-
 function EmptyState({ message }: { message: string }) {
   return (
     <div className="rounded-2xl border border-dashed border-gray-300 bg-gray-50 p-6 text-sm font-semibold text-gray-500">
