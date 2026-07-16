@@ -57,25 +57,6 @@ type CreatedInvitation = {
   createdAt: string;
 };
 
-const INVITATION_EXPIRATION_OPTIONS = [
-  {
-    value: 24,
-    label: "24 hours",
-  },
-  {
-    value: 48,
-    label: "48 hours",
-  },
-  {
-    value: 72,
-    label: "72 hours",
-  },
-  {
-    value: 168,
-    label: "7 days",
-  },
-] as const;
-
 function readStoredAdminAccess(): StoredAdminAccess | null {
   const rawAccess =
     sessionStorage.getItem("niatube_admin_access");
@@ -129,10 +110,7 @@ export default function AdminInvitationsPage() {
   const [role, setRole] =
     useState<AdminRole>("support_admin");
 
-  const [expiresInHours, setExpiresInHours] =
-    useState(48);
-
-  const [creating, setCreating] =
+   const [creating, setCreating] =
     useState(false);
 
   const [loading, setLoading] =
@@ -327,17 +305,15 @@ export default function AdminInvitationsPage() {
               `Bearer ${sessionToken}`,
           },
 
-          body: JSON.stringify({
-            fullName:
-              cleanName,
+         body: JSON.stringify({
+         fullName:
+         cleanName,
 
-            email:
-              cleanEmail,
+         email:
+        cleanEmail,
 
-            role,
-
-            expiresInHours,
-          }),
+        role,
+        }),
         },
       );
 
@@ -358,12 +334,11 @@ export default function AdminInvitationsPage() {
         result.invitation as CreatedInvitation,
       );
 
-      setFullName("");
-      setEmail("");
-      setRole("support_admin");
-      setExpiresInHours(48);
+     setFullName("");
+setEmail("");
+setRole("support_admin");
 
-      await loadInvitations();
+await loadInvitations();
     } catch (error) {
       console.error(
         "Invitation creation request failed:",
@@ -600,37 +575,25 @@ export default function AdminInvitationsPage() {
                 </p>
               </div>
 
-              <div>
-                <label
-                  htmlFor="invite-expiration"
-                  className="mb-2 block text-sm font-black text-gray-800"
-                >
-                  Invitation Expiration
-                </label>
+              <div className="rounded-2xl border border-blue-200 bg-blue-50 p-4">
+  <p className="text-sm font-black text-blue-950">
+    Invitation Validity
+  </p>
 
-                <select
-                  id="invite-expiration"
-                  value={expiresInHours}
-                  onChange={(event) =>
-                    setExpiresInHours(
-                      Number(event.target.value),
-                    )
-                  }
-                  disabled={creating}
-                  className="w-full rounded-xl border border-gray-300 bg-white px-4 py-3 text-sm outline-none focus:border-black focus:ring-2 focus:ring-gray-200 disabled:bg-gray-100"
-                >
-                  {INVITATION_EXPIRATION_OPTIONS.map(
-                    (option) => (
-                      <option
-                        key={option.value}
-                        value={option.value}
-                      >
-                        {option.label}
-                      </option>
-                    ),
-                  )}
-                </select>
-              </div>
+  <p className="mt-2 text-sm leading-6 text-blue-900">
+    Every administrator invitation is valid for{" "}
+    <span className="font-black">
+      30 days
+    </span>{" "}
+    from the time it is generated, in accordance with
+    the NiaTube Governance Protocol.
+  </p>
+
+  <p className="mt-2 text-xs font-semibold text-blue-800">
+    The administrator becomes active automatically
+    after successfully redeeming the invitation.
+  </p>
+</div>
 
               <button
                 type="submit"

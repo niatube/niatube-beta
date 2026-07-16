@@ -10,8 +10,7 @@ const INVITATION_CODE_PREFIX = "NTA";
 const INVITATION_SEGMENT_LENGTH = 4;
 const INVITATION_SEGMENT_COUNT = 3;
 
-export const DEFAULT_ADMIN_INVITATION_HOURS = 48;
-export const MAX_ADMIN_INVITATION_HOURS = 168;
+export const ADMIN_INVITATION_VALIDITY_DAYS = 30;
 
 export type GeneratedAdminInvitationCode = {
   code: string;
@@ -112,28 +111,16 @@ export function verifyAdminInvitationCode(
   );
 }
 
-export function resolveInvitationExpiration(
-  requestedHours: unknown,
-): Date {
-  const parsedHours =
-    typeof requestedHours === "number"
-      ? requestedHours
-      : Number(requestedHours);
-
-  const validHours =
-    Number.isFinite(parsedHours) &&
-    parsedHours > 0
-      ? Math.min(
-          Math.floor(parsedHours),
-          MAX_ADMIN_INVITATION_HOURS,
-        )
-      : DEFAULT_ADMIN_INVITATION_HOURS;
-
+export function resolveInvitationExpiration(): Date {
   return new Date(
-    Date.now() + validHours * 60 * 60 * 1000,
+    Date.now() +
+      ADMIN_INVITATION_VALIDITY_DAYS *
+        24 *
+        60 *
+        60 *
+        1000,
   );
 }
-
 export function isAdminInvitationExpired(
   expiresAt: string | Date,
 ): boolean {

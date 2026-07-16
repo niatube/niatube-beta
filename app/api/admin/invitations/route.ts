@@ -28,7 +28,6 @@ type InvitationRequestBody = {
   email?: string;
   fullName?: string;
   role?: string;
-  expiresInHours?: number | string;
 };
 
 type ExistingAdminRow = {
@@ -419,9 +418,7 @@ export async function POST(request: Request) {
     }
 
     const expiresAt =
-      resolveInvitationExpiration(
-        body.expiresInHours,
-      );
+  resolveInvitationExpiration();
 
     const generatedCode =
       generateAdminInvitationCode();
