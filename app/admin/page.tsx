@@ -106,13 +106,21 @@ if (!hasAccess) {
       <h1 className="text-2xl font-bold mb-4">Admin Control Center</h1>
     
       <div className="mb-8 grid gap-4 md:grid-cols-2 lg:grid-cols-3">
-  
+
   <a
   href="/admin/creators"
   className="rounded-xl border bg-white p-4 shadow-sm hover:bg-gray-50"
-  >
+>
+  <h2 className="text-lg font-black">
+    Creator Management
+  </h2>
 
-    <a
+  <p className="mt-2 text-sm text-gray-600">
+    Monitor creator profiles, uploads, and creator growth activity.
+  </p>
+</a>
+
+<a
   href="/admin/governance"
   className="rounded-xl border border-purple-200 bg-purple-50 p-4 shadow-sm hover:bg-purple-100"
 >
@@ -130,9 +138,21 @@ if (!hasAccess) {
     and maintain governance audit records.
   </p>
 </a>
-  <h2 className="text-lg font-black">Creator Management</h2>
-  <p className="mt-2 text-sm text-gray-600">
-    Monitor creator profiles, uploads, and creator growth activity.
+<a
+  href="/admin/invitations"
+  className="rounded-xl border border-indigo-200 bg-indigo-50 p-4 shadow-sm hover:bg-indigo-100"
+>
+  <p className="text-xs font-black uppercase tracking-wide text-indigo-700">
+    Administrator Governance
+  </p>
+
+  <h2 className="mt-2 text-lg font-black text-gray-900">
+    Admin Invitations
+  </h2>
+
+  <p className="mt-2 text-sm leading-6 text-gray-700">
+    Invite new administrators, assign roles, generate secure one-time
+    onboarding codes, and review invitation status.
   </p>
 </a>
   <a
