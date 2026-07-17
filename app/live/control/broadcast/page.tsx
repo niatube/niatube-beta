@@ -309,14 +309,14 @@ export default function BroadcastStatusPage() {
               </button>
             )}
 
-            <button
-              onClick={toggleMonetization}
-              className={`rounded-xl px-5 py-3 font-bold text-white ${
-                monetizationEnabled
-                  ? "bg-green-700 hover:bg-green-800"
-                  : "bg-green-600 hover:bg-green-700"
-              }`}
-            >
+          <button
+  onClick={toggleMonetization}
+  className={`rounded-xl px-5 py-3 font-bold text-white ${
+    monetizationEnabled
+      ? "bg-green-700 hover:bg-green-800"
+      : "bg-green-600 hover:bg-green-700"
+  }`}
+>
               {monetizationEnabled
                 ? "Monetization Enabled"
                 : "Enable Monetization"}

@@ -417,22 +417,28 @@ export async function POST(request: Request) {
       );
     }
 
-    const {
-      error: adminActivationError,
-    } = await supabaseAdmin
-      .from("admin_users")
-      .update({
-        role: invitation.role,
-        status: "active",
-        invitation_redeemed_at: now,
-        suspended_at: null,
-        revoked_at: null,
-        updated_at: now,
-      })
-      .eq("id", admin.id)
-      .eq("status", "invited");
+   const {
+  data: activatedAdminData,
+  error: adminActivationError,
+} = await supabaseAdmin
+  .from("admin_users")
+  .update({
+    role: invitation.role,
+    status: "active",
+    invitation_redeemed_at: now,
+    suspended_at: null,
+    revoked_at: null,
+    updated_at: now,
+  })
+  .eq("id", admin.id)
+  .eq("status", "invited")
+  .select("id, email, full_name, role, status")
+  .maybeSingle();
 
-    if (adminActivationError) {
+if (
+  adminActivationError ||
+  !activatedAdminData
+) {
       console.error(
         "Invited Admin activation failed:",
         adminActivationError,
