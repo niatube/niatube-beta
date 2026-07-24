@@ -2,9 +2,19 @@
 
 import { useEffect, useRef, useState } from "react";
 import { useParams } from "next/navigation";
+import {
+  RoomEvent,
+  type RemoteTrack,
+  type Room,
+} from "livekit-client";
+
 import Navbar from "@/components/Navbar";
 import { supabase } from "@/lib/supabase-browser";
 import { fallbackVideos } from "@/lib/fallbackVideos";
+import {
+  connectToLiveKit,
+  disconnectFromLiveKit,
+} from "@/lib/livekit";
 
 import {
   SUPPORT_PROFILES,
@@ -107,6 +117,204 @@ const subscriberMilestones = [10, 100, 1000, 10000, 100000];
 
 function milestoneTitle(milestone: number) {
   return `Milestone unlocked: ${milestone.toLocaleString()} subscribers`;
+}
+
+type LiveKitViewerProps = {
+  eventId: string;
+};
+
+function LiveKitViewer({ eventId }: LiveKitViewerProps) {
+  const roomRef = useRef<Room | null>(null);
+  const mediaContainerRef = useRef<HTMLDivElement | null>(null);
+
+  const [status, setStatus] = useState("Connecting to livestream...");
+  const [hasVideo, setHasVideo] = useState(false);
+  const [hasAudio, setHasAudio] = useState(false);
+  const [soundEnabled, setSoundEnabled] = useState(false);
+
+  useEffect(() => {
+    let cancelled = false;
+
+    function attachRemoteTrack(track: RemoteTrack) {
+      if (!mediaContainerRef.current) return;
+
+      const element = track.attach();
+
+      element.autoplay = true;
+      element.setAttribute("playsinline", "true");
+
+      if (track.kind === "video") {
+        element.className =
+          "h-full w-full bg-black object-contain";
+
+        setHasVideo(true);
+      }
+
+      if (track.kind === "audio") {
+        element.className = "hidden";
+        setHasAudio(true);
+      }
+
+      mediaContainerRef.current.appendChild(element);
+
+      setStatus("Live");
+    }
+
+    function detachRemoteTrack(track: RemoteTrack) {
+      const detachedElements = track.detach();
+
+      detachedElements.forEach((element) => {
+        element.remove();
+      });
+    }
+
+    async function connectViewer() {
+      try {
+        setStatus("Connecting to livestream...");
+
+        const roomName = `niatube-live-${eventId}`;
+
+        const participantName =
+          `NiaTube Viewer ${crypto.randomUUID().slice(0, 8)}`;
+
+        const room = await connectToLiveKit({
+          roomName,
+          participantName,
+          role: "viewer",
+        });
+
+        if (cancelled) {
+          await disconnectFromLiveKit(room);
+          return;
+        }
+
+        roomRef.current = room;
+
+        room.on(
+          RoomEvent.TrackSubscribed,
+          (track) => {
+            attachRemoteTrack(track);
+          }
+        );
+
+        room.on(
+          RoomEvent.TrackUnsubscribed,
+          (track) => {
+            detachRemoteTrack(track);
+          }
+        );
+
+        room.on(RoomEvent.Disconnected, () => {
+          setStatus("Livestream disconnected.");
+          setHasVideo(false);
+          setHasAudio(false);
+        });
+
+        let existingTrackFound = false;
+
+        room.remoteParticipants.forEach((participant) => {
+          participant.trackPublications.forEach((publication) => {
+            if (publication.track) {
+              existingTrackFound = true;
+              attachRemoteTrack(publication.track);
+            }
+          });
+        });
+
+        if (!existingTrackFound) {
+          setStatus(
+            "Connected. Waiting for the creator's camera and microphone..."
+          );
+        }
+      } catch (error) {
+        console.error("LiveKit viewer connection error:", error);
+
+        if (!cancelled) {
+          setStatus(
+            "Unable to connect to the livestream. Please refresh and try again."
+          );
+        }
+      }
+    }
+
+    connectViewer();
+
+    return () => {
+      cancelled = true;
+
+      if (roomRef.current) {
+        roomRef.current.remoteParticipants.forEach((participant) => {
+          participant.trackPublications.forEach((publication) => {
+            if (publication.track) {
+              detachRemoteTrack(publication.track);
+            }
+          });
+        });
+
+        disconnectFromLiveKit(roomRef.current);
+        roomRef.current = null;
+      }
+
+      if (mediaContainerRef.current) {
+        mediaContainerRef.current.innerHTML = "";
+      }
+    };
+  }, [eventId]);
+
+  async function enableSound() {
+    if (!roomRef.current) return;
+
+    try {
+      await roomRef.current.startAudio();
+      setSoundEnabled(true);
+    } catch (error) {
+      console.error("LiveKit audio playback error:", error);
+      setStatus(
+        "The livestream is connected, but audio playback could not be started."
+      );
+    }
+  }
+
+  return (
+    <div className="relative aspect-video w-full overflow-hidden bg-black">
+      <div
+        ref={mediaContainerRef}
+        className="h-full w-full bg-black"
+      />
+
+      {!hasVideo && (
+        <div className="absolute inset-0 flex items-center justify-center bg-black px-6 text-center">
+          <div>
+            <div className="mx-auto h-12 w-12 animate-pulse rounded-full bg-red-600" />
+
+            <p className="mt-5 text-lg font-black text-white">
+              {status}
+            </p>
+
+            <p className="mt-2 text-sm text-gray-300">
+              Live Event ID: {eventId}
+            </p>
+          </div>
+        </div>
+      )}
+
+      {hasVideo && (
+        <div className="absolute left-4 top-4 rounded-full bg-red-600 px-3 py-1 text-xs font-black uppercase text-white shadow">
+          🔴 Live
+        </div>
+      )}
+
+      {hasAudio && !soundEnabled && (
+        <button
+          type="button"
+          onClick={enableSound}
+          className="absolute bottom-4 right-4 rounded-xl bg-white px-4 py-2 text-sm font-black text-black shadow-lg hover:bg-gray-100"
+        >
+          🔊 Enable Sound
+        </button>
+      )}
+    </div>
+  );
 }
 
 export default function WatchPage() {
@@ -719,22 +927,44 @@ async function sendTip() {
   let convertedAmount = amount;
 
   if (tipCurrency !== reportingCurrency) {
-    const { data: fxRateData, error: fxRateError } = await supabase
+  const { data: directRateData, error: directRateError } = await supabase
+    .from("fx_rates")
+    .select("rate")
+    .eq("base_currency", tipCurrency)
+    .eq("target_currency", reportingCurrency)
+    .maybeSingle();
+
+  if (directRateData?.rate) {
+    // Example: NGN → USD
+    fxRateUsed = Number(directRateData.rate);
+    convertedAmount = amount * fxRateUsed;
+  } else {
+    const { data: reverseRateData, error: reverseRateError } = await supabase
       .from("fx_rates")
       .select("rate")
       .eq("base_currency", reportingCurrency)
       .eq("target_currency", tipCurrency)
-      .single();
+      .maybeSingle();
 
-    if (fxRateError || !fxRateData?.rate) {
-      console.error("FX rate error:", fxRateError);
-      setTipStatus("Tip failed. FX rate is not available for this currency.");
+    if (reverseRateData?.rate) {
+      // Example: USD → NGN, so invert it to convert NGN → USD.
+      fxRateUsed = 1 / Number(reverseRateData.rate);
+      convertedAmount = amount * fxRateUsed;
+    } else {
+      console.error("FX rate lookup failed:", {
+        directRateError,
+        reverseRateError,
+        tipCurrency,
+        reportingCurrency,
+      });
+
+      setTipStatus(
+        `Tip failed. FX rate is not available for ${tipCurrency}.`
+      );
       return;
     }
-
-    fxRateUsed = 1 / Number(fxRateData.rate);
-    convertedAmount = amount * fxRateUsed;
   }
+}
 
   const { data, error } = await supabase
     .from("tips")
@@ -1137,39 +1367,39 @@ if (loading) {
         <div className="grid gap-6 lg:grid-cols-[minmax(0,1fr)_350px]">
           <section>
             <div className="overflow-hidden rounded-2xl bg-black shadow-sm">
-            {video.video_url?.includes("iframe.mediadelivery.net") ? (
-  <iframe
-    src={video.video_url}
-    className="aspect-video w-full bg-black"
-    allow="accelerometer; gyroscope; autoplay; encrypted-media; picture-in-picture;"
-    allowFullScreen
-  />
-) : video.video_url ? (
-  <video
-    controls
-    autoPlay={isLive}
-    className="aspect-video w-full bg-black"
-    poster={
-      video.thumbnail_url ||
-      video.image ||
-      "/default-thumbnail.jpg"
-    }
-  >
-    <source src={video.video_url} type="video/mp4" />
-  </video>
-) : (
-  <img
-    src={
-      video.thumbnail_url ||
-      video.image ||
-      "/default-thumbnail.jpg"
-    }
-    alt={video.title}
-    className="aspect-video w-full object-cover"
-  />
-)}
-
-            </div>
+  {isLive ? (
+    <LiveKitViewer eventId={id} />
+  ) : video.video_url?.includes("iframe.mediadelivery.net") ? (
+    <iframe
+      src={video.video_url}
+      className="aspect-video w-full bg-black"
+      allow="accelerometer; gyroscope; autoplay; encrypted-media; picture-in-picture;"
+      allowFullScreen
+    />
+  ) : video.video_url ? (
+    <video
+      controls
+      className="aspect-video w-full bg-black"
+      poster={
+        video.thumbnail_url ||
+        video.image ||
+        "/default-thumbnail.jpg"
+      }
+    >
+      <source src={video.video_url} type="video/mp4" />
+    </video>
+  ) : (
+    <img
+      src={
+        video.thumbnail_url ||
+        video.image ||
+        "/default-thumbnail.jpg"
+      }
+      alt={video.title}
+      className="aspect-video w-full object-cover"
+    />
+  )}
+</div>
 
             <div className="mt-5 rounded-2xl bg-white p-6 shadow-sm">
               <div className="flex flex-wrap items-start justify-between gap-4">

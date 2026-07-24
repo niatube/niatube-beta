@@ -51,19 +51,32 @@ export async function GET(req: Request) {
       trending_score: calculateTrendingScore(upload),
     }));
 
-    scoredUploads.sort((a, b) => {
-      const scoreDifference =
-        Number(b.trending_score || 0) - Number(a.trending_score || 0);
+   scoredUploads.sort((a, b) => {
+  const aIsLive =
+    Boolean(a.is_live) && a.live_status === "live";
 
-      if (scoreDifference !== 0) return scoreDifference;
+  const bIsLive =
+    Boolean(b.is_live) && b.live_status === "live";
 
-      return (
-        new Date(b.created_at || 0).getTime() -
-        new Date(a.created_at || 0).getTime()
-      );
-    });
+  // Active livestreams must always appear first.
+  if (aIsLive && !bIsLive) return -1;
+  if (!aIsLive && bIsLive) return 1;
 
-    return NextResponse.json({ uploads: scoredUploads.slice(0, 20) });
+  const scoreDifference =
+    Number(b.trending_score || 0) -
+    Number(a.trending_score || 0);
+
+  if (scoreDifference !== 0) {
+    return scoreDifference;
+  }
+
+  return (
+    new Date(b.created_at || 0).getTime() -
+    new Date(a.created_at || 0).getTime()
+  );
+});
+
+    return NextResponse.json({ uploads: scoredUploads });
   } catch (err) {
     return NextResponse.json(
       { error: "Unexpected error" },

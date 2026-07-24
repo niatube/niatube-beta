@@ -50,10 +50,10 @@ export default function LiveSetupPage() {
     setMessage("Live event created.");
 
     if (data?.id) {
-      router.push(`/live/control?eventId=${data.id}`);
-    } else {
-      router.push("/live/control");
-    }
+  router.push(`/live/control/${data.id}`);
+} else {
+  router.push("/live/control");
+}
   }
 
   return (

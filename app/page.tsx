@@ -18,6 +18,7 @@ type UploadItem = {
   likes?: number | null;
   views?: number | null;
   is_live?: boolean | null;
+  live_status?: string | null;
 };
 
 function formatUploadTime(dateString?: string | null) {
@@ -80,10 +81,16 @@ setHomepageAd(adData.ad || null);
         setUploads([]);
       }
     }
+fetchUploads();
 
-    fetchUploads();
-  }, []);
+const refreshInterval = window.setInterval(() => {
+  fetchUploads();
+}, 15000);
 
+return () => {
+  window.clearInterval(refreshInterval);
+};
+}, []);
   useEffect(() => {
   async function recordImpression() {
 if (!homepageAd?.campaign_name || impressionRecorded) {
@@ -138,7 +145,9 @@ const recordHomepageAdClick = async () => {
       language: item.language || null,
       image: item.thumbnail_url || "/default-thumbnail.jpg",
       created_at: item.created_at,
-      is_live: Boolean(item.is_live),
+      is_live:
+  Boolean(item.is_live) &&
+  item.live_status === "live",
       isUploadedVideo: true,
     }));
 
@@ -265,9 +274,13 @@ const recordHomepageAdClick = async () => {
                 <div className="text-sm">
                   <span className="font-semibold">Now uploading:</span>{" "}
                   <span className="text-gray-300">
-                    {uploadedVideos.length > 0
-                      ? uploadedVideos.map((item) => item.title).join(" • ")
-                      : "Approved creator uploads will appear here."}
+                    {uploadedVideos.filter((item) => !item.is_live).length > 0
+  ? uploadedVideos
+      .filter((item) => !item.is_live)
+      .slice(0, 5)
+      .map((item) => item.title)
+      .join(" • ")
+  : "Approved creator uploads will appear here."}
                   </span>
                 </div>
               </div>
@@ -459,7 +472,10 @@ const recordHomepageAdClick = async () => {
                           href={`/watch/${video.id}`}
                           className="group overflow-hidden rounded-2xl bg-white shadow-sm transition-all duration-300 hover:-translate-y-1 hover:shadow-xl"
                         >
-                          <div className="relative h-[190px] overflow-hidden bg-black">
+                          <div className="relative h-[190px] overflow-hidden bg-gradient-to-br
+from-[#0f172a]
+via-[#1d4ed8]
+to-[#7c3aed]">
                             <div className="absolute left-3 top-3 z-20 rounded-full bg-red-600 px-3 py-1 text-xs font-bold text-white shadow-md">
                               🔴 LIVE
                             </div>

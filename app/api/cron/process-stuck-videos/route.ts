@@ -25,12 +25,12 @@ export async function GET() {
       );
     }
 
-    const { data: uploads, error } = await supabaseAdmin
-      .from("uploads")
-      .select("*")
-      .eq("status", "processing")
-      .lt("processing_deadline_at", new Date().toISOString());
-
+   const { data: uploads, error } = await supabaseAdmin
+  .from("uploads")
+  .select("*")
+  .eq("status", "processing")
+  .order("created_at", { ascending: true })
+  .limit(50);
     if (error) {
       return NextResponse.json({ error: error.message }, { status: 500 });
     }
