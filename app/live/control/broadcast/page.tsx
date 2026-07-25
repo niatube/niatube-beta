@@ -423,9 +423,9 @@ if (settings.is_live) {
     }
 
     try {
-      await navigator.clipboard.writeText(
-        `${window.location.origin}/watch/${eventId}`
-      );
+    await navigator.clipboard.writeText(
+  `${window.location.origin}/watch/${eventId}`
+);
 
       setShareCopied(true);
 

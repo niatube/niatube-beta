@@ -200,8 +200,9 @@ const [accountHolderName, setAccountHolderName] = useState("");
 
 const [walletActivity, setWalletActivity] = useState<WalletActivityItem[]>([]);
 
-  const videosPerPage = 6;
 
+
+const videosPerPage = 6;
   useEffect(() => {
     async function loadDashboard() {
       setLoading(true);
@@ -379,18 +380,38 @@ setSelectedPayoutCurrency(loadedCreatorCurrency);
 
 setFxRates((fxData || []) as FxRate[]);
 
-const { data: walletLedgerData } = await supabase
+const { data: walletLedgerData, error: walletLedgerError } = await supabase
   .from("creator_wallet_ledger")
   .select("*")
-  .ilike("creator_name", activeCreatorName);
+  .ilike("creator_name", activeCreatorName.trim());
 
-  setWalletActivity(buildWalletActivity(walletLedgerData || []));
+if (walletLedgerError) {
+  console.error(
+    "Creator wallet ledger load error:",
+    JSON.stringify(walletLedgerError, null, 2)
+  );
+}
 
-  const settlementSummary = buildCreatorSettlementSummary(
+console.log("Creator wallet ledger diagnostic:", {
+  activeCreatorName,
+  normalizedCreatorName: activeCreatorName.trim(),
+  rowCount: walletLedgerData?.length || 0,
+  rows: walletLedgerData || [],
+});
+
+const activity = buildWalletActivity(walletLedgerData || []);
+
+
+
+setWalletActivity(activity);
+
+const settlementSummary = buildCreatorSettlementSummary(
   walletLedgerData || [],
   (fxData || []) as FxRate[],
   loadedCreatorCurrency
 );
+
+
 
 setCreatorSettlement(settlementSummary);
       setUploads((uploadsData || []) as Upload[]);
@@ -1865,8 +1886,11 @@ async function copyPublicChannelLink() {
         </tr>
       </thead>
 
-      <tbody>
-        {!creatorSettlement || creatorSettlement.holdings.length === 0 ? (
+      
+        <tbody>
+    
+
+  {!creatorSettlement || creatorSettlement.holdings.length === 0 ? (
           <tr>
             <td colSpan={3} className="py-5 text-gray-500">
               No wallet activity yet.
@@ -1917,8 +1941,11 @@ async function copyPublicChannelLink() {
         </tr>
       </thead>
 
+     
       <tbody>
-        {walletActivity.length === 0 ? (
+   
+
+  {walletActivity.length === 0 ? (
           <tr>
             <td colSpan={6} className="py-5 text-gray-500">
               No wallet activity yet.

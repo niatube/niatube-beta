@@ -147,14 +147,23 @@ const paymentMethod = String(
       );
     }
 
-    await supabaseAdmin.from("notifications").insert([
-      {
-        creator_name: creatorName,
-        type: "super_support",
-        title: "New Super Support received",
-        message: `You received ${preparedSupport.currencyCode} ${preparedSupport.grossAmount} Super Support from ${supporterName}.`,
-      },
-    ]);
+   const { error: notificationError } = await supabaseAdmin
+  .from("notifications")
+  .insert([
+    {
+      creator_name: creatorName,
+      type: "super_support",
+      title: "New Super Support received",
+      message: `You received ${preparedSupport.currencyCode} ${preparedSupport.grossAmount} Super Support from ${supporterName}.`,
+    },
+  ]);
+
+if (notificationError) {
+  console.error(
+    "Super Support notification error:",
+    notificationError
+  );
+}
 
     return NextResponse.json(
       {

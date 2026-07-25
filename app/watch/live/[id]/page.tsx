@@ -14,6 +14,9 @@ import {
   disconnectFromLiveKit,
 } from "@/lib/livekit";
 
+import { supabase } from "@/lib/supabase-browser";
+import { COUNTRY_REGISTRY } from "@/lib/country-registry";
+
 export default function LiveWatchPage() {
   const params = useParams<{ id: string }>();
 
@@ -27,10 +30,33 @@ export default function LiveWatchPage() {
   const [statusMessage, setStatusMessage] = useState(
     "Select Join Live Stream to begin watching."
   );
+  // ---------- Super Support ----------
+const [username, setUsername] = useState("");
+const [viewerCountry, setViewerCountry] = useState("Rwanda");
+const [viewerCurrency, setViewerCurrency] = useState("RWF");
+
+const [supportTier, setSupportTier] = useState("Support");
+const [supportMessage, setSupportMessage] = useState("");
+
+const [isSendingSupport, setIsSendingSupport] = useState(false);
+const [supportStatus, setSupportStatus] = useState("");
+const [creatorName, setCreatorName] = useState("");
 
   const streamId = Array.isArray(params.id)
     ? params.id[0]
     : params.id;
+
+    function handleViewerCountryChange(countryName: string) {
+  setViewerCountry(countryName);
+
+  const countryRecord = COUNTRY_REGISTRY.find(
+    (record) => record.country === countryName
+  );
+
+  if (countryRecord) {
+    setViewerCurrency(countryRecord.currencyCode);
+  }
+}
 
   useEffect(() => {
     return () => {
@@ -42,6 +68,28 @@ export default function LiveWatchPage() {
       clearMediaContainers();
     };
   }, []);
+  useEffect(() => {
+  async function loadStreamMetadata() {
+    if (!streamId) return;
+
+    const { data, error } = await supabase
+      .from("uploads")
+      .select("creator")
+      .eq("id", streamId)
+      .maybeSingle();
+
+    if (error) {
+      console.error("Live stream metadata error:", error);
+      return;
+    }
+
+    if (data?.creator) {
+      setCreatorName(data.creator);
+    }
+  }
+
+  loadStreamMetadata();
+}, [streamId]);
 
   function clearMediaContainers() {
     if (videoContainerRef.current) {
@@ -189,6 +237,63 @@ export default function LiveWatchPage() {
       setIsConnecting(false);
     }
   }
+  async function sendSuperSupport() {
+  if (!streamId || !creatorName) {
+    setSupportStatus("Unable to identify this live stream.");
+    return;
+  }
+
+  if (!supportMessage.trim()) {
+    setSupportStatus("Please enter a message.");
+    return;
+  }
+
+  setIsSendingSupport(true);
+  setSupportStatus("");
+
+  try {
+    const amountMap: Record<string, number> = {
+      Support: 5,
+      Champion: 20,
+      Legend: 100,
+    };
+
+    const response = await fetch("/api/super-support", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({
+        live_video_id: streamId,
+        supporter_name: username || "Guest",
+        creator_name: creatorName,
+        amount: amountMap[supportTier] || 5,
+        currency_code: viewerCurrency,
+        tier: supportTier,
+        message: supportMessage,
+        country: viewerCountry,
+        payment_method: "CARD",
+      }),
+    });
+
+    const result = await response.json();
+
+    if (!response.ok) {
+      setSupportStatus(
+        result.error || "Super Support could not be completed."
+      );
+      return;
+    }
+
+    setSupportStatus("✅ Super Support sent successfully!");
+    setSupportMessage("");
+  } catch (err) {
+    console.error(err);
+    setSupportStatus("An unexpected error occurred.");
+  } finally {
+    setIsSendingSupport(false);
+  }
+}
 
   return (
     <main className="min-h-screen bg-gray-950 px-4 py-6 text-white">
@@ -280,17 +385,87 @@ export default function LiveWatchPage() {
               </div>
             </div>
 
-            <div className="mt-5 rounded-2xl border border-gray-800 bg-gray-900 p-6">
-              <h2 className="text-2xl font-black">
-                Live Broadcast
-              </h2>
+           <div className="mt-5 rounded-2xl border border-gray-800 bg-gray-900 p-6">
+  <h2 className="text-2xl font-black">
+    ⭐ Super Support
+  </h2>
 
-              <p className="mt-2 text-gray-400">
-                Creator information, live viewer count, reactions, and
-                Super Support will appear here in the next integration
-                stages.
-              </p>
-            </div>
+  <p className="mt-2 text-sm text-gray-400">
+    Support this creator during the live broadcast.
+  </p>
+
+  <div className="mt-6 space-y-4">
+
+    <select
+  value={viewerCountry}
+  onChange={(e) => handleViewerCountryChange(e.target.value)}
+  className="w-full rounded-xl border border-gray-700 bg-gray-950 p-3 text-white"
+>
+  {COUNTRY_REGISTRY.map((record) => (
+    <option key={record.isoCode} value={record.country}>
+      {record.country}
+    </option>
+  ))}
+</select>
+
+    <input
+      type="text"
+      placeholder="Your country"
+      value={viewerCountry}
+      onChange={(e) => setViewerCountry(e.target.value)}
+      className="w-full rounded-xl border border-gray-700 bg-gray-950 p-3 text-white"
+    />
+
+    <div className="rounded-xl border border-gray-700 bg-gray-950 p-3">
+  <p className="text-xs font-bold uppercase tracking-wide text-gray-500">
+    Support Currency
+  </p>
+
+  <p className="mt-1 text-lg font-black text-yellow-400">
+    {viewerCurrency}
+  </p>
+
+  <p className="mt-1 text-xs text-gray-500">
+    Automatically selected from the viewer country.
+  </p>
+</div>
+
+    <select
+      value={supportTier}
+      onChange={(e) => setSupportTier(e.target.value)}
+      className="w-full rounded-xl border border-gray-700 bg-gray-950 p-3 text-white"
+    >
+      <option value="Support">Support</option>
+      <option value="Champion">Champion</option>
+      <option value="Legend">Legend</option>
+    </select>
+
+    <textarea
+      rows={4}
+      placeholder="Leave a message for the creator..."
+      value={supportMessage}
+      onChange={(e) => setSupportMessage(e.target.value)}
+      className="w-full rounded-xl border border-gray-700 bg-gray-950 p-3 text-white"
+    />
+
+    <button
+      onClick={sendSuperSupport}
+      disabled={isSendingSupport}
+      className="w-full rounded-xl bg-yellow-500 px-6 py-3 font-black text-black hover:bg-yellow-400 disabled:opacity-50"
+    >
+      {isSendingSupport
+        ? "Sending..."
+        : `⭐ Send ${supportTier} Support`}
+    </button>
+
+    {supportStatus && (
+      <p className="text-sm font-semibold text-green-400">
+        {supportStatus}
+      </p>
+    )}
+
+  </div>
+</div>
           </section>
 
           <aside className="rounded-3xl border border-gray-800 bg-gray-900 p-6">

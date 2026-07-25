@@ -922,50 +922,9 @@ async function sendTip() {
   const platformFee = amount * 0.05;
   const netAmount = amount * 0.95;
 
-  const reportingCurrency = "USD";
-  let fxRateUsed = 1;
-  let convertedAmount = amount;
-
-  if (tipCurrency !== reportingCurrency) {
-  const { data: directRateData, error: directRateError } = await supabase
-    .from("fx_rates")
-    .select("rate")
-    .eq("base_currency", tipCurrency)
-    .eq("target_currency", reportingCurrency)
-    .maybeSingle();
-
-  if (directRateData?.rate) {
-    // Example: NGN → USD
-    fxRateUsed = Number(directRateData.rate);
-    convertedAmount = amount * fxRateUsed;
-  } else {
-    const { data: reverseRateData, error: reverseRateError } = await supabase
-      .from("fx_rates")
-      .select("rate")
-      .eq("base_currency", reportingCurrency)
-      .eq("target_currency", tipCurrency)
-      .maybeSingle();
-
-    if (reverseRateData?.rate) {
-      // Example: USD → NGN, so invert it to convert NGN → USD.
-      fxRateUsed = 1 / Number(reverseRateData.rate);
-      convertedAmount = amount * fxRateUsed;
-    } else {
-      console.error("FX rate lookup failed:", {
-        directRateError,
-        reverseRateError,
-        tipCurrency,
-        reportingCurrency,
-      });
-
-      setTipStatus(
-        `Tip failed. FX rate is not available for ${tipCurrency}.`
-      );
-      return;
-    }
-  }
-}
-
+const reportingCurrency = tipCurrency;
+const fxRateUsed = 1;
+const convertedAmount = amount;
   const { data, error } = await supabase
     .from("tips")
     .insert([
@@ -1085,156 +1044,201 @@ async function sendComment() {
   setInput("");
 }
 async function sendSuperSupport() {
-  if (chatRestricted) return;
-
-  const finalMessage = input.trim();
-  if (!finalMessage) return;
-
-  if (!video || !id) return;
-
-  if (mutedUsers.includes(username)) {
+  if (chatRestricted) {
+    alert("Live Chat and Super Support are currently restricted.");
     return;
   }
+
+  if (!video || !id) {
+    alert("The live video information is not available.");
+    return;
+  }
+
+  const safeUsername = username.trim() || "Viewer";
+
+  if (mutedUsers.includes(safeUsername)) {
+    alert("This viewer is currently muted.");
+    return;
+  }
+
+  const finalMessage =
+    input.trim() || `${safeUsername} sent Super Support!`;
 
   const supportTier = superChatAmount || "Support";
 
- const cfaXofCountries = [
-  "Benin",
-  "Burkina Faso",
-  "Côte d'Ivoire",
-  "Guinea-Bissau",
-  "Mali",
-  "Niger",
-  "Senegal",
-  "Togo",
-];
+  const cfaXofCountries = [
+    "Benin",
+    "Burkina Faso",
+    "Côte d'Ivoire",
+    "Guinea-Bissau",
+    "Mali",
+    "Niger",
+    "Senegal",
+    "Togo",
+  ];
 
-const cfaXafCountries = [
-  "Cameroon",
-  "Central African Republic",
-  "Chad",
-  "Republic of the Congo",
-  "Equatorial Guinea",
-  "Gabon",
-];
+  const cfaXafCountries = [
+    "Cameroon",
+    "Central African Republic",
+    "Chad",
+    "Republic of the Congo",
+    "Equatorial Guinea",
+    "Gabon",
+  ];
 
-const country = viewerCountry || "United States";
+  const country = viewerCountry || "United States";
 
-const selectedCurrency =
-  viewerCurrency && viewerCurrency !== "OTHER"
-    ? viewerCurrency
-    : cfaXofCountries.includes(country)
-    ? "XOF"
-    : cfaXafCountries.includes(country)
-    ? "XAF"
-    : tipCurrency && tipCurrency !== "OTHER"
-    ? tipCurrency
-    : "USD";
-
-  const { data: preset } = await supabase
-  .from("monetization_presets")
-  .select("currency_code, amount, tier")
-  .ilike("currency_code", selectedCurrency)
-  .ilike("tier", supportTier)
-  .eq("is_active", true)
-  .maybeSingle();
-
-const currencyCode = preset?.currency_code || selectedCurrency || "USD";
-
-const fallbackSupportAmountsByCurrency: Record<string, Record<string, number>> = {
-  USD: { Support: 5, Champion: 20, Legend: 100 },
-  EUR: { Support: 5, Champion: 20, Legend: 100 },
-  XOF: { Support: 2500, Champion: 10000, Legend: 50000 },
-  XAF: { Support: 2500, Champion: 10000, Legend: 50000 },
-  NGN: { Support: 1500, Champion: 7500, Legend: 30000 },
-  GHS: { Support: 20, Champion: 100, Legend: 500 },
-  KES: { Support: 150, Champion: 750, Legend: 3000 },
-  RWF: { Support: 2000, Champion: 10000, Legend: 50000 },
-};
-
-const supportAmount = Number(
-  preset?.amount ||
-    fallbackSupportAmountsByCurrency[currencyCode]?.[supportTier] ||
-    5
-);
-
-if (!supportAmount || supportAmount <= 0) {
-  console.error("Invalid Super Support amount.");
-  return;
-}
-
-
-  
-
-const response = await fetch("/api/super-support", {
-  method: "POST",
-  headers: {
-    "Content-Type": "application/json",
-  },
- body: JSON.stringify({
-  live_video_id: id,
-  supporter_name: username,
-  creator_name: video.creator,
-  amount: supportAmount,
-  currency_code:
-    selectedCurrency === "OTHER" || currencyCode === "AOA"
+  const selectedCurrency =
+    viewerCurrency && viewerCurrency !== "OTHER"
+      ? viewerCurrency.toUpperCase()
+      : cfaXofCountries.includes(country)
       ? "XOF"
-      : selectedCurrency,
-  tier: supportTier,
-  message: finalMessage,
-  country,
-  payment_method: "CARD",
-}),
-});
+      : cfaXafCountries.includes(country)
+      ? "XAF"
+      : tipCurrency && tipCurrency !== "OTHER"
+      ? tipCurrency.toUpperCase()
+      : "USD";
 
-const resultText = await response.text();
+  const { data: preset, error: presetError } = await supabase
+    .from("monetization_presets")
+    .select("currency_code, amount, tier")
+    .ilike("currency_code", selectedCurrency)
+    .ilike("tier", supportTier)
+    .eq("is_active", true)
+    .maybeSingle();
 
-let result: any = {};
-try {
-  result = resultText ? JSON.parse(resultText) : {};
-} catch {
-  result = { raw: resultText };
-}
+  if (presetError) {
+    console.error("Super Support preset error:", presetError);
+  }
 
-if (!response.ok) {
-  alert(
-    `Super Support failed.\nStatus: ${response.status}\nStatus Text: ${response.statusText}\nResponse: ${JSON.stringify(result)}`
+  const currencyCode = String(
+    preset?.currency_code || selectedCurrency || "USD"
+  ).toUpperCase();
+
+  const fallbackSupportAmountsByCurrency: Record<
+    string,
+    Record<string, number>
+  > = {
+    USD: { Support: 5, Champion: 20, Legend: 100 },
+    EUR: { Support: 5, Champion: 20, Legend: 100 },
+    XOF: { Support: 2500, Champion: 10000, Legend: 50000 },
+    XAF: { Support: 2500, Champion: 10000, Legend: 50000 },
+    NGN: { Support: 1500, Champion: 7500, Legend: 30000 },
+    GHS: { Support: 20, Champion: 100, Legend: 500 },
+    KES: { Support: 150, Champion: 750, Legend: 3000 },
+    RWF: { Support: 2000, Champion: 10000, Legend: 50000 },
+  };
+
+  const supportAmount = Number(
+    preset?.amount ||
+      fallbackSupportAmountsByCurrency[currencyCode]?.[supportTier] ||
+      fallbackSupportAmountsByCurrency.USD[supportTier] ||
+      5
   );
 
-  console.error(
-    `Super Support API error | Status: ${response.status} | Status Text: ${
-      response.statusText
-    } | Response: ${JSON.stringify(result)}`
-  );
-
-  return;
-}
-  const { data, error } = await supabase
-    .from("live_chat")
-    .insert([
-      {
-        username,
-        message: finalMessage,
-        type: "super_chat",
-      },
-    ])
-    .select()
-    .single();
-
-  if (error) {
-    console.error("Super Support chat error:", error);
+  if (!Number.isFinite(supportAmount) || supportAmount <= 0) {
+    alert("A valid Super Support amount could not be determined.");
+    console.error("Invalid Super Support amount:", {
+      supportTier,
+      currencyCode,
+      supportAmount,
+    });
     return;
   }
 
-  if (data) {
-    setMessages((prev) => [...prev, data as ChatMessage]);
-  }
+  try {
+    const response = await fetch("/api/super-support", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({
+        live_video_id: id,
+        supporter_name: safeUsername,
+        viewer_id: liveViewerId || safeUsername,
+        creator_name: video.creator,
+        amount: supportAmount,
+        currency_code: currencyCode,
+        tier: supportTier,
+        message: finalMessage,
+        country,
+        payment_method: "CARD",
+      }),
+    });
 
-  setInput("");
- setSuperChatAmount("");
-setTimeout(() => {
-  setSuperChatAmount("Support");
-}, 0);
+    const resultText = await response.text();
+
+    let result: any = {};
+
+    try {
+      result = resultText ? JSON.parse(resultText) : {};
+    } catch {
+      result = { raw: resultText };
+    }
+
+    if (!response.ok) {
+      alert(
+        `Super Support failed.\nStatus: ${response.status}\nResponse: ${
+          result?.error || JSON.stringify(result)
+        }`
+      );
+
+      console.error("Super Support API error:", {
+        status: response.status,
+        statusText: response.statusText,
+        result,
+      });
+
+      return;
+    }
+
+    const { data: chatData, error: chatError } = await supabase
+      .from("live_chat")
+      .insert([
+        {
+          username: safeUsername,
+          message: finalMessage,
+          type: "super_chat",
+        },
+      ])
+      .select()
+      .single();
+
+    if (chatError) {
+      console.error("Super Support chat error:", chatError);
+
+      alert(
+        "Super Support was recorded, but its highlighted chat message could not be displayed."
+      );
+
+      return;
+    }
+
+    if (chatData) {
+      setMessages((previousMessages) => {
+        const alreadyPresent = previousMessages.some(
+          (message) => message.id === chatData.id
+        );
+
+        return alreadyPresent
+          ? previousMessages
+          : [...previousMessages, chatData as ChatMessage];
+      });
+    }
+
+    setInput("");
+    setSuperChatAmount("Support");
+
+    alert(
+      `Super Support sent successfully: ${currencyCode} ${supportAmount}`
+    );
+  } catch (error) {
+    console.error("Super Support request error:", error);
+
+    alert(
+      "Super Support could not be sent because of a network or server error."
+    );
+  }
 }
 async function deleteLiveChatMessage(messageId: string) {
   const { error } = await supabase

@@ -60,9 +60,13 @@ export function buildCreatorSettlementSummary(
   fxRates: FxRate[],
   settlementCurrency: string
 ): CreatorSettlementSummary {
-  const completedEntries = ledgerEntries.filter(
-    (entry) => !entry.status || entry.status === "completed"
-  );
+ const completedEntries = ledgerEntries.filter((entry) => {
+  const status = String(entry.status || "completed")
+    .trim()
+    .toLowerCase();
+
+  return status === "completed";
+});
 
   const balancesByCurrency = completedEntries.reduce<Record<string, number>>(
     (totals, entry) => {
