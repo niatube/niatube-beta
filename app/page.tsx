@@ -422,7 +422,7 @@ const recordHomepageAdClick = async () => {
                           </div>
                         </div>
 
-                        <div className="p-4">
+                        <div className="flex flex-1 flex-col p-4">
                           <h3 className="line-clamp-2 text-base font-black text-gray-900">
                             {video.title}
                           </h3>
@@ -441,79 +441,114 @@ const recordHomepageAdClick = async () => {
                 )}
               </div>
 
-              {uploadedVideos.some((video: any) => video.is_live) && (
-                <div className="mt-10 rounded-3xl border border-red-100 bg-red-50 p-5">
-                  <div className="mb-5 flex items-center justify-between">
-                    <div>
-                      <h2 className="text-3xl font-extrabold text-red-700">
-                        🔴 Live Now
-                      </h2>
+             {uploadedVideos.some((video: any) => video.is_live) && (
+  <div className="mt-10 rounded-3xl border border-red-100 bg-red-50 p-5">
+    <div className="mb-5 flex items-center justify-between gap-4">
+      <div>
+        <h2 className="flex items-center gap-3 text-3xl font-extrabold text-red-700">
+          <span className="h-4 w-4 animate-pulse rounded-full bg-red-600" />
+          Live Now
+        </h2>
 
-                      <p className="mt-1 text-sm text-red-700/80">
-                        Join active livestreams happening now on NiaTube.
-                      </p>
-                    </div>
+        <p className="mt-1 text-sm text-red-700/80">
+          Join active livestreams happening now on NiaTube.
+        </p>
+      </div>
 
-                    <Link
-                      href="/live"
-                      className="rounded-lg bg-red-600 px-4 py-2 text-sm font-bold text-white hover:bg-red-700"
-                    >
-                      View Live
-                    </Link>
-                  </div>
+      <Link
+        href="/live"
+        className="rounded-xl bg-red-600 px-4 py-2 text-sm font-bold text-white transition hover:bg-red-700"
+      >
+        View Live
+      </Link>
+    </div>
 
-                  <div className="grid grid-cols-1 gap-5 md:grid-cols-2 xl:grid-cols-3">
-                    {uploadedVideos
-                      .filter((video: any) => video.is_live)
-                      .slice(0, 3)
-                      .map((video: any, i: number) => (
-                        <Link
-                          key={`live-${video.id}-${i}`}
-                          href={`/watch/${video.id}`}
-                          className="group overflow-hidden rounded-2xl bg-white shadow-sm transition-all duration-300 hover:-translate-y-1 hover:shadow-xl"
-                        >
-                          <div className="relative h-[190px] overflow-hidden bg-gradient-to-br
-from-[#0f172a]
-via-[#1d4ed8]
-to-[#7c3aed]">
-                            <div className="absolute left-3 top-3 z-20 rounded-full bg-red-600 px-3 py-1 text-xs font-bold text-white shadow-md">
-                              🔴 LIVE
-                            </div>
+    <div className="grid grid-cols-1 gap-5 md:grid-cols-2 xl:grid-cols-3">
+      {uploadedVideos
+        .filter((video: any) => video.is_live)
+        .slice(0, 3)
+        .map((video: any, i: number) => {
+          const liveCardThemes = [
+            {
+              card: "border-yellow-300 bg-gradient-to-br from-yellow-100 via-amber-50 to-yellow-200",
+              media:
+                "border-yellow-300 bg-gradient-to-br from-yellow-300 via-amber-200 to-orange-200",
+              label: "text-amber-800",
+              button:
+                "bg-yellow-400 text-gray-950 hover:bg-yellow-500",
+            },
+            {
+              card: "border-red-300 bg-gradient-to-br from-red-100 via-pink-50 to-rose-200",
+              media:
+                "border-red-300 bg-gradient-to-br from-red-300 via-pink-200 to-rose-200",
+              label: "text-red-700",
+              button:
+                "bg-red-600 text-white hover:bg-red-700",
+            },
+            {
+              card: "border-green-300 bg-gradient-to-br from-green-100 via-emerald-50 to-teal-200",
+              media:
+                "border-green-300 bg-gradient-to-br from-green-300 via-emerald-200 to-teal-200",
+              label: "text-green-800",
+              button:
+                "bg-green-600 text-white hover:bg-green-700",
+            },
+          ];
 
-                            <img
-                              src={video.image || "/default-thumbnail.jpg"}
-                              alt={video.title}
-                              onError={(e) => {
-                                e.currentTarget.src = "/default-thumbnail.jpg";
-                              }}
-                              className="h-full w-full object-cover transition-transform duration-500 group-hover:scale-105"
-                            />
+          const theme = liveCardThemes[i % liveCardThemes.length];
 
-                            <div className="absolute inset-0 bg-black/25" />
-                          </div>
-
-                          <div className="p-5">
-                            <p className="text-xs font-bold text-red-600">
-                              ● Live now
-                            </p>
-
-                            <h3 className="mt-2 line-clamp-2 text-base font-bold text-gray-900">
-                              {video.title}
-                            </h3>
-
-                            <p className="mt-1 text-sm font-semibold text-gray-600">
-                              {video.creator}
-                            </p>
-
-                            <button className="mt-4 w-full rounded-lg bg-red-600 px-4 py-2 text-sm font-bold text-white">
-                              Watch Live
-                            </button>
-                          </div>
-                        </Link>
-                      ))}
-                  </div>
+          return (
+            <Link
+              key={`live-${video.id}-${i}`}
+              href={`/watch/${video.id}`}
+             className={`group flex h-full flex-col overflow-hidden rounded-3xl border-2 p-3 shadow-sm transition-all duration-300 hover:-translate-y-1 hover:shadow-xl ${theme.card}`}
+            >
+              <div
+                className={`relative h-[190px] overflow-hidden rounded-2xl border ${theme.media}`}
+              >
+                <div className="absolute left-3 top-3 z-20 flex items-center gap-2 rounded-full bg-red-600 px-3 py-1 text-xs font-bold text-white shadow-md">
+                  <span className="h-2 w-2 animate-pulse rounded-full bg-white" />
+                  LIVE
                 </div>
-              )}
+
+                <img
+                  src={video.image || "/default-thumbnail.jpg"}
+                  alt={video.title}
+                  onError={(e) => {
+                    e.currentTarget.src = "/default-thumbnail.jpg";
+                  }}
+                  className="h-full w-full object-cover transition-transform duration-500 group-hover:scale-105"
+                />
+
+                <div className="absolute inset-0 bg-black/20" />
+              </div>
+
+              <div className="p-4">
+                <p className={`flex items-center gap-2 text-xs font-bold ${theme.label}`}>
+                  <span className="h-2 w-2 animate-pulse rounded-full bg-red-600" />
+                  Live now
+                </p>
+
+                <h3 className="mt-2 min-h-[48px] line-clamp-2 text-base font-bold text-gray-900">
+  {video.title}
+</h3>
+
+                <p className="mt-1 text-sm font-semibold text-gray-700">
+                  {video.creator}
+                </p>
+
+                <span
+  className={`mt-auto block w-full rounded-xl px-4 py-2 text-center text-sm font-bold transition ${theme.button}`}
+>
+  Watch Live
+</span>
+              </div>
+            </Link>
+          );
+        })}
+    </div>
+  </div>
+)}
             </section>
           </div>
 
