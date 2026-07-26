@@ -7,10 +7,10 @@ type CreatorProfile = {
   id: string;
   creator_name: string;
   email?: string | null;
+  country?: string | null;
   verified?: boolean | null;
   created_at?: string | null;
 };
-
 type CreatorStats = {
   totalCreators: number;
   creatorsWithUploads: number;
@@ -120,26 +120,26 @@ export default function AdminCreatorsPage() {
           </div>
         ) : (
           <div className="mt-8 overflow-hidden rounded-3xl bg-white shadow-sm">
-            <div className="grid grid-cols-5 gap-4 border-b bg-gray-100 px-5 py-4 text-sm font-black text-gray-700">
-              <p>Creator</p>
-              <p>Email</p>
-              <p>Verified</p>
-              <p>Joined</p>
-              <p>Channel</p>
-            </div>
-
+            <div className="grid grid-cols-6 gap-4 border-b bg-gray-100 px-5 py-4 text-sm font-black text-gray-700">
+  <p>Creator</p>
+  <p>Email</p>
+  <p>Country</p>
+  <p>Verified</p>
+  <p>Joined</p>
+  <p>Channel</p>
+</div>
             {creators.map((creator) => (
               <div
                 key={creator.id}
-                className="grid grid-cols-5 gap-4 border-b px-5 py-4 text-sm last:border-b-0"
+              className="grid grid-cols-6 gap-4 border-b px-5 py-4 text-sm last:border-b-0"
               >
                 <p className="font-bold text-gray-900">
                   {creator.creator_name}
                 </p>
 
-                <p className="text-gray-700">
-                  {creator.email || "Not provided"}
-                </p>
+<p className="text-gray-700">
+  {creator.country || "Not set"}
+</p>
 
                 <p className="text-gray-700">
                   {creator.verified ? "Verified" : "Not verified"}
