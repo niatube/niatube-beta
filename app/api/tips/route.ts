@@ -1,6 +1,7 @@
 import { getSupabaseAdmin } from "@/lib/supabase-server";
 import { NextResponse } from "next/server";
 import { recordCreatorWalletEntry } from "@/lib/creator-wallet-engine";
+import { recordPlatformRevenue } from "@/lib/platform-treasury";
 
 import {
   calculateNetAmount,
@@ -115,22 +116,26 @@ export async function POST(req: Request) {
 const netAmount = calculateNetAmount(amount);
 
     const { data: tipData, error: tipError } = await supabaseAdmin
-      .from("tips")
-      .insert([
-        {
-          creator_name: creatorName,
-          video_id: videoId,
-          amount,
-          currency_code: currencyCode,
-          gross_amount: amount,
-          platform_fee: platformFee,
-          net_amount: netAmount,
-          message,
-        },
-      ])
-      .select()
-      .single();
-
+  .from("tips")
+  .insert([
+    {
+      creator_name: creatorName,
+      video_id: videoId,
+      amount,
+      gross_amount: amount,
+      platform_fee: platformFee,
+      net_amount: netAmount,
+      fee_rate: amount > 0 ? platformFee / amount : 0,
+      currency_code: currencyCode,
+      currency: currencyCode,
+      message,
+      fx_rate_used: 1,
+      reporting_currency: currencyCode,
+      converted_amount: amount,
+    },
+  ])
+  .select()
+  .single();
     if (tipError) {
       console.error("Tip insert error:", tipError);
       return NextResponse.json({ error: tipError.message }, { status: 500 });
@@ -146,19 +151,45 @@ const netAmount = calculateNetAmount(amount);
     amount: netAmount,
     status: TRANSACTION_STATUS.COMPLETED,
   });
+  await recordPlatformRevenue({
+    supabaseAdmin,
+    creatorName,
+    transactionType: "TIP_FEE",
+    referenceId: tipData.id,
+    currencyCode,
+    grossAmount: amount,
+    platformFee,
+    country,
+    status: TRANSACTION_STATUS.COMPLETED,
+    notes: "Platform fee from viewer tip",
+  });
+
 } catch (error: any) {
-  console.error("Creator wallet engine error:", error);
+  console.error("Treasury integration error:", error);
 
   return NextResponse.json(
     {
-      error:
-        error?.message ||
-        "Failed to record creator wallet entry.",
+      error: error?.message,
+      details: error,
     },
     { status: 500 }
   );
 }
 
+const { error: notificationError } = await supabaseAdmin
+  .from("notifications")
+  .insert([
+    {
+      creator_name: creatorName,
+      type: "tip",
+      title: "New tip received",
+      message: `You received a tip of ${currencyCode} ${amount}.`,
+    },
+  ]);
+
+if (notificationError) {
+  console.error("Tip notification error:", notificationError);
+}
     return NextResponse.json(tipData, { status: 201 });
   } catch (error: any) {
     console.error("Tips POST API error:", error);

@@ -910,88 +910,84 @@ if (Boolean(data.is_live)) {
   ]);
 }
 async function sendTip() {
-  if (!video?.creator) return;
+  if (!video?.creator || !id) {
+    setTipStatus("The video or creator information is unavailable.");
+    return;
+  }
 
   const amount = Number(tipAmount);
 
-  if (!amount || amount <= 0) {
+  if (!Number.isFinite(amount) || amount <= 0) {
     setTipStatus("Please enter a valid tip amount.");
     return;
   }
 
-  const platformFee = amount * 0.05;
-  const netAmount = amount * 0.95;
+  if (!tipCurrency) {
+    setTipStatus("Please select a currency.");
+    return;
+  }
 
-const reportingCurrency = tipCurrency;
-const fxRateUsed = 1;
-const convertedAmount = amount;
-  const { data, error } = await supabase
-    .from("tips")
-    .insert([
-      {
+  setTipStatus("Processing tip...");
+
+  try {
+    const response = await fetch("/api/tips", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({
         creator_name: video.creator,
+        video_id: id,
+        viewer_id: viewerId || "anonymous-viewer",
         amount,
-        gross_amount: amount,
-        platform_fee: platformFee,
-        net_amount: netAmount,
-        fee_rate: 0.05,
         currency_code: tipCurrency,
-        currency: tipCurrency,
-        message: tipMessage.trim(),
-        fx_rate_used: fxRateUsed,
-        reporting_currency: reportingCurrency,
-        converted_amount: convertedAmount,
-      },
-    ])
-    .select()
-    .single();
+        message: tipMessage.trim() || null,
+        country: viewerCountry || "United States",
+        payment_method: "CARD",
+      }),
+    });
 
-  if (error) {
-    console.error("Tip error:", error);
-    setTipStatus("Tip failed. Please check Supabase policies.");
-    return;
-  }
+    const resultText = await response.text();
 
-  const { error: walletError } = await supabase
-    .from("creator_wallet_ledger")
-    .insert([
-      {
-        creator_name: video.creator,
-        transaction_type: "tip",
-        reference_id: data?.id || null,
-        currency_code: tipCurrency,
-        amount: netAmount,
-        status: "completed",
-      },
-    ]);
+    let result: any = {};
 
-  if (walletError) {
-    console.error(
-      "Tip wallet ledger error:",
-      JSON.stringify(walletError, null, 2)
-    );
-    setTipStatus("Tip was recorded, but wallet ledger update failed.");
-    return;
-  }
+    try {
+      result = resultText ? JSON.parse(resultText) : {};
+    } catch {
+      result = { raw: resultText };
+    }
 
-  if (data) {
-    setTips((prev) => [data as Tip, ...prev].slice(0, 5));
+    if (!response.ok) {
+      console.error("Tip API error:", {
+        status: response.status,
+        statusText: response.statusText,
+        result,
+      });
 
-    await supabase.from("notifications").insert([
-      {
-        creator_name: video.creator,
-        type: "tip",
-        title: "New tip received",
-        message: `You received a tip of ${tipCurrency} ${amount}.`,
-      },
-    ]);
+      setTipStatus(
+        result?.error ||
+          `Tip failed with status ${response.status}. Please try again.`
+      );
+
+      return;
+    }
+
+    setTips((previousTips) => [
+      result as Tip,
+      ...previousTips.filter((tip) => tip.id !== result.id),
+    ].slice(0, 5));
 
     setTipAmount("");
     setTipMessage("");
     setTipStatus("Tip sent successfully.");
+  } catch (error) {
+    console.error("Tip request error:", error);
+
+    setTipStatus(
+      "The tip could not be sent because of a network or server error."
+    );
   }
 }
-
 
 async function sendComment() {
   const finalComment = commentText.trim();
