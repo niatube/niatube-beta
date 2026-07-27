@@ -19,7 +19,9 @@ export async function POST(req: Request) {
 
     const { data, error } = await supabaseAdmin
       .from("admin_sessions")
-      .select("session_token, code_name, redirect_path, expires_at")
+      .select(
+  "session_token, code_name, redirect_path, expires_at, admin_role",
+)
       .eq("session_token", sessionToken)
       .maybeSingle();
 
@@ -37,11 +39,26 @@ export async function POST(req: Request) {
       );
     }
 
-    const allowed =
-      data.redirect_path === "/admin" ||
-      requestedPath === data.redirect_path ||
-      requestedPath.startsWith(`${data.redirect_path}/`);
+const isFinancialPath =
+  requestedPath === "/financial" ||
+  requestedPath.startsWith("/financial/");
 
+const isAdminFinancePath =
+  requestedPath === "/admin/finance" ||
+  requestedPath.startsWith("/admin/finance/");
+
+const hasRedirectPathAccess =
+  requestedPath === data.redirect_path ||
+  requestedPath.startsWith(
+    `${data.redirect_path}/`,
+  );
+
+const allowed =
+  data.admin_role === "super_admin" ||
+  (data.admin_role === "finance_admin" &&
+    (isFinancialPath ||
+      isAdminFinancePath)) ||
+  hasRedirectPathAccess;
     return NextResponse.json({
       allowed,
       codeName: data.code_name,

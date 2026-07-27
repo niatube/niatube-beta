@@ -4,9 +4,72 @@ import { recordCreatorWalletEntry } from "@/lib/creator-wallet-engine";
 import { prepareSuperSupport } from "@/lib/super-support-engine";
 import { TRANSACTION_STATUS } from "@/lib/creator-economy";
 import { NextResponse } from "next/server";
+import { recordPlatformRevenue } from "@/lib/platform-treasury";
 
 export const dynamic = "force-dynamic";
 export const runtime = "nodejs";
+
+export async function GET(req: Request) {
+  try {
+    const supabaseAdmin = getSupabaseAdmin();
+
+    const { searchParams } = new URL(req.url);
+    const creatorName = searchParams.get("creator");
+
+    let query = supabaseAdmin
+      .from("super_support_transactions")
+      .select("*")
+      .order("created_at", {
+        ascending: false,
+      });
+
+    if (creatorName) {
+      query = query.ilike(
+        "creator_name",
+        creatorName,
+      );
+    }
+
+    const { data, error } = await query;
+
+    if (error) {
+      console.error(
+        "Super Support ledger error:",
+        error,
+      );
+
+      return NextResponse.json(
+        {
+          error: error.message,
+        },
+        {
+          status: 500,
+        },
+      );
+    }
+
+    return NextResponse.json(
+      data ?? [],
+    );
+  } catch (error: unknown) {
+    console.error(
+      "Super Support GET API error:",
+      error,
+    );
+
+    return NextResponse.json(
+      {
+        error:
+          error instanceof Error
+            ? error.message
+            : "Failed to load Super Support transactions.",
+      },
+      {
+        status: 500,
+      },
+    );
+  }
+}
 
 export async function POST(req: Request) {
   try {
@@ -135,6 +198,18 @@ const paymentMethod = String(
         amount: preparedSupport.netAmount,
         status: TRANSACTION_STATUS.COMPLETED,
       });
+      await recordPlatformRevenue({
+  supabaseAdmin,
+  creatorName,
+  transactionType: "SUPER_SUPPORT_FEE",
+  referenceId: transactionData.id,
+  currencyCode: preparedSupport.currencyCode,
+  grossAmount: preparedSupport.grossAmount,
+  platformFee: preparedSupport.platformFee,
+  country,
+  status: TRANSACTION_STATUS.COMPLETED,
+  notes: "Platform fee from Super Support",
+});
     } catch (error: any) {
       console.error("Super Support wallet error:", error);
 

@@ -40,6 +40,9 @@ const ROLE_ALLOWED_PATHS: Record<
     "/admin/finance/payouts",
     "/admin/advertising",
     "/admin/advertising/assign",
+
+    "/financial",
+    "/financial/tips",
   ],
 
   governance_admin: [
@@ -49,6 +52,9 @@ const ROLE_ALLOWED_PATHS: Record<
   finance_admin: [
     "/admin/finance",
     "/admin/finance/payouts",
+
+    "/financial",
+"/financial/tips",
   ],
 
   advertising_admin: [
