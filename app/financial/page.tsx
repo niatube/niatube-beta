@@ -1,4 +1,9 @@
+"use client";
+
+import { useEffect, useState } from "react";
 export default function FinancialControlCenterPage() {
+const [accessChecked, setAccessChecked] = useState(false);
+const [hasAccess, setHasAccess] = useState(false);
   const sections = [
   {
     title: "Revenue Operations",
@@ -38,6 +43,61 @@ export default function FinancialControlCenterPage() {
     ],
   },
 ];
+useEffect(() => {
+  const rawAccess = sessionStorage.getItem(
+    "niatube_admin_access",
+  );
+
+  if (!rawAccess) {
+    window.location.assign("/financial/access");
+    return;
+  }
+
+  try {
+    const access = JSON.parse(rawAccess);
+
+    const expiresAt = access?.expiresAt
+      ? new Date(access.expiresAt)
+      : null;
+
+    const allowedRoles = [
+      "super_admin",
+      "finance_admin",
+    ];
+
+    if (
+      !access?.sessionToken ||
+      !expiresAt ||
+      expiresAt < new Date() ||
+      access.redirectPath !== "/financial" ||
+      !allowedRoles.includes(access.adminRole)
+    ) {
+      sessionStorage.removeItem(
+        "niatube_admin_access",
+      );
+
+      window.location.assign(
+        "/financial/access",
+      );
+
+      return;
+    }
+
+    setHasAccess(true);
+    setAccessChecked(true);
+  } catch {
+    sessionStorage.removeItem(
+      "niatube_admin_access",
+    );
+
+    window.location.assign(
+      "/financial/access",
+    );
+  }
+}, []);
+if (!accessChecked || !hasAccess) {
+  return null;
+}
   return (
     <main className="mx-auto max-w-7xl p-8">
       <h1 className="text-4xl font-bold">Financial Control Center</h1>

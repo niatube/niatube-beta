@@ -276,6 +276,12 @@ export default function Navbar({ simple = false }: { simple?: boolean }) {
 >
   Admin Control Center
 </Link>
+<Link
+  className="mt-2 block rounded-lg bg-emerald-500 px-4 py-2 text-sm font-black text-white hover:bg-emerald-400"
+  href="/financial"
+>
+  Financial Control Center
+</Link>
 
               <div className="mt-3 grid grid-cols-2 gap-2 border-t pt-3">
                 <Link
