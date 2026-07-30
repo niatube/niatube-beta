@@ -7,9 +7,9 @@ type Tip = {
   created_at: string;
   creator_name: string;
   viewer_id?: string | null;
-  gross_amount: number;
-  platform_fee: number;
-  net_amount: number;
+  gross_amount?: number | null;
+platform_fee?: number | null;
+net_amount?: number | null;
   currency_code: string;
   status?: string | null;
 };
@@ -149,15 +149,15 @@ export default function TipsLedgerPage() {
                     </td>
 
                     <td className="px-4 py-3 text-right">
-                      {tip.gross_amount.toFixed(2)}
+                      {Number(tip.gross_amount || 0).toFixed(2)}
                     </td>
 
                     <td className="px-4 py-3 text-right">
-                      {tip.platform_fee.toFixed(2)}
+                      {Number(tip.platform_fee || 0).toFixed(2)}
                     </td>
 
                     <td className="px-4 py-3 text-right">
-                      {tip.net_amount.toFixed(2)}
+                      {Number(tip.net_amount || 0).toFixed(2)}
                     </td>
 
                     <td className="px-4 py-3 text-center">

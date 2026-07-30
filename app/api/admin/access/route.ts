@@ -42,7 +42,8 @@ const ROLE_ALLOWED_PATHS: Record<
     "/admin/advertising/assign",
 
     "/financial",
-    "/financial/tips",
+"/financial/tips",
+"/financial/creator-wallet",
   ],
 
   governance_admin: [
@@ -55,6 +56,7 @@ const ROLE_ALLOWED_PATHS: Record<
 
     "/financial",
 "/financial/tips",
+"/financial/creator-wallet",
   ],
 
   advertising_admin: [
