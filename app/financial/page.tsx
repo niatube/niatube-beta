@@ -18,7 +18,7 @@ const [hasAccess, setHasAccess] = useState(false);
   {
     title: "Treasury Operations",
     items: [
-      { name: "Platform Treasury", href: "/financial/treasury", status: "Coming Soon" },
+      { name: "Platform Treasury", href: "/financial/treasury", status: "Active" },
       { name: "Creator Wallet Ledger", href: "/financial/creator-wallet", status: "Active" },
       { name: "Payout Processing", href: "/financial/payouts", status: "Coming Soon" },
       { name: "FX & Currency", href: "/financial/fx", status: "Coming Soon" },
