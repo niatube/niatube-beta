@@ -2,6 +2,7 @@ import { getSupabaseAdmin } from "@/lib/supabase-server";
 import { NextResponse } from "next/server";
 import { recordCreatorWalletEntry } from "@/lib/creator-wallet-engine";
 import { recordPlatformRevenue } from "@/lib/platform-treasury";
+import { postJournalEntry } from "@/lib/journal-engine";
 
 import {
   calculateNetAmount,
@@ -164,8 +165,48 @@ const netAmount = calculateNetAmount(amount);
     notes: "Platform fee from viewer tip",
   });
 
+  await postJournalEntry({
+  supabaseAdmin,
+
+  sourceType: SOURCE_TYPES.VIDEO_TIP,
+  sourceId: String(tipData.id),
+
+  description: `Viewer tip received for ${creatorName}`,
+
+  currencyCode,
+
+  createdBy: "SYSTEM",
+
+  lines: [
+    {
+      accountCode: "1000",
+      debit: amount,
+      credit: 0,
+      description:
+        "Tip payment received through payment processor",
+    },
+    {
+      accountCode: "2000",
+      debit: 0,
+      credit: netAmount,
+      description:
+        "Creator earnings payable from viewer tip",
+    },
+    {
+      accountCode: "4000",
+      debit: 0,
+      credit: platformFee,
+      description:
+        "Platform fee revenue from viewer tip",
+    },
+  ],
+});
+
 } catch (error: any) {
-  console.error("Treasury integration error:", error);
+  console.error(
+  "Tip financial integration error:",
+  error,
+);
 
   return NextResponse.json(
     {
