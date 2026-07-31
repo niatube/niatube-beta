@@ -32,7 +32,7 @@ const ROLE_ALLOWED_PATHS: Record<
   AdminRole,
   readonly string[]
 > = {
-  super_admin: [
+   super_admin: [
     "/admin",
     "/admin/governance",
     "/admin/niacircle",
@@ -45,8 +45,8 @@ const ROLE_ALLOWED_PATHS: Record<
     "/financial/tips",
     "/financial/creator-wallet",
     "/financial/treasury",
+    "/financial/general-ledger",
   ],
-
   governance_admin: [
     "/admin/governance",
   ],
@@ -59,6 +59,7 @@ const ROLE_ALLOWED_PATHS: Record<
     "/financial/tips",
     "/financial/creator-wallet",
     "/financial/treasury",
+    "/financial/general-ledger",
   ],
 
   advertising_admin: [

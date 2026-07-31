@@ -28,7 +28,7 @@ const [hasAccess, setHasAccess] = useState(false);
   {
     title: "Accounting",
     items: [
-      { name: "General Ledger", href: "/financial/general-ledger", status: "Coming Soon" },
+      { name: "General Ledger", href: "/financial/general-ledger", status: "Active" },
       { name: "Journal", href: "/financial/journal", status: "Coming Soon" },
       { name: "Reconciliation", href: "/financial/reconciliation", status: "Coming Soon" },
       { name: "Financial Reports", href: "/financial/reports", status: "Coming Soon" },
