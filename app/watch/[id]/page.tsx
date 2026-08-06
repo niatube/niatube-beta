@@ -23,9 +23,20 @@ import {
 } from "@/lib/support-profiles";
 
 import {
+  COUNTRY_REGISTRY,
+  CURRENCY_REGISTRY,
+} from "@/lib/global-registry";
+
+import {
   resolveSupportContext,
   getCountryFromBrowserLocale,
 } from "@/lib/support-context";
+
+const countries = Object.values(COUNTRY_REGISTRY)
+  .sort((a, b) =>
+    a.country.localeCompare(b.country)
+  );
+
 
 type Video = {
   id: string;
@@ -65,53 +76,24 @@ type Tip = {
   message?: string;
   created_at?: string;
 };
-const currencies = [
-  { code: "DZD", label: "Algerian Dinar", symbol: "دج" },
-  { code: "AOA", label: "Angolan Kwanza", symbol: "Kz" },
-  { code: "XOF", label: "West African CFA Franc", symbol: "CFA" },
-  { code: "BWP", label: "Botswana Pula", symbol: "P" },
-  { code: "BIF", label: "Burundian Franc", symbol: "FBu" },
-  { code: "XAF", label: "Central African CFA Franc", symbol: "FCFA" },
-  { code: "CVE", label: "Cape Verde Escudo", symbol: "$" },
-  { code: "KMF", label: "Comorian Franc", symbol: "CF" },
-  { code: "CDF", label: "Congolese Franc", symbol: "FC" },
-  { code: "DJF", label: "Djiboutian Franc", symbol: "Fdj" },
-  { code: "EGP", label: "Egyptian Pound", symbol: "£" },
-  { code: "ERN", label: "Eritrean Nakfa", symbol: "Nfk" },
-  { code: "SZL", label: "Eswatini Lilangeni", symbol: "E" },
-  { code: "ETB", label: "Ethiopian Birr", symbol: "Br" },
-  { code: "GMD", label: "Gambian Dalasi", symbol: "D" },
-  { code: "GHS", label: "Ghana Cedi", symbol: "₵" },
-  { code: "GNF", label: "Guinean Franc", symbol: "FG" },
-  { code: "KES", label: "Kenyan Shilling", symbol: "KSh" },
-  { code: "LSL", label: "Lesotho Loti", symbol: "L" },
-  { code: "LRD", label: "Liberian Dollar", symbol: "L$" },
-  { code: "LYD", label: "Libyan Dinar", symbol: "LD" },
-  { code: "MGA", label: "Malagasy Ariary", symbol: "Ar" },
-  { code: "MWK", label: "Malawian Kwacha", symbol: "MK" },
-  { code: "MRU", label: "Mauritanian Ouguiya", symbol: "UM" },
-  { code: "MUR", label: "Mauritian Rupee", symbol: "₨" },
-  { code: "MAD", label: "Moroccan Dirham", symbol: "DH" },
-  { code: "MZN", label: "Mozambican Metical", symbol: "MT" },
-  { code: "NAD", label: "Namibian Dollar", symbol: "N$" },
-  { code: "NGN", label: "Nigerian Naira", symbol: "₦" },
-  { code: "RWF", label: "Rwandan Franc", symbol: "FRw" },
-  { code: "STN", label: "São Tomé and Príncipe Dobra", symbol: "Db" },
-  { code: "SCR", label: "Seychellois Rupee", symbol: "₨" },
-  { code: "SLE", label: "Sierra Leone Leone", symbol: "Le" },
-  { code: "SOS", label: "Somali Shilling", symbol: "Sh" },
-  { code: "ZAR", label: "South African Rand", symbol: "R" },
-  { code: "SSP", label: "South Sudanese Pound", symbol: "£" },
-  { code: "SDG", label: "Sudanese Pound", symbol: "£" },
-  { code: "TZS", label: "Tanzanian Shilling", symbol: "TSh" },
-  { code: "TND", label: "Tunisian Dinar", symbol: "DT" },
-  { code: "UGX", label: "Ugandan Shilling", symbol: "USh" },
-  { code: "ZMW", label: "Zambian Kwacha", symbol: "ZK" },
-  { code: "ZWL", label: "Zimbabwe Gold", symbol: "ZiG" },
-
-  { code: "EUR", label: "Euro", symbol: "€" },
-  { code: "USD", label: "United States Dollar", symbol: "$" },
-];
+const currencies = Object.values(
+  CURRENCY_REGISTRY,
+)
+  .filter(
+  (currency) =>
+    currency.active &&
+    currency.fxSupported,
+)
+  .sort((first, second) =>
+    first.name.localeCompare(
+      second.name,
+    ),
+  )
+  .map((currency) => ({
+    code: currency.code,
+    label: currency.name,
+    symbol: currency.symbol,
+  }));
 
 const subscriberMilestones = [10, 100, 1000, 10000, 100000];
 
@@ -378,6 +360,33 @@ const [debugCreatorEmail, setDebugCreatorEmail] = useState("");
 const activeSupportProfile =
   getSupportProfileByCountry(viewerCountry) ??
   getDefaultSupportProfile();
+
+  const effectiveSupportLevels =
+  monetizationPresets.length > 0
+    ? [...monetizationPresets]
+        .sort(
+          (first, second) =>
+            Number(first.display_order || 0) -
+            Number(second.display_order || 0),
+        )
+        .map((preset) => ({
+          tier: String(preset.tier),
+          amount: Number(preset.amount || 0),
+          currencyCode: String(
+            preset.currency_code ||
+              viewerCurrency ||
+              "USD",
+          ).toUpperCase(),
+        }))
+    : (
+        activeSupportProfile?.supportLevels.map(
+          (level) => ({
+            ...level,
+            currencyCode:
+              activeSupportProfile.currencyCode,
+          }),
+        ) ?? []
+      );
  
   const chatEndRef = useRef<HTMLDivElement | null>(null);
 
@@ -420,19 +429,34 @@ useEffect(() => {
 }, [viewerCurrency]);
 
 useEffect(() => {
-  const profile =
-    getSupportProfileByCountry(viewerCountry) ??
-    getDefaultSupportProfile();
+  const selectedCountry =
+    countries.find(
+      (country) =>
+        country.country.toLowerCase() ===
+        viewerCountry.trim().toLowerCase(),
+    );
 
-  if (!profile) {
-    setViewerCurrency("USD");
+  const currencyCode =
+    selectedCountry?.currency.code || "USD";
+
+  setViewerCurrency(currencyCode);
+}, [viewerCountry]);
+
+
+useEffect(() => {
+  if (
+    !viewerCurrency ||
+    viewerCurrency === "OTHER"
+  ) {
     return;
   }
 
-  setViewerCurrency(profile.currencyCode);
-  loadMonetizationPresets(profile.currencyCode);
-}, [viewerCountry]);
-
+  setTipCurrency(
+    viewerCurrency
+      .trim()
+      .toUpperCase(),
+  );
+}, [viewerCurrency]);
  
   useEffect(() => {
     async function loadVideo() {
@@ -457,9 +481,7 @@ useEffect(() => {
   .eq("creator_name", data.creator)
   .maybeSingle();
 
-if (creatorProfile?.currency_code) {
-  setTipCurrency(creatorProfile.currency_code);
-}
+
 
 const {
   data: { user },
@@ -1082,18 +1104,28 @@ async function sendSuperSupport() {
     "Gabon",
   ];
 
-  const country = viewerCountry || "United States";
+  const country =
+  viewerCountry || "United States";
 
-  const selectedCurrency =
-    viewerCurrency && viewerCurrency !== "OTHER"
+const selectedCountry =
+  countries.find(
+    (countryRecord) =>
+      countryRecord.country
+        .toLowerCase() ===
+      country.trim().toLowerCase(),
+  );
+
+const selectedCurrency =
+  selectedCountry?.currency.code ||
+  (
+    viewerCurrency &&
+    viewerCurrency !== "OTHER"
       ? viewerCurrency.toUpperCase()
-      : cfaXofCountries.includes(country)
-      ? "XOF"
-      : cfaXafCountries.includes(country)
-      ? "XAF"
-      : tipCurrency && tipCurrency !== "OTHER"
-      ? tipCurrency.toUpperCase()
-      : "USD";
+      : tipCurrency &&
+          tipCurrency !== "OTHER"
+        ? tipCurrency.toUpperCase()
+        : "USD"
+  );
 
   const { data: preset, error: presetError } = await supabase
     .from("monetization_presets")
@@ -1316,28 +1348,60 @@ const recordWatchAdClick = async () => {
     console.error("Failed to record watch ad click", error);
   }
 };
-async function loadMonetizationPresets(currency: string) {
-  const cleanCurrency = String(currency || "USD").trim().toUpperCase();
+async function loadMonetizationPresets(
+  currency: string,
+) {
+  const cleanCurrency = String(
+    currency || "USD",
+  )
+    .trim()
+    .toUpperCase();
 
-  const { data, error } = await supabase
-  .from("monetization_presets")
-  .select("*");
-  if (error) {
-    console.error("Monetization presets load error:", error);
+  if (
+    !cleanCurrency ||
+    cleanCurrency === "OTHER"
+  ) {
     setMonetizationPresets([]);
     return;
   }
 
-  const filteredPresets = (data || []).filter(
-    (preset) =>
-      String(preset.currency_code || "").trim().toUpperCase() === cleanCurrency &&
-      Number(preset.amount || 0) > 0
+  const { data, error } = await supabase
+    .from("monetization_presets")
+    .select(
+      `
+        currency_code,
+        tier,
+        amount,
+        display_order,
+        is_active
+      `,
+    )
+    .ilike(
+      "currency_code",
+      cleanCurrency,
+    )
+    .eq("is_active", true)
+    .gt("amount", 0)
+    .order("display_order", {
+      ascending: true,
+    });
+
+  if (error) {
+    console.error(
+      "Monetization presets load error:",
+      error,
+    );
+
+    setMonetizationPresets([]);
+    return;
+  }
+
+  console.log(
+    `Loaded presets for ${cleanCurrency}:`,
+    data,
   );
 
-  console.log("Loaded all presets:", data);
-  console.log("Filtered presets for:", cleanCurrency, filteredPresets);
-
-  setMonetizationPresets(filteredPresets);
+  setMonetizationPresets(data ?? []);
 }
 
 if (loading) {
@@ -1548,6 +1612,31 @@ if (loading) {
   <h2 className="text-xl font-black text-gray-900">
     Support Creator
   </h2>
+
+    <label className="mt-4 block text-sm font-bold text-gray-700">
+    Viewing From
+  </label>
+
+  <select
+    value={viewerCountry}
+    onChange={(event) =>
+      setViewerCountry(event.target.value)
+    }
+    className="mt-2 w-full rounded-xl border px-4 py-3"
+  >
+    {countries.map((country) => (
+      <option
+        key={country.isoCode}
+        value={country.country}
+      >
+        {country.country}
+      </option>
+    ))}
+  </select>
+
+  <p className="mt-3 text-sm font-bold text-gray-700">
+    Tip Currency: {tipCurrency || viewerCurrency}
+  </p>
 
   <div className="mt-4 grid gap-4 md:grid-cols-2">
     <input
@@ -1873,25 +1962,14 @@ if (loading) {
   onChange={(e) => setViewerCountry(e.target.value)}
   className="mt-2 w-full rounded-xl border px-4 py-3"
 >
-  <option value="Benin">Benin</option>
-  <option value="Burkina Faso">Burkina Faso</option>
-  <option value="Côte d'Ivoire">Côte d'Ivoire</option>
-  <option value="Guinea-Bissau">Guinea-Bissau</option>
-  <option value="Mali">Mali</option>
-  <option value="Niger">Niger</option>
-  <option value="Senegal">Senegal</option>
-  <option value="Togo">Togo</option>
-  <option value="Cameroon">Cameroon</option>
-  <option value="Rwanda">Rwanda</option>
-  <option value="Kenya">Kenya</option>
-  <option value="Ghana">Ghana</option>
-  <option value="Nigeria">Nigeria</option>
-  <option value="Tanzania">Tanzania</option>
-  <option value="Uganda">Uganda</option>
-  <option value="South Africa">South Africa</option>
-  <option value="United States">United States</option>
-  <option value="United Kingdom">United Kingdom</option>
-  <option value="France">France</option>
+  {countries.map((country) => (
+  <option
+    key={country.isoCode}
+    value={country.country}
+  >
+    {country.country}
+  </option>
+))}
 </select>
 <p className="mt-3 text-sm font-bold text-yellow-900">
   Support Currency: {viewerCurrency}
@@ -1908,14 +1986,14 @@ if (loading) {
   onChange={(e) => setSuperChatAmount(e.target.value)}
   className="mt-2 w-full rounded-xl border px-4 py-3"
 >
-  {activeSupportProfile?.supportLevels.map((level) => (
+  {effectiveSupportLevels.map((level) => (
   <option key={level.tier} value={level.tier}>
     {level.tier === "Support"
       ? "⭐"
       : level.tier === "Champion"
       ? "🏆"
       : "👑"}{" "}
-    {level.tier} — {activeSupportProfile.currencyCode}{" "}
+    {level.tier} — {level.currencyCode}{" "}
     {level.amount.toLocaleString()}
   </option>
 ))}

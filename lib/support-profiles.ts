@@ -5,6 +5,9 @@
  * ==========================================================
  */
 
+import {
+  getCountryByName,
+} from "@/lib/global-registry";
 export type SupportLevel = {
   tier: string;
   amount: number;
@@ -68,6 +71,19 @@ export const SUPPORT_PROFILES: SupportProfile[] = [
       { tier: "Legend", amount: 50000 },
     ],
   },
+
+{
+  profileCode: "MA_MAD",
+  profileName: "Morocco",
+  currencyCode: "MAD",
+  countries: ["Morocco"],
+  supportLevels: [
+    { tier: "Support", amount: 20 },
+    { tier: "Champion", amount: 100 },
+    { tier: "Legend", amount: 500 },
+  ],
+},
+
   {
     profileCode: "KE_KES",
     profileName: "Kenya",
@@ -168,13 +184,36 @@ export const SUPPORT_PROFILES: SupportProfile[] = [
     ],
   },
 ];
+export function getSupportProfileByCurrency(
+  currencyCode: string,
+) {
+  const normalizedCurrency = String(
+    currencyCode || "",
+  )
+    .trim()
+    .toUpperCase();
 
-export function getSupportProfileByCountry(country: string) {
-  return SUPPORT_PROFILES.find((profile) =>
-    profile.countries.some(
-      (profileCountry) =>
-        profileCountry.toLowerCase() === country.trim().toLowerCase()
-    )
+  return SUPPORT_PROFILES.find(
+    (profile) =>
+      profile.currencyCode
+        .trim()
+        .toUpperCase() ===
+      normalizedCurrency,
+  );
+}
+
+export function getSupportProfileByCountry(
+  countryName: string,
+) {
+  const country =
+    getCountryByName(countryName);
+
+  if (!country) {
+    return undefined;
+  }
+
+  return getSupportProfileByCurrency(
+    country.currency.code,
   );
 }
 

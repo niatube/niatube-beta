@@ -13,6 +13,20 @@ export type JournalLineInput = {
   description?: string | null;
 };
 
+export type JournalFxMetadataInput = {
+  transactionCurrency: string;
+  transactionAmount: number;
+
+  reportingCurrency: string;
+  reportingAmount: number;
+
+  exchangeRate: number;
+
+  fxRateId?: string | null;
+  fxRateSource?: string | null;
+  fxRateTimestamp?: string | null;
+};
+
 export type PostJournalEntryInput = {
   supabaseAdmin: SupabaseAdminClient;
 
@@ -22,8 +36,10 @@ export type PostJournalEntryInput = {
   description: string;
   currencyCode: string;
 
-  createdBy?: string | null;
+    createdBy?: string | null;
   entryDate?: string | null;
+
+  fxMetadata?: JournalFxMetadataInput | null;
 
   lines: JournalLineInput[];
 };
@@ -59,8 +75,9 @@ export async function postJournalEntry({
   sourceId = null,
   description,
   currencyCode,
-  createdBy = null,
+    createdBy = null,
   entryDate = null,
+  fxMetadata = null,
   lines,
 }: PostJournalEntryInput) {
   const normalizedSourceType = String(
@@ -185,6 +202,109 @@ export async function postJournalEntry({
     );
   }
 
+    /*
+   * FX audit metadata.
+   *
+   * If the caller does not provide FX metadata,
+   * the journal is treated as an identity-currency
+   * posting for backward compatibility.
+   */
+  const normalizedTransactionCurrency =
+    normalizeCurrencyCode(
+      fxMetadata?.transactionCurrency ||
+        normalizedCurrency,
+    );
+
+  const normalizedReportingCurrency =
+    normalizeCurrencyCode(
+      fxMetadata?.reportingCurrency ||
+        normalizedCurrency,
+    );
+
+  const transactionAmount =
+    roundMoney(
+      Number(
+        fxMetadata?.transactionAmount ??
+          totalDebits,
+      ),
+    );
+
+  const reportingAmount =
+    roundMoney(
+      Number(
+        fxMetadata?.reportingAmount ??
+          totalDebits,
+      ),
+    );
+
+  const exchangeRate =
+    Number(
+      fxMetadata?.exchangeRate ?? 1,
+    );
+
+  const fxRateId =
+    fxMetadata?.fxRateId ?? null;
+
+  const fxRateSource =
+    fxMetadata?.fxRateSource ||
+    (normalizedTransactionCurrency ===
+    normalizedReportingCurrency
+      ? "IDENTITY"
+      : "UNSPECIFIED");
+
+  const fxRateTimestamp =
+    fxMetadata?.fxRateTimestamp ||
+    new Date().toISOString();
+
+  if (
+    !Number.isFinite(transactionAmount) ||
+    transactionAmount <= 0
+  ) {
+    throw new Error(
+      "Journal transaction amount must be greater than zero.",
+    );
+  }
+
+  if (
+    !Number.isFinite(reportingAmount) ||
+    reportingAmount <= 0
+  ) {
+    throw new Error(
+      "Journal reporting amount must be greater than zero.",
+    );
+  }
+
+  if (
+    !Number.isFinite(exchangeRate) ||
+    exchangeRate <= 0
+  ) {
+    throw new Error(
+      "Journal exchange rate must be greater than zero.",
+    );
+  }
+
+  if (
+    normalizedReportingCurrency !==
+    normalizedCurrency
+  ) {
+    throw new Error(
+      "Journal reporting currency must match the journal currency code.",
+    );
+  }
+
+  if (
+    reportingAmount !== totalDebits ||
+    reportingAmount !== totalCredits
+  ) {
+    throw new Error(
+      `Journal reporting amount ${reportingAmount.toFixed(
+        2,
+      )} does not match the balanced journal total ${totalDebits.toFixed(
+        2,
+      )}.`,
+    );
+  }
+
   /*
    * Idempotency protection:
    * If the same source transaction has already
@@ -297,6 +417,17 @@ export async function postJournalEntry({
   const entryNumber =
     generateEntryNumber();
 
+    console.log("Journal FX Metadata:", {
+  transactionCurrency: normalizedTransactionCurrency,
+  transactionAmount,
+  reportingCurrency: normalizedReportingCurrency,
+  reportingAmount,
+  exchangeRate,
+  fxRateId,
+  fxRateSource,
+  fxRateTimestamp,
+});
+
   const {
     data: journalEntry,
     error: journalEntryError,
@@ -319,8 +450,32 @@ export async function postJournalEntry({
 
         status: "POSTED",
 
-        currency_code:
+                currency_code:
           normalizedCurrency,
+
+        transaction_currency:
+          normalizedTransactionCurrency,
+
+        transaction_amount:
+          transactionAmount,
+
+        reporting_currency:
+          normalizedReportingCurrency,
+
+        reporting_amount:
+          reportingAmount,
+
+        exchange_rate:
+          exchangeRate,
+
+        fx_rate_id:
+          fxRateId,
+
+        fx_rate_source:
+          fxRateSource,
+
+        fx_rate_timestamp:
+          fxRateTimestamp,
 
         created_by:
           createdBy,

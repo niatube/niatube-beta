@@ -3,6 +3,10 @@ import { NextResponse } from "next/server";
 import { recordCreatorWalletEntry } from "@/lib/creator-wallet-engine";
 import { recordPlatformRevenue } from "@/lib/platform-treasury";
 import { postJournalEntry } from "@/lib/journal-engine";
+import {
+  ACCOUNTING_EVENT_TYPES,
+  buildCreatorMonetizationJournalLines,
+} from "@/lib/accounting-rules";
 
 import {
   calculateNetAmount,
@@ -12,6 +16,11 @@ import {
   TRANSACTION_STATUS,
 } from "@/lib/creator-economy";
 import { authorizePayment } from "@/lib/payment-authorization";
+
+import {
+  convertToReportingCurrency,
+  REPORTING_CURRENCY,
+} from "@/lib/fx-engine";
 
 export async function GET(req: Request) {
   try {
@@ -165,43 +174,98 @@ const netAmount = calculateNetAmount(amount);
     notes: "Platform fee from viewer tip",
   });
 
-  await postJournalEntry({
+ const grossFx =
+  await convertToReportingCurrency({
+    supabaseAdmin,
+
+    amount,
+    transactionCurrency:
+      currencyCode,
+  });
+
+const reportingGrossAmount =
+  grossFx.reportingAmount;
+
+const reportingCreatorNetAmount =
+  Number(
+    (
+      netAmount *
+      grossFx.exchangeRate
+    ).toFixed(2),
+  );
+
+const reportingPlatformFee =
+  Number(
+    (
+      reportingGrossAmount -
+      reportingCreatorNetAmount
+    ).toFixed(2),
+  );
+
+await postJournalEntry({
   supabaseAdmin,
 
-  sourceType: SOURCE_TYPES.VIDEO_TIP,
-  sourceId: String(tipData.id),
+  sourceType:
+    SOURCE_TYPES.VIDEO_TIP,
 
-  description: `Viewer tip received for ${creatorName}`,
+  sourceId:
+    String(tipData.id),
 
-  currencyCode,
+  description:
+    `Viewer tip received for ${creatorName} — ` +
+    `${currencyCode} ${amount.toFixed(2)} converted to ` +
+    `${REPORTING_CURRENCY} ${reportingGrossAmount.toFixed(2)} ` +
+    `at FX rate ${grossFx.exchangeRate}`,
 
-  createdBy: "SYSTEM",
+  currencyCode:
+    REPORTING_CURRENCY,
 
-  lines: [
-    {
-      accountCode: "1000",
-      debit: amount,
-      credit: 0,
-      description:
-        "Tip payment received through payment processor",
-    },
-    {
-      accountCode: "2000",
-      debit: 0,
-      credit: netAmount,
-      description:
-        "Creator earnings payable from viewer tip",
-    },
-    {
-      accountCode: "4000",
-      debit: 0,
-      credit: platformFee,
-      description:
-        "Platform fee revenue from viewer tip",
-    },
-  ],
+  createdBy:
+    "SYSTEM",
+
+    fxMetadata: {
+  transactionCurrency:
+    grossFx.transactionCurrency,
+
+  transactionAmount:
+    grossFx.transactionAmount,
+
+  reportingCurrency:
+    grossFx.reportingCurrency,
+
+  reportingAmount:
+    grossFx.reportingAmount,
+
+  exchangeRate:
+    grossFx.exchangeRate,
+
+  fxRateId:
+    grossFx.fxRateId,
+
+  fxRateSource:
+    grossFx.rateSource,
+
+  fxRateTimestamp:
+    grossFx.rateTimestamp,
+},
+
+  lines:
+    buildCreatorMonetizationJournalLines({
+      eventType:
+        ACCOUNTING_EVENT_TYPES.TIP,
+
+      grossAmount:
+        reportingGrossAmount,
+
+      creatorNetAmount:
+        reportingCreatorNetAmount,
+
+      platformFee:
+        reportingPlatformFee,
+
+      creatorName,
+    }),
 });
-
 } catch (error: any) {
   console.error(
   "Tip financial integration error:",

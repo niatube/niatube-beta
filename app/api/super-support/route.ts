@@ -5,6 +5,17 @@ import { prepareSuperSupport } from "@/lib/super-support-engine";
 import { TRANSACTION_STATUS } from "@/lib/creator-economy";
 import { NextResponse } from "next/server";
 import { recordPlatformRevenue } from "@/lib/platform-treasury";
+import { postJournalEntry } from "@/lib/journal-engine";
+
+import {
+  ACCOUNTING_EVENT_TYPES,
+  buildCreatorMonetizationJournalLines,
+} from "@/lib/accounting-rules";
+
+import {
+  convertToReportingCurrency,
+  REPORTING_CURRENCY,
+} from "@/lib/fx-engine";
 
 export const dynamic = "force-dynamic";
 export const runtime = "nodejs";
@@ -210,13 +221,113 @@ const paymentMethod = String(
   status: TRANSACTION_STATUS.COMPLETED,
   notes: "Platform fee from Super Support",
 });
+
+const grossFx =
+  await convertToReportingCurrency({
+    supabaseAdmin,
+
+    amount:
+      preparedSupport.grossAmount,
+
+    transactionCurrency:
+      preparedSupport.currencyCode,
+  });
+
+const reportingGrossAmount =
+  grossFx.reportingAmount;
+
+const reportingCreatorNetAmount =
+  Number(
+    (
+      preparedSupport.netAmount *
+      grossFx.exchangeRate
+    ).toFixed(2),
+  );
+
+const reportingPlatformFee =
+  Number(
+    (
+      reportingGrossAmount -
+      reportingCreatorNetAmount
+    ).toFixed(2),
+  );
+
+await postJournalEntry({
+  supabaseAdmin,
+
+  sourceType:
+    ACCOUNTING_EVENT_TYPES.SUPER_SUPPORT,
+
+  sourceId:
+    String(transactionData.id),
+
+  description:
+    `Super Support received for ${creatorName} — ` +
+    `${preparedSupport.currencyCode} ` +
+    `${preparedSupport.grossAmount.toFixed(2)} converted to ` +
+    `${REPORTING_CURRENCY} ` +
+    `${reportingGrossAmount.toFixed(2)} ` +
+    `at FX rate ${grossFx.exchangeRate}`,
+
+  currencyCode:
+    REPORTING_CURRENCY,
+
+  createdBy:
+    "SYSTEM",
+    fxMetadata: {
+  transactionCurrency:
+    grossFx.transactionCurrency,
+
+  transactionAmount:
+    grossFx.transactionAmount,
+
+  reportingCurrency:
+    grossFx.reportingCurrency,
+
+  reportingAmount:
+    grossFx.reportingAmount,
+
+  exchangeRate:
+    grossFx.exchangeRate,
+
+  fxRateId:
+    grossFx.fxRateId,
+
+  fxRateSource:
+    grossFx.rateSource,
+
+  fxRateTimestamp:
+    grossFx.rateTimestamp,
+},
+
+  lines:
+    buildCreatorMonetizationJournalLines({
+      eventType:
+        ACCOUNTING_EVENT_TYPES.SUPER_SUPPORT,
+
+      grossAmount:
+        reportingGrossAmount,
+
+      creatorNetAmount:
+        reportingCreatorNetAmount,
+
+      platformFee:
+        reportingPlatformFee,
+
+      creatorName,
+    }),
+});
     } catch (error: any) {
-      console.error("Super Support wallet error:", error);
+      console.error(
+  "Super Support financial integration error:",
+  error,
+);
 
       return NextResponse.json(
         {
           error:
-            error?.message || "Failed to record Super Support wallet entry.",
+            error?.message ||
+  "Failed to complete Super Support financial integration."
         },
         { status: 500 }
       );

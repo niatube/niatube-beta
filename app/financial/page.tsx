@@ -9,7 +9,7 @@ const [hasAccess, setHasAccess] = useState(false);
     title: "Revenue Operations",
     items: [
       { name: "Tips Ledger", href: "/financial/tips", status: "Active" },
-      { name: "Super Support Ledger", href: "/financial/super-support", status: "Coming Soon" },
+      { name: "Super Support Ledger", href: "/financial/super-support", status: "Active" },
       { name: "Subscription Ledger", href: "/financial/subscriptions", status: "Coming Soon" },
       { name: "Advertising Ledger", href: "/financial/advertising", status: "Coming Soon" },
       { name: "BrandConnect Ledger", href: "/financial/brandconnect", status: "Coming Soon" },

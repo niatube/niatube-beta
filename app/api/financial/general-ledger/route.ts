@@ -4,56 +4,74 @@ import { getSupabaseAdmin } from "@/lib/supabase-server";
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
 
+type JournalEntryRelation = {
+  id: string;
+  entry_number: string;
+  entry_date: string;
+  source_type: string;
+  source_id: string | null;
+  description: string;
+  status: string;
+  currency_code: string;
+
+  transaction_currency: string | null;
+  transaction_amount:
+    | number
+    | string
+    | null;
+
+  reporting_currency: string | null;
+  reporting_amount:
+    | number
+    | string
+    | null;
+
+  exchange_rate:
+    | number
+    | string
+    | null;
+
+  fx_rate_id: string | null;
+  fx_rate_source: string | null;
+  fx_rate_timestamp: string | null;
+};
+
+type FinancialAccountRelation = {
+  id: string;
+  account_code: string;
+  account_name: string;
+  account_type: string;
+  normal_balance: string;
+};
+
 type JournalLineRow = {
   id: string;
   journal_entry_id: string;
   line_description: string | null;
-  debit_amount: number | string | null;
-  credit_amount: number | string | null;
+
+  debit_amount:
+    | number
+    | string
+    | null;
+
+  credit_amount:
+    | number
+    | string
+    | null;
+
   currency_code: string;
   created_at: string;
 
   journal_entries:
-    | {
-        id: string;
-        entry_number: string;
-        entry_date: string;
-        source_type: string;
-        source_id: string | null;
-        description: string;
-        status: string;
-        currency_code: string;
-      }
-    | {
-        id: string;
-        entry_number: string;
-        entry_date: string;
-        source_type: string;
-        source_id: string | null;
-        description: string;
-        status: string;
-        currency_code: string;
-      }[]
+    | JournalEntryRelation
+    | JournalEntryRelation[]
     | null;
 
   financial_accounts:
-    | {
-        id: string;
-        account_code: string;
-        account_name: string;
-        account_type: string;
-        normal_balance: string;
-      }
-    | {
-        id: string;
-        account_code: string;
-        account_name: string;
-        account_type: string;
-        normal_balance: string;
-      }[]
+    | FinancialAccountRelation
+    | FinancialAccountRelation[]
     | null;
 };
-
 function firstRelation<T>(
   relation: T | T[] | null,
 ): T | null {
@@ -88,7 +106,15 @@ export async function GET() {
           source_id,
           description,
           status,
-          currency_code
+currency_code,
+transaction_currency,
+transaction_amount,
+reporting_currency,
+reporting_amount,
+exchange_rate,
+fx_rate_id,
+fx_rate_source,
+fx_rate_timestamp
         ),
         financial_accounts!inner (
           id,
@@ -160,6 +186,45 @@ export async function GET() {
           line.currency_code ||
           journalEntry?.currency_code ||
           "USD",
+          transaction_currency:
+  journalEntry?.transaction_currency ??
+  journalEntry?.currency_code ??
+  "USD",
+
+transaction_amount:
+  Number(
+    journalEntry?.transaction_amount ||
+      0,
+  ),
+
+reporting_currency:
+  journalEntry?.reporting_currency ??
+  journalEntry?.currency_code ??
+  "USD",
+
+reporting_amount:
+  Number(
+    journalEntry?.reporting_amount ||
+      0,
+  ),
+
+exchange_rate:
+  Number(
+    journalEntry?.exchange_rate ||
+      1,
+  ),
+
+fx_rate_id:
+  journalEntry?.fx_rate_id ??
+  null,
+
+fx_rate_source:
+  journalEntry?.fx_rate_source ??
+  null,
+
+fx_rate_timestamp:
+  journalEntry?.fx_rate_timestamp ??
+  null,
 
         account_code:
           financialAccount?.account_code ??
