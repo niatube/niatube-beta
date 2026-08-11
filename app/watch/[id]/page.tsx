@@ -354,6 +354,8 @@ const [debugCreatorEmail, setDebugCreatorEmail] = useState("");
   const [liveAd, setLiveAd] = useState<any | null>(null);
   
   const [superChatAmount, setSuperChatAmount] = useState("Support");
+  const [sendingSuperSupport, setSendingSuperSupport] = useState(false);
+  const [superSupportStatus, setSuperSupportStatus] = useState("");
   const [viewerCountry, setViewerCountry] = useState("Mali");
   const [viewerCurrency, setViewerCurrency] = useState("OTHER");
   const [monetizationPresets, setMonetizationPresets] = useState<any[]>([]);
@@ -952,6 +954,7 @@ async function sendTip() {
   setTipStatus("Processing tip...");
 
   try {
+    const idempotencyKey = crypto.randomUUID();
     const response = await fetch("/api/tips", {
       method: "POST",
       headers: {
@@ -966,6 +969,7 @@ async function sendTip() {
         message: tipMessage.trim() || null,
         country: viewerCountry || "United States",
         payment_method: "CARD",
+         idempotency_key: idempotencyKey,
       }),
     });
 
@@ -1062,6 +1066,12 @@ async function sendComment() {
   setInput("");
 }
 async function sendSuperSupport() {
+  if (sendingSuperSupport) {
+  return;
+}
+
+setSendingSuperSupport(true);
+setSuperSupportStatus("Processing Super Support...");
   if (chatRestricted) {
     alert("Live Chat and Super Support are currently restricted.");
     return;
@@ -1174,99 +1184,103 @@ const selectedCurrency =
     return;
   }
 
+ try {
+  const idempotencyKey = crypto.randomUUID();
+  const response = await fetch("/api/super-support", {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+    },
+    body: JSON.stringify({
+      live_video_id: id,
+      supporter_name: safeUsername,
+      viewer_id: liveViewerId || safeUsername,
+      creator_name: video.creator,
+      amount: supportAmount,
+      currency_code: currencyCode,
+      tier: supportTier,
+      message: finalMessage,
+      country,
+      payment_method: "CARD",
+       idempotency_key: idempotencyKey,
+    }),
+  });
+
+  const resultText = await response.text();
+
+  let result: any = {};
+
   try {
-    const response = await fetch("/api/super-support", {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-      },
-      body: JSON.stringify({
-        live_video_id: id,
-        supporter_name: safeUsername,
-        viewer_id: liveViewerId || safeUsername,
-        creator_name: video.creator,
-        amount: supportAmount,
-        currency_code: currencyCode,
-        tier: supportTier,
-        message: finalMessage,
-        country,
-        payment_method: "CARD",
-      }),
+    result = resultText ? JSON.parse(resultText) : {};
+  } catch {
+    result = { raw: resultText };
+  }
+
+  if (!response.ok) {
+    alert(
+      `Super Support failed.\nStatus: ${response.status}\nResponse: ${
+        result?.error || JSON.stringify(result)
+      }`
+    );
+
+    console.error("Super Support API error:", {
+      status: response.status,
+      statusText: response.statusText,
+      result,
     });
 
-    const resultText = await response.text();
-
-    let result: any = {};
-
-    try {
-      result = resultText ? JSON.parse(resultText) : {};
-    } catch {
-      result = { raw: resultText };
-    }
-
-    if (!response.ok) {
-      alert(
-        `Super Support failed.\nStatus: ${response.status}\nResponse: ${
-          result?.error || JSON.stringify(result)
-        }`
-      );
-
-      console.error("Super Support API error:", {
-        status: response.status,
-        statusText: response.statusText,
-        result,
-      });
-
-      return;
-    }
-
-    const { data: chatData, error: chatError } = await supabase
-      .from("live_chat")
-      .insert([
-        {
-          username: safeUsername,
-          message: finalMessage,
-          type: "super_chat",
-        },
-      ])
-      .select()
-      .single();
-
-    if (chatError) {
-      console.error("Super Support chat error:", chatError);
-
-      alert(
-        "Super Support was recorded, but its highlighted chat message could not be displayed."
-      );
-
-      return;
-    }
-
-    if (chatData) {
-      setMessages((previousMessages) => {
-        const alreadyPresent = previousMessages.some(
-          (message) => message.id === chatData.id
-        );
-
-        return alreadyPresent
-          ? previousMessages
-          : [...previousMessages, chatData as ChatMessage];
-      });
-    }
-
-    setInput("");
-    setSuperChatAmount("Support");
-
-    alert(
-      `Super Support sent successfully: ${currencyCode} ${supportAmount}`
-    );
-  } catch (error) {
-    console.error("Super Support request error:", error);
-
-    alert(
-      "Super Support could not be sent because of a network or server error."
-    );
+    return;
   }
+
+  const { data: chatData, error: chatError } = await supabase
+    .from("live_chat")
+    .insert([
+      {
+        username: safeUsername,
+        message: finalMessage,
+        type: "super_chat",
+      },
+    ])
+    .select()
+    .single();
+
+  if (chatError) {
+    console.error("Super Support chat error:", chatError);
+
+    alert(
+      "Super Support was recorded, but its highlighted chat message could not be displayed."
+    );
+
+    return;
+  }
+
+  if (chatData) {
+    setMessages((previousMessages) => {
+      const alreadyPresent = previousMessages.some(
+        (message) => message.id === chatData.id
+      );
+
+      return alreadyPresent
+        ? previousMessages
+        : [...previousMessages, chatData as ChatMessage];
+    });
+  }
+
+  setInput("");
+  setSuperChatAmount("Support");
+
+ setSuperSupportStatus(
+  `Super Support sent successfully: ${currencyCode} ${supportAmount}`
+);
+} catch (error) {
+  console.error("Super Support request error:", error);
+
+  setSuperSupportStatus(
+  "Super Support could not be sent because of a network or server error."
+);
+} finally {
+  setSendingSuperSupport(false);
+}
 }
 async function deleteLiveChatMessage(messageId: string) {
   const { error } = await supabase
@@ -2028,10 +2042,22 @@ if (loading) {
 <button
   type="button"
   onClick={sendSuperSupport}
-  className="rounded-xl bg-yellow-500 px-5 py-3 text-sm font-black text-white hover:bg-yellow-600"
+  disabled={sendingSuperSupport}
+ className={`rounded-xl px-5 py-3 text-sm font-black text-white ${
+  sendingSuperSupport
+    ? "bg-gray-400 cursor-not-allowed"
+    : "bg-yellow-500 hover:bg-yellow-600"
+}`}
 >
-  ⭐ Send Super Support
+  {sendingSuperSupport
+  ? "Processing..."
+  : "⭐ Send Super Support"}
 </button>
+{superSupportStatus && (
+  <p className="mt-2 text-sm font-semibold text-yellow-900">
+    {superSupportStatus}
+  </p>
+)}
 
     </div>
   </div>

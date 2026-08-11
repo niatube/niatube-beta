@@ -1,21 +1,19 @@
-import { authorizePayment } from "@/lib/payment-authorization";
+import { settlementEngine } from "@/lib/settlement-engine";
 import { getSupabaseAdmin } from "@/lib/supabase-server";
-import { recordCreatorWalletEntry } from "@/lib/creator-wallet-engine";
-import { prepareSuperSupport } from "@/lib/super-support-engine";
-import { TRANSACTION_STATUS } from "@/lib/creator-economy";
-import { NextResponse } from "next/server";
-import { recordPlatformRevenue } from "@/lib/platform-treasury";
-import { postJournalEntry } from "@/lib/journal-engine";
-
 import {
   ACCOUNTING_EVENT_TYPES,
-  buildCreatorMonetizationJournalLines,
 } from "@/lib/accounting-rules";
 
+import { prepareSuperSupport } from "@/lib/super-support-engine";
 import {
-  convertToReportingCurrency,
-  REPORTING_CURRENCY,
-} from "@/lib/fx-engine";
+  SOURCE_TYPES,
+  TRANSACTION_STATUS,
+} from "@/lib/creator-economy";
+import { NextResponse } from "next/server";
+
+import { postJournalEntry } from "@/lib/journal-engine";
+
+
 
 export const dynamic = "force-dynamic";
 export const runtime = "nodejs";
@@ -86,6 +84,11 @@ export async function POST(req: Request) {
   try {
     const supabaseAdmin = getSupabaseAdmin();
     const body = await req.json();
+    const idempotencyKey = String(
+  body.idempotency_key ||
+    body.idempotencyKey ||
+    ""
+).trim();
 
     const liveVideoId = body.live_video_id || body.liveVideoId || null;
     const creatorName = body.creator_name || body.creatorName;
@@ -143,15 +146,59 @@ const paymentMethod = String(
         { status: 400 }
       );
     }
+    if (!idempotencyKey) {
+  return NextResponse.json(
+    { error: "Idempotency key is required." },
+    { status: 400 }
+  );
+}
 
-    const authorization = await authorizePayment({
-      viewerId,
-      creatorId,
-      country,
-      currency: currencyCode,
-      paymentMethod,
-      amount,
-    });
+const {
+  data: existingTransaction,
+  error: existingTransactionError,
+} = await supabaseAdmin
+  .from("super_support_transactions")
+  .select("*")
+  .eq("idempotency_key", idempotencyKey)
+  .maybeSingle();
+
+if (existingTransactionError) {
+  console.error(
+    "Super Support idempotency lookup error:",
+    existingTransactionError
+  );
+
+  return NextResponse.json(
+    {
+      error:
+        existingTransactionError.message ||
+        "Failed to verify Super Support request."
+    },
+    { status: 500 }
+  );
+}
+
+if (existingTransaction) {
+  return NextResponse.json(
+    {
+      transaction: existingTransaction,
+      duplicate: true,
+      idempotency_key: idempotencyKey,
+    },
+    { status: 200 }
+  );
+}
+
+    const authorization = await settlementEngine.authorize({
+  viewerId,
+  creatorId,
+  creatorName,
+  country,
+  currencyCode,
+  paymentMethod,
+  amount,
+  sourceType: ACCOUNTING_EVENT_TYPES.SUPER_SUPPORT,
+});
 
     if (!authorization.approved) {
   return NextResponse.json(
@@ -186,136 +233,119 @@ const paymentMethod = String(
             tier,
             message,
             payment_status: "completed",
+            idempotency_key: idempotencyKey,
           },
         ])
         .select()
         .single();
 
     if (transactionError) {
-      console.error("Super Support transaction error:", transactionError);
+  if (transactionError.code === "23505") {
+    const {
+      data: existingTransaction,
+      error: lookupError,
+    } = await supabaseAdmin
+      .from("super_support_transactions")
+      .select("*")
+      .eq("idempotency_key", idempotencyKey)
+      .maybeSingle();
+
+    if (!lookupError && existingTransaction) {
       return NextResponse.json(
-        { error: transactionError.message },
-        { status: 500 }
+        {
+          transaction: existingTransaction,
+          duplicate: true,
+          idempotency_key: idempotencyKey,
+        },
+        { status: 200 }
       );
     }
+  }
 
-    try {
-      await recordCreatorWalletEntry({
-        supabaseAdmin,
-        creatorName,
-        transactionType: "super_support",
-        referenceId: transactionData.id,
-        currencyCode: preparedSupport.currencyCode,
-        amount: preparedSupport.netAmount,
-        status: TRANSACTION_STATUS.COMPLETED,
-      });
-      await recordPlatformRevenue({
-  supabaseAdmin,
-  creatorName,
-  transactionType: "SUPER_SUPPORT_FEE",
-  referenceId: transactionData.id,
-  currencyCode: preparedSupport.currencyCode,
-  grossAmount: preparedSupport.grossAmount,
-  platformFee: preparedSupport.platformFee,
-  country,
-  status: TRANSACTION_STATUS.COMPLETED,
-  notes: "Platform fee from Super Support",
-});
-
-const grossFx =
-  await convertToReportingCurrency({
-    supabaseAdmin,
-
-    amount:
-      preparedSupport.grossAmount,
-
-    transactionCurrency:
-      preparedSupport.currencyCode,
-  });
-
-const reportingGrossAmount =
-  grossFx.reportingAmount;
-
-const reportingCreatorNetAmount =
-  Number(
-    (
-      preparedSupport.netAmount *
-      grossFx.exchangeRate
-    ).toFixed(2),
+  console.error(
+    "Super Support transaction error:",
+    transactionError
   );
 
-const reportingPlatformFee =
-  Number(
-    (
-      reportingGrossAmount -
-      reportingCreatorNetAmount
-    ).toFixed(2),
+  return NextResponse.json(
+    {
+      error:
+        transactionError.message ||
+        "Failed to create Super Support transaction.",
+    },
+    { status: 500 }
   );
+}
 
-await postJournalEntry({
+await settlementEngine.createAuthorizedSettlement({
   supabaseAdmin,
 
   sourceType:
-    ACCOUNTING_EVENT_TYPES.SUPER_SUPPORT,
+    SOURCE_TYPES.SUPER_SUPPORT,
 
   sourceId:
     String(transactionData.id),
 
-  description:
-    `Super Support received for ${creatorName} — ` +
-    `${preparedSupport.currencyCode} ` +
-    `${preparedSupport.grossAmount.toFixed(2)} converted to ` +
-    `${REPORTING_CURRENCY} ` +
-    `${reportingGrossAmount.toFixed(2)} ` +
-    `at FX rate ${grossFx.exchangeRate}`,
+  creatorName,
 
   currencyCode:
-    REPORTING_CURRENCY,
+    preparedSupport.currencyCode,
 
-  createdBy:
-    "SYSTEM",
-    fxMetadata: {
+  grossAmount:
+    preparedSupport.grossAmount,
+
+  paymentProvider:
+    "BETA",
+
+  providerReference:
+    null,
+});
+
+    try {
+      await settlementEngine.recordMonetizationAllocation({
+  supabaseAdmin,
+  creatorName,
+  referenceId: String(transactionData.id),
+
+  currencyCode: preparedSupport.currencyCode,
+  country,
+
+  grossAmount: preparedSupport.grossAmount,
+  platformFee: preparedSupport.platformFee,
+  creatorNetAmount: preparedSupport.netAmount,
+
+  walletTransactionType: "super_support",
+  treasuryTransactionType: "SUPER_SUPPORT_FEE",
+
+  status: TRANSACTION_STATUS.COMPLETED,
+  treasuryNotes: "Platform fee from Super Support",
+});
+
+await settlementEngine.recordMonetizationJournal({
+  supabaseAdmin,
+
+  sourceType:
+    SOURCE_TYPES.SUPER_SUPPORT,
+
+  sourceId:
+    String(transactionData.id),
+
+  eventType:
+    ACCOUNTING_EVENT_TYPES.SUPER_SUPPORT,
+
+  creatorName,
+
   transactionCurrency:
-    grossFx.transactionCurrency,
+    preparedSupport.currencyCode,
 
-  transactionAmount:
-    grossFx.transactionAmount,
+  grossAmount:
+    preparedSupport.grossAmount,
 
-  reportingCurrency:
-    grossFx.reportingCurrency,
+  creatorNetAmount:
+    preparedSupport.netAmount,
 
-  reportingAmount:
-    grossFx.reportingAmount,
-
-  exchangeRate:
-    grossFx.exchangeRate,
-
-  fxRateId:
-    grossFx.fxRateId,
-
-  fxRateSource:
-    grossFx.rateSource,
-
-  fxRateTimestamp:
-    grossFx.rateTimestamp,
-},
-
-  lines:
-    buildCreatorMonetizationJournalLines({
-      eventType:
-        ACCOUNTING_EVENT_TYPES.SUPER_SUPPORT,
-
-      grossAmount:
-        reportingGrossAmount,
-
-      creatorNetAmount:
-        reportingCreatorNetAmount,
-
-      platformFee:
-        reportingPlatformFee,
-
-      creatorName,
-    }),
+  descriptionPrefix:
+    "Super Support received for",
 });
     } catch (error: any) {
       console.error(

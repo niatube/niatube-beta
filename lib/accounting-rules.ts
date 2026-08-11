@@ -145,19 +145,23 @@ export function buildCreatorMonetizationJournalLines({
           description:
             `Tip earnings payable to ${creatorLabel}`,
         },
-        {
-          accountCode:
-            ACCOUNT_CODES.PLATFORM_FEE_REVENUE,
+        ...(safePlatformFee > 0
+  ? [
+      {
+        accountCode:
+          ACCOUNT_CODES.PLATFORM_FEE_REVENUE,
 
-          debit:
-            0,
+        debit:
+          0,
 
-          credit:
-            safePlatformFee,
+        credit:
+          safePlatformFee,
 
-          description:
-            "Platform fee revenue from viewer tip",
-        },
+        description:
+          "Platform fee revenue from viewer tip",
+      },
+    ]
+  : []),
       ];
 
     case ACCOUNTING_EVENT_TYPES.SUPER_SUPPORT:
@@ -188,19 +192,21 @@ export function buildCreatorMonetizationJournalLines({
           description:
             `Super Support earnings payable to ${creatorLabel}`,
         },
-        {
-          accountCode:
-            ACCOUNT_CODES.PLATFORM_FEE_REVENUE,
+        ...(safePlatformFee > 0
+  ? [
+      {
+        accountCode:
+          ACCOUNT_CODES.PLATFORM_FEE_REVENUE,
 
-          debit:
-            0,
+        debit: 0,
 
-          credit:
-            safePlatformFee,
+        credit: safePlatformFee,
 
-          description:
-            "Platform fee revenue from Super Support",
-        },
+        description:
+          "Platform fee revenue from Super Support",
+      },
+    ]
+  : []),
       ];
 
     default:

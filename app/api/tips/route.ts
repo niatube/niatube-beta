@@ -1,13 +1,10 @@
 import { getSupabaseAdmin } from "@/lib/supabase-server";
 import { NextResponse } from "next/server";
-import { recordCreatorWalletEntry } from "@/lib/creator-wallet-engine";
-import { recordPlatformRevenue } from "@/lib/platform-treasury";
-import { postJournalEntry } from "@/lib/journal-engine";
+
+
 import {
   ACCOUNTING_EVENT_TYPES,
-  buildCreatorMonetizationJournalLines,
 } from "@/lib/accounting-rules";
-
 import {
   calculateNetAmount,
   calculatePlatformFee,
@@ -15,12 +12,9 @@ import {
   SOURCE_TYPES,
   TRANSACTION_STATUS,
 } from "@/lib/creator-economy";
-import { authorizePayment } from "@/lib/payment-authorization";
+import { settlementEngine } from "@/lib/settlement-engine";
 
-import {
-  convertToReportingCurrency,
-  REPORTING_CURRENCY,
-} from "@/lib/fx-engine";
+
 
 export async function GET(req: Request) {
   try {
@@ -59,6 +53,11 @@ export async function POST(req: Request) {
   try {
     const supabaseAdmin = getSupabaseAdmin();
     const body = await req.json();
+    const idempotencyKey = String(
+  body.idempotency_key ||
+    body.idempotencyKey ||
+    ""
+).trim();
 
     const creatorName = body.creator_name || body.creatorName;
     const videoId = body.video_id || body.videoId || null;
@@ -100,15 +99,59 @@ export async function POST(req: Request) {
     const paymentMethod = String(
       body.payment_method || body.paymentMethod || "CARD"
     ).toUpperCase();
+    if (!idempotencyKey) {
+  return NextResponse.json(
+    { error: "Idempotency key is required." },
+    { status: 400 }
+  );
+}
 
-    const authorization = await authorizePayment({
-      viewerId,
-      creatorId,
-      country,
-      currency: currencyCode,
-      paymentMethod,
-      amount,
-    });
+const {
+  data: existingTip,
+  error: existingTipError,
+} = await supabaseAdmin
+  .from("tips")
+  .select("*")
+  .eq("idempotency_key", idempotencyKey)
+  .maybeSingle();
+
+if (existingTipError) {
+  console.error(
+    "Tip idempotency lookup error:",
+    existingTipError
+  );
+
+  return NextResponse.json(
+    {
+      error:
+        existingTipError.message ||
+        "Failed to verify Tip request.",
+    },
+    { status: 500 }
+  );
+}
+
+if (existingTip) {
+  return NextResponse.json(
+    {
+      ...existingTip,
+      duplicate: true,
+      idempotency_key: idempotencyKey,
+    },
+    { status: 200 }
+  );
+}
+
+    const authorization = await settlementEngine.authorize({
+  viewerId,
+  creatorId,
+  creatorName,
+  country,
+  currencyCode,
+  paymentMethod,
+  amount,
+  sourceType: SOURCE_TYPES.VIDEO_TIP,
+});
 
     if (!authorization.approved) {
       return NextResponse.json(
@@ -142,67 +185,50 @@ const netAmount = calculateNetAmount(amount);
       fx_rate_used: 1,
       reporting_currency: currencyCode,
       converted_amount: amount,
+      idempotency_key: idempotencyKey,
     },
   ])
   .select()
   .single();
     if (tipError) {
-      console.error("Tip insert error:", tipError);
-      return NextResponse.json({ error: tipError.message }, { status: 500 });
+  if (tipError.code === "23505") {
+    const {
+      data: existingTip,
+      error: lookupError,
+    } = await supabaseAdmin
+      .from("tips")
+      .select("*")
+      .eq("idempotency_key", idempotencyKey)
+      .maybeSingle();
+
+    if (!lookupError && existingTip) {
+      return NextResponse.json(
+        {
+          ...existingTip,
+          duplicate: true,
+          idempotency_key: idempotencyKey,
+        },
+        { status: 200 }
+      );
     }
+  }
 
-   try {
-  await recordCreatorWalletEntry({
-    supabaseAdmin,
-    creatorName,
-    transactionType: "tip", // Keep "tip" for beta compatibility
-    referenceId: tipData.id,
-    currencyCode,
-    amount: netAmount,
-    status: TRANSACTION_STATUS.COMPLETED,
-  });
-  await recordPlatformRevenue({
-    supabaseAdmin,
-    creatorName,
-    transactionType: "TIP_FEE",
-    referenceId: tipData.id,
-    currencyCode,
-    grossAmount: amount,
-    platformFee,
-    country,
-    status: TRANSACTION_STATUS.COMPLETED,
-    notes: "Platform fee from viewer tip",
-  });
-
- const grossFx =
-  await convertToReportingCurrency({
-    supabaseAdmin,
-
-    amount,
-    transactionCurrency:
-      currencyCode,
-  });
-
-const reportingGrossAmount =
-  grossFx.reportingAmount;
-
-const reportingCreatorNetAmount =
-  Number(
-    (
-      netAmount *
-      grossFx.exchangeRate
-    ).toFixed(2),
+  console.error(
+    "Tip insert error:",
+    tipError
   );
 
-const reportingPlatformFee =
-  Number(
-    (
-      reportingGrossAmount -
-      reportingCreatorNetAmount
-    ).toFixed(2),
+  return NextResponse.json(
+    {
+      error:
+        tipError.message ||
+        "Failed to create Tip transaction.",
+    },
+    { status: 500 }
   );
+}
 
-await postJournalEntry({
+await settlementEngine.createAuthorizedSettlement({
   supabaseAdmin,
 
   sourceType:
@@ -211,60 +237,64 @@ await postJournalEntry({
   sourceId:
     String(tipData.id),
 
-  description:
-    `Viewer tip received for ${creatorName} — ` +
-    `${currencyCode} ${amount.toFixed(2)} converted to ` +
-    `${REPORTING_CURRENCY} ${reportingGrossAmount.toFixed(2)} ` +
-    `at FX rate ${grossFx.exchangeRate}`,
+  creatorName,
 
-  currencyCode:
-    REPORTING_CURRENCY,
+  currencyCode,
 
-  createdBy:
-    "SYSTEM",
+  grossAmount:
+    amount,
 
-    fxMetadata: {
+  paymentProvider:
+    "BETA",
+
+  providerReference:
+    null,
+});
+   try {
+  await settlementEngine.recordMonetizationAllocation({
+  supabaseAdmin,
+  creatorName,
+  referenceId: String(tipData.id),
+
+  currencyCode,
+  country,
+
+  grossAmount: amount,
+  platformFee,
+  creatorNetAmount: netAmount,
+
+  walletTransactionType: "tip",
+  treasuryTransactionType: "TIP_FEE",
+
+  status: TRANSACTION_STATUS.COMPLETED,
+  treasuryNotes: "Platform fee from viewer tip",
+});
+
+ await settlementEngine.recordMonetizationJournal({
+  supabaseAdmin,
+
+  sourceType:
+    SOURCE_TYPES.VIDEO_TIP,
+
+  sourceId:
+    String(tipData.id),
+
+  eventType:
+    ACCOUNTING_EVENT_TYPES.TIP,
+
+  creatorName,
+
   transactionCurrency:
-    grossFx.transactionCurrency,
+    currencyCode,
 
-  transactionAmount:
-    grossFx.transactionAmount,
+  grossAmount:
+    amount,
 
-  reportingCurrency:
-    grossFx.reportingCurrency,
+  creatorNetAmount:
+    netAmount,
 
-  reportingAmount:
-    grossFx.reportingAmount,
-
-  exchangeRate:
-    grossFx.exchangeRate,
-
-  fxRateId:
-    grossFx.fxRateId,
-
-  fxRateSource:
-    grossFx.rateSource,
-
-  fxRateTimestamp:
-    grossFx.rateTimestamp,
-},
-
-  lines:
-    buildCreatorMonetizationJournalLines({
-      eventType:
-        ACCOUNTING_EVENT_TYPES.TIP,
-
-      grossAmount:
-        reportingGrossAmount,
-
-      creatorNetAmount:
-        reportingCreatorNetAmount,
-
-      platformFee:
-        reportingPlatformFee,
-
-      creatorName,
-    }),
+  descriptionPrefix:
+    "Viewer tip received for",
 });
 } catch (error: any) {
   console.error(
