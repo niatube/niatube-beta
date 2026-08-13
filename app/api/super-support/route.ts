@@ -92,7 +92,7 @@ export async function POST(req: Request) {
 
     const liveVideoId = body.live_video_id || body.liveVideoId || null;
     const creatorName = body.creator_name || body.creatorName;
-    const creatorId = body.creator_id || body.creatorId || creatorName;
+    const creatorId = body.creator_id || body.creatorId || null;
     const supporterName =
       body.supporter_name || body.supporterName || "Viewer";
     const viewerId =
@@ -132,6 +132,12 @@ const paymentMethod = String(
         { status: 400 }
       );
     }
+    if (!creatorId) {
+  return NextResponse.json(
+    { error: "Creator ID is required." },
+    { status: 400 }
+  );
+}
 
     if (!liveVideoId) {
       return NextResponse.json(
@@ -286,17 +292,20 @@ await settlementEngine.createAuthorizedSettlement({
   sourceId:
     String(transactionData.id),
 
-  creatorName,
+  creatorId,
+creatorName,
 
   currencyCode:
     preparedSupport.currencyCode,
 
   grossAmount:
-    preparedSupport.grossAmount,
+  preparedSupport.grossAmount,
 
-  paymentProvider:
-    "BETA",
+creatorNetAmount:
+  preparedSupport.netAmount,
 
+paymentProvider:
+  "BETA",
   providerReference:
     null,
 });

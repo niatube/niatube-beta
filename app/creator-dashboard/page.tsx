@@ -183,6 +183,7 @@ const [subscriberRows, setSubscriberRows] = useState<any[]>([]);
   
  const [creatorCountry, setCreatorCountry] = useState("Not set");
 const [creatorCurrency, setCreatorCurrency] = useState("Not set");
+const [creatorUserId, setCreatorUserId] = useState<string | null>(null);
 
 const [channelHandle, setChannelHandle] = useState("");
 const [accountStatus, setAccountStatus] = useState("pending_email");
@@ -215,6 +216,7 @@ const videosPerPage = 6;
         router.push("/login");
         return;
       }
+      setCreatorUserId(user.id);
 
       if (user.created_at) {
         setCreatorSince(
@@ -2268,6 +2270,7 @@ async function copyPublicChannelLink() {
         .upsert(
           {
             creator_name: creatorName,
+            creator_id: creatorUserId,
             country: creatorCountry,
             payout_currency: payoutCurrency,
             payout_method: payoutMethod,

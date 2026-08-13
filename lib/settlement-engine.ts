@@ -1,4 +1,8 @@
 import { authorizePayment } from "@/lib/payment-authorization";
+import {
+  routePayout,
+  type PayoutProviderId,
+} from "@/lib/payout-provider-router";
 import { recordCreatorWalletEntry } from "@/lib/creator-wallet-engine";
 import { recordPlatformRevenue } from "@/lib/platform-treasury";
 import {
@@ -179,12 +183,14 @@ export type CreateSettlementRecordRequest = {
   sourceType: string;
   sourceId: string;
 
+  creatorId?: string | null;
   creatorName?: string | null;
 
   currencyCode: string;
-  grossAmount: number;
+grossAmount: number;
+creatorNetAmount?: number | null;
 
-  paymentProvider?: string | null;
+paymentProvider?: string | null;
   providerReference?: string | null;
 };
 
@@ -298,17 +304,23 @@ async createAuthorizedSettlement(
         source_id:
           sourceId,
 
-        creator_name:
-          request.creatorName ?? null,
+creator_id:
+  request.creatorId ?? null,
 
-        currency_code:
-          currencyCode,
+creator_name:
+  request.creatorName ?? null,
 
-        gross_amount:
-          grossAmount,
+currency_code:
+  currencyCode,
 
-        current_status:
-          SettlementStatus.AUTHORIZED,
+       gross_amount:
+  grossAmount,
+
+creator_net_amount:
+  request.creatorNetAmount ?? null,
+
+current_status:
+  SettlementStatus.AUTHORIZED,
 
         payment_provider:
           request.paymentProvider ?? null,
@@ -866,15 +878,195 @@ async requestWithdrawal(
     "nextStatus"
   >,
 ) {
+  const {
+    data: settlementTransaction,
+    error: settlementLookupError,
+  } = await request.supabaseAdmin
+    .from("settlement_transactions")
+    .select("*")
+    .eq("id", request.settlementId)
+    .single();
+
+  if (settlementLookupError) {
+    throw new Error(
+      settlementLookupError.message ||
+        "Failed to load settlement transaction for payout.",
+    );
+  }
+
+  const creatorId = String(
+    settlementTransaction.creator_id || "",
+  ).trim();
+
+  if (!creatorId) {
+    throw new Error(
+      "Settlement transaction does not have a creator ID.",
+    );
+  }
+
+  const creatorNetAmount = Number(
+    settlementTransaction.creator_net_amount || 0,
+  );
+
+  if (creatorNetAmount <= 0) {
+    throw new Error(
+      "Settlement transaction does not have a valid creator net payout amount.",
+    );
+  }
+
+  const currencyCode = String(
+    settlementTransaction.currency_code || "",
+  )
+    .trim()
+    .toUpperCase();
+
+  if (!currencyCode) {
+    throw new Error(
+      "Settlement transaction does not have a payout currency.",
+    );
+  }
+
+  const provider = String(
+  request.paymentProvider ||
+    settlementTransaction.payment_provider ||
+    "BETA",
+)
+  .trim()
+  .toUpperCase() as PayoutProviderId;
+
+let destinationReference: string | null = null;
+
+if (provider !== "BETA") {
+  const {
+    data: payoutProfile,
+    error: payoutProfileError,
+  } = await request.supabaseAdmin
+    .from("creator_payout_profiles")
+    .select(
+      "creator_id, payout_provider, provider_recipient_id, provider_recipient_type, payout_currency, payout_method, country",
+    )
+    .eq("creator_id", creatorId)
+    .maybeSingle();
+
+  if (payoutProfileError) {
+    throw new Error(
+      payoutProfileError.message ||
+        "Failed to load creator payout profile.",
+    );
+  }
+
+  if (!payoutProfile) {
+    throw new Error(
+      "Creator does not have a payout profile configured.",
+    );
+  }
+
+  const configuredProvider = String(
+    payoutProfile.payout_provider || "",
+  )
+    .trim()
+    .toUpperCase();
+
+  if (configuredProvider !== provider) {
+    throw new Error(
+      `Creator payout profile is not configured for ${provider}.`,
+    );
+  }
+
+  const payoutCurrency = String(
+    payoutProfile.payout_currency || "",
+  )
+    .trim()
+    .toUpperCase();
+
+  if (
+    payoutCurrency &&
+    payoutCurrency !== currencyCode
+  ) {
+    throw new Error(
+      `Creator payout profile currency ${payoutCurrency} does not match settlement currency ${currencyCode}.`,
+    );
+  }
+
+  destinationReference = String(
+    payoutProfile.provider_recipient_id || "",
+  ).trim();
+
+  if (!destinationReference) {
+    throw new Error(
+      `${provider} recipient ID is not configured for this creator.`,
+    );
+  }
+}
+
+const payoutResult = await routePayout({
+    settlementId:
+      request.settlementId,
+
+    creatorId,
+
+    amount:
+      creatorNetAmount,
+
+    currency:
+      currencyCode,
+
+    provider,
+
+destinationReference,
+
+metadata: {
+      sourceType:
+        settlementTransaction.source_type,
+
+      sourceId:
+        settlementTransaction.source_id,
+
+      grossAmount:
+        Number(
+          settlementTransaction.gross_amount || 0,
+        ),
+
+      creatorNetAmount,
+    },
+  });
+
+  if (!payoutResult.accepted) {
+    throw new Error(
+      payoutResult.message ||
+        "Payout provider rejected the payout request.",
+    );
+  }
+
   return this.transitionSettlement({
     ...request,
+
+    paymentProvider:
+      payoutResult.provider,
+
+    providerReference:
+      payoutResult.providerReference,
+
+    metadata: {
+      ...(request.metadata ?? {}),
+
+      payoutProviderStatus:
+        payoutResult.status,
+
+      payoutRail:
+        payoutResult.payoutRail,
+
+      creatorNetAmount,
+
+      currencyCode,
+    },
 
     nextStatus:
       SettlementStatus.PAYOUT_QUEUED,
 
     transitionReason:
       request.transitionReason ??
-      "Creator payout queued.",
+      "Creator payout accepted by payout provider and queued.",
   });
 }
 

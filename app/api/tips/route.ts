@@ -68,21 +68,25 @@ export async function POST(req: Request) {
 
     const message = body.message || null;
 
-    if (!creatorName) {
-      return NextResponse.json(
-        { error: "Creator name is required." },
-        { status: 400 }
-      );
-    }
 
-    if (!amount || amount <= 0) {
-      return NextResponse.json(
-        { error: "Tip amount must be greater than zero." },
-        { status: 400 }
-      );
-    }
+  if (!creatorName) {
+  return NextResponse.json(
+    { error: "Creator name is required." },
+    { status: 400 }
+  );
+}
 
-        const creatorId = body.creator_id || body.creatorId || creatorName;
+const creatorId =
+  body.creator_id ||
+  body.creatorId ||
+  null;
+
+if (!creatorId) {
+  return NextResponse.json(
+    { error: "Creator ID is required." },
+    { status: 400 }
+  );
+}
     const viewerId =
       body.viewer_id ||
       body.viewerId ||
@@ -237,15 +241,19 @@ await settlementEngine.createAuthorizedSettlement({
   sourceId:
     String(tipData.id),
 
-  creatorName,
+  creatorId,
+creatorName,
 
   currencyCode,
 
-  grossAmount:
-    amount,
+grossAmount:
+  amount,
 
-  paymentProvider:
-    "BETA",
+creatorNetAmount:
+  netAmount,
+
+paymentProvider:
+  "BETA",
 
   providerReference:
     null,

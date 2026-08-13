@@ -302,11 +302,11 @@ function LiveKitViewer({ eventId }: LiveKitViewerProps) {
 export default function WatchPage() {
   const params = useParams();
   const id = params?.id as string;
-
-  const [video, setVideo] = useState<Video | null>(null);
-  const [creatorVideo, setCreatorVideo] = useState<Video | null>(null);
-  const [recommendedVideos, setRecommendedVideos] = useState<Video[]>([]);
-  const [loading, setLoading] = useState(true);
+const [video, setVideo] = useState<Video | null>(null);
+const [creatorId, setCreatorId] = useState<string | null>(null);
+const [creatorVideo, setCreatorVideo] = useState<Video | null>(null);
+const [recommendedVideos, setRecommendedVideos] = useState<Video[]>([]);
+    const [loading, setLoading] = useState(true);
 
   const [isLive, setIsLive] = useState(false);
   const [viewerCount, setViewerCount] = useState(0);
@@ -477,13 +477,28 @@ useEffect(() => {
 
         setVideo({ ...data, views: updatedViews });
 
- const { data: creatorProfile } = await supabase
+const {
+  data: creatorProfile,
+  error: creatorProfileError,
+} = await supabase
   .from("creator_profiles")
-  .select("currency_code, email")
+  .select("user_id, currency_code, email")
   .eq("creator_name", data.creator)
   .maybeSingle();
 
+if (creatorProfileError) {
+  console.error(
+    "Creator profile lookup error:",
+    creatorProfileError,
+  );
+}
 
+console.log("Creator profile lookup:", {
+  creatorName: data.creator,
+  creatorProfile,
+});
+
+setCreatorId(creatorProfile?.user_id || null);
 
 const {
   data: { user },
@@ -961,16 +976,18 @@ async function sendTip() {
         "Content-Type": "application/json",
       },
       body: JSON.stringify({
-        creator_name: video.creator,
-        video_id: id,
-        viewer_id: viewerId || "anonymous-viewer",
-        amount,
-        currency_code: tipCurrency,
-        message: tipMessage.trim() || null,
-        country: viewerCountry || "United States",
-        payment_method: "CARD",
-         idempotency_key: idempotencyKey,
-      }),
+  creator_id: creatorId,
+  creator_name: video.creator,
+  video_id: id,
+  viewer_id: viewerId || "anonymous-viewer",
+  amount,
+  currency_code: tipCurrency,
+  message: tipMessage.trim() || null,
+  country: viewerCountry || "United States",
+  payment_method: "CARD",
+  idempotency_key: idempotencyKey,
+}),
+
     });
 
     const resultText = await response.text();
@@ -1191,19 +1208,20 @@ const selectedCurrency =
     headers: {
       "Content-Type": "application/json",
     },
-    body: JSON.stringify({
-      live_video_id: id,
-      supporter_name: safeUsername,
-      viewer_id: liveViewerId || safeUsername,
-      creator_name: video.creator,
-      amount: supportAmount,
-      currency_code: currencyCode,
-      tier: supportTier,
-      message: finalMessage,
-      country,
-      payment_method: "CARD",
-       idempotency_key: idempotencyKey,
-    }),
+   body: JSON.stringify({
+  live_video_id: id,
+  supporter_name: safeUsername,
+  viewer_id: liveViewerId || safeUsername,
+  creator_id: creatorId,
+  creator_name: video.creator,
+  amount: supportAmount,
+  currency_code: currencyCode,
+  tier: supportTier,
+  message: finalMessage,
+  country,
+  payment_method: "CARD",
+  idempotency_key: idempotencyKey,
+}),
   });
 
   const resultText = await response.text();
