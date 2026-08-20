@@ -13,9 +13,10 @@ export type PayoutProviderId =
   | "FLUTTERWAVE"
   | "PAYSTACK"
   | "PAPSS"
-  | "MOBILE_MONEY"
-  | "BANK_TRANSFER";
-
+  | "TERRAPAY"
+  | "THUNES"
+  | "ONAFRIQ"
+  | "CELLULANT";
 export type PayoutRequest = {
   settlementId: string;
   creatorId: string;
@@ -269,13 +270,15 @@ function normalizeProvider(
       .trim()
       .toUpperCase();
 
-  switch (normalized) {
+    switch (normalized) {
     case "STRIPE":
     case "FLUTTERWAVE":
     case "PAYSTACK":
     case "PAPSS":
-    case "MOBILE_MONEY":
-    case "BANK_TRANSFER":
+    case "TERRAPAY":
+    case "THUNES":
+    case "ONAFRIQ":
+    case "CELLULANT":
     case "BETA":
       return normalized;
 

@@ -3,6 +3,18 @@ import {
   routePayout,
   type PayoutProviderId,
 } from "@/lib/payout-provider-router";
+
+import type {
+  PaymentRailId,
+} from "@/lib/global-registry";
+import {
+  buildPayoutRoutingPlan,
+} from "@/lib/payout-routing-plan";
+
+import type {
+  CreatorPayoutMethod,
+} from "@/lib/creator-payout-preferences";
+
 import { recordCreatorWalletEntry } from "@/lib/creator-wallet-engine";
 import { recordPlatformRevenue } from "@/lib/platform-treasury";
 import {
@@ -926,78 +938,240 @@ async requestWithdrawal(
     );
   }
 
-  const provider = String(
-  request.paymentProvider ||
-    settlementTransaction.payment_provider ||
-    "BETA",
-)
-  .trim()
-  .toUpperCase() as PayoutProviderId;
+    const requestedProvider =
+    request.paymentProvider
+      ? (String(request.paymentProvider)
+          .trim()
+          .toUpperCase() as PayoutProviderId)
+      : null;
 
-let destinationReference: string | null = null;
+  let provider: PayoutProviderId =
+    requestedProvider === "BETA"
+      ? "BETA"
+      : "BETA";
 
-if (provider !== "BETA") {
-  const {
-    data: payoutProfile,
-    error: payoutProfileError,
-  } = await request.supabaseAdmin
-    .from("creator_payout_profiles")
-    .select(
-      "creator_id, payout_provider, provider_recipient_id, provider_recipient_type, payout_currency, payout_method, country",
+  let payoutRail: PaymentRailId | null = null;
+
+  let destinationReference: string | null =
+    null;
+
+  /*
+   * Preserve the explicit BETA testing path.
+   *
+   * Production payouts do not inherit the
+   * settlement transaction's payment provider.
+   * They are routed independently from the
+   * creator's payout preference.
+   */
+  if (requestedProvider !== "BETA") {
+    const {
+      data: payoutProfile,
+      error: payoutProfileError,
+    } = await request.supabaseAdmin
+      .from("creator_payout_profiles")
+      .select(
+        "creator_id, payout_country_code, payout_currency, preferred_payout_method, fallback_payout_method, payout_preference_enabled",
+      )
+      .eq("creator_id", creatorId)
+      .maybeSingle();
+
+    if (payoutProfileError) {
+      throw new Error(
+        payoutProfileError.message ||
+          "Failed to load creator payout preference.",
+      );
+    }
+
+    if (!payoutProfile) {
+      throw new Error(
+        "Creator does not have a payout profile configured.",
+      );
+    }
+
+    if (
+      payoutProfile.payout_preference_enabled ===
+      false
+    ) {
+      throw new Error(
+        "Creator payout preference is disabled.",
+      );
+    }
+
+    const payoutCountryCode = String(
+      payoutProfile.payout_country_code || "",
     )
-    .eq("creator_id", creatorId)
-    .maybeSingle();
+      .trim()
+      .toUpperCase();
 
-  if (payoutProfileError) {
-    throw new Error(
-      payoutProfileError.message ||
-        "Failed to load creator payout profile.",
-    );
+    if (!payoutCountryCode) {
+      throw new Error(
+        "Creator payout country is not configured.",
+      );
+    }
+
+    const payoutCurrency = String(
+      payoutProfile.payout_currency || "",
+    )
+      .trim()
+      .toUpperCase();
+
+    if (!payoutCurrency) {
+      throw new Error(
+        "Creator payout currency is not configured.",
+      );
+    }
+
+    if (payoutCurrency !== currencyCode) {
+      throw new Error(
+        `Creator payout profile currency ${payoutCurrency} does not match settlement currency ${currencyCode}.`,
+      );
+    }
+
+    const preferredPayoutMethod = String(
+      payoutProfile.preferred_payout_method ||
+        "",
+    )
+      .trim()
+      .toUpperCase() as CreatorPayoutMethod;
+
+    if (!preferredPayoutMethod) {
+      throw new Error(
+        "Creator preferred payout method is not configured.",
+      );
+    }
+
+    const fallbackPayoutMethod =
+      payoutProfile.fallback_payout_method
+        ? (String(
+            payoutProfile.fallback_payout_method,
+          )
+            .trim()
+            .toUpperCase() as CreatorPayoutMethod)
+        : null;
+
+    let routingPlan =
+      buildPayoutRoutingPlan({
+        countryCode:
+          payoutCountryCode,
+        currencyCode:
+          payoutCurrency,
+        payoutMethod:
+          preferredPayoutMethod,
+      });
+
+    let candidateRoutes =
+      routingPlan.candidateRoutes;
+
+    /*
+     * If a provider was explicitly requested,
+     * restrict automatic routing to that
+     * provider only.
+     */
+    if (requestedProvider) {
+      candidateRoutes =
+        candidateRoutes.filter(
+          (candidate) =>
+            candidate.providerCapability
+              .provider ===
+            requestedProvider,
+        );
+    }
+
+    /*
+     * If the preferred method has no eligible
+     * route, try the creator's fallback method.
+     */
+    if (
+      candidateRoutes.length === 0 &&
+      fallbackPayoutMethod
+    ) {
+      routingPlan =
+        buildPayoutRoutingPlan({
+          countryCode:
+            payoutCountryCode,
+          currencyCode:
+            payoutCurrency,
+          payoutMethod:
+            fallbackPayoutMethod,
+        });
+
+      candidateRoutes =
+        requestedProvider
+          ? routingPlan.candidateRoutes.filter(
+              (candidate) =>
+                candidate.providerCapability
+                  .provider ===
+                requestedProvider,
+            )
+          : routingPlan.candidateRoutes;
+    }
+
+    const selectedRoute =
+      candidateRoutes[0];
+
+    if (!selectedRoute) {
+      throw new Error(
+        `No qualified payout provider is available for ${payoutCountryCode} ${payoutCurrency}.`,
+      );
+    }
+
+    provider =
+      selectedRoute.providerCapability.provider;
+
+    payoutRail =
+      selectedRoute.payoutRail;
+
+    const {
+      data: providerRecipient,
+      error: providerRecipientError,
+    } = await request.supabaseAdmin
+      .from(
+        "creator_payout_provider_recipients",
+      )
+      .select(
+        "provider_recipient_id, provider_recipient_type",
+      )
+      .eq("creator_id", creatorId)
+      .eq("payout_provider", provider)
+      .eq(
+        "country_code",
+        payoutCountryCode,
+      )
+      .eq(
+        "currency_code",
+        payoutCurrency,
+      )
+      .eq(
+        "payout_rail",
+        payoutRail,
+      )
+      .eq("is_active", true)
+      .maybeSingle();
+
+    if (providerRecipientError) {
+      throw new Error(
+        providerRecipientError.message ||
+          "Failed to load provider payout recipient.",
+      );
+    }
+
+    if (!providerRecipient) {
+      throw new Error(
+        `${provider} payout recipient is not configured for this creator and payout rail.`,
+      );
+    }
+
+    destinationReference = String(
+      providerRecipient.provider_recipient_id ||
+        "",
+    ).trim();
+
+    if (!destinationReference) {
+      throw new Error(
+        `${provider} recipient ID is not configured for this creator.`,
+      );
+    }
   }
-
-  if (!payoutProfile) {
-    throw new Error(
-      "Creator does not have a payout profile configured.",
-    );
-  }
-
-  const configuredProvider = String(
-    payoutProfile.payout_provider || "",
-  )
-    .trim()
-    .toUpperCase();
-
-  if (configuredProvider !== provider) {
-    throw new Error(
-      `Creator payout profile is not configured for ${provider}.`,
-    );
-  }
-
-  const payoutCurrency = String(
-    payoutProfile.payout_currency || "",
-  )
-    .trim()
-    .toUpperCase();
-
-  if (
-    payoutCurrency &&
-    payoutCurrency !== currencyCode
-  ) {
-    throw new Error(
-      `Creator payout profile currency ${payoutCurrency} does not match settlement currency ${currencyCode}.`,
-    );
-  }
-
-  destinationReference = String(
-    payoutProfile.provider_recipient_id || "",
-  ).trim();
-
-  if (!destinationReference) {
-    throw new Error(
-      `${provider} recipient ID is not configured for this creator.`,
-    );
-  }
-}
 
 const payoutResult = await routePayout({
     settlementId:
@@ -1012,6 +1186,8 @@ const payoutResult = await routePayout({
       currencyCode,
 
     provider,
+
+    payoutRail,
 
 destinationReference,
 
