@@ -55,7 +55,6 @@ export enum RegistryStatus {
   PLANNED = "PLANNED",
 }
 
-
 export interface PaymentRail {
   id: string;
   name: string;
@@ -84,22 +83,22 @@ export interface CountryDefinition {
   languages: string[];
 
   /**
- * Payment rails commercially available
- * in this country.
- */
-marketAvailableRails: PaymentRailId[];
+   * Payment rails commercially available
+   * in this country.
+   */
+  marketAvailableRails: PaymentRailId[];
 
-/**
- * Payment rails currently enabled
- * inside NiaTube.
- */
-enabledPaymentRails: PaymentRailId[];
+  /**
+   * Payment rails currently enabled
+   * inside NiaTube.
+   */
+  enabledPaymentRails: PaymentRailId[];
 
-/**
- * Payout rails currently enabled
- * for creators.
- */
-enabledPayoutRails: PaymentRailId[];
+  /**
+   * Payout rails currently enabled
+   * for creators.
+   */
+  enabledPayoutRails: PaymentRailId[];
 
   papssSupported: boolean;
 
@@ -109,7 +108,7 @@ enabledPayoutRails: PaymentRailId[];
 
   mobileMoneySupported: boolean;
 
-digitalWalletSupported: boolean;
+  digitalWalletSupported: boolean;
 
   reportingCurrency: string;
 
@@ -117,15 +116,15 @@ digitalWalletSupported: boolean;
 
   defaultSettlementRail: string | null;
 
-defaultPayoutRail: string | null;
+  defaultPayoutRail: string | null;
 
   fxSupported: boolean;
 
   kycRequired: boolean;
 
-creatorMonetizationEnabled: boolean;
+  creatorMonetizationEnabled: boolean;
 
-viewerPaymentsEnabled: boolean;
+  viewerPaymentsEnabled: boolean;
 
   status: RegistryStatus;
 }
@@ -141,11 +140,11 @@ export type CreateCountryInput = {
 
   languages: string[];
 
- marketAvailableRails?: PaymentRailId[];
+  marketAvailableRails?: PaymentRailId[];
 
-enabledPaymentRails?: PaymentRailId[];
+  enabledPaymentRails?: PaymentRailId[];
 
-enabledPayoutRails?: PaymentRailId[];
+  enabledPayoutRails?: PaymentRailId[];
 
   papssSupported?: boolean;
 
@@ -174,6 +173,7 @@ export const PaymentRailId = {
   MASTERCARD: "MASTERCARD",
   PAYPAL: "PAYPAL",
 
+  MOBILE_MONEY: "MOBILE_MONEY",
   MTN_MOMO: "MTN_MOMO",
   ORANGE_MONEY: "ORANGE_MONEY",
   WAVE: "WAVE",
@@ -185,14 +185,9 @@ export const PaymentRailId = {
   BANK_TRANSFER: "BANK_TRANSFER",
 } as const;
 
-export type PaymentRailId =
-  (typeof PaymentRailId)[keyof typeof PaymentRailId];
+export type PaymentRailId = (typeof PaymentRailId)[keyof typeof PaymentRailId];
 
-
-export const PAYMENT_RAILS: Record<
-  string,
-  PaymentRail
-> = {
+export const PAYMENT_RAILS: Record<string, PaymentRail> = {
   VISA: {
     id: "VISA",
     name: "Visa",
@@ -217,6 +212,16 @@ export const PAYMENT_RAILS: Record<
     id: "PAYPAL",
     name: "PayPal",
     type: PaymentRailType.WALLET,
+    supportedCountries: [],
+    supportedCurrencies: [],
+    status: RegistryStatus.PLANNED,
+    apiReady: false,
+  },
+
+  MOBILE_MONEY: {
+    id: "MOBILE_MONEY",
+    name: "Mobile Money",
+    type: PaymentRailType.MOBILE_MONEY,
     supportedCountries: [],
     supportedCurrencies: [],
     status: RegistryStatus.PLANNED,
@@ -294,17 +299,12 @@ export const PAYMENT_RAILS: Record<
   },
 };
 
-function requireRegistryCurrency(
-  currencyCode: string,
-): CurrencyDefinition {
-  const normalizedCode = String(
-    currencyCode || "",
-  )
+function requireRegistryCurrency(currencyCode: string): CurrencyDefinition {
+  const normalizedCode = String(currencyCode || "")
     .trim()
     .toUpperCase();
 
-  const currency =
-    CURRENCY_REGISTRY[normalizedCode];
+  const currency = CURRENCY_REGISTRY[normalizedCode];
 
   if (!currency) {
     throw new Error(
@@ -334,8 +334,7 @@ function createCountry({
   mobileMoneySupported = false,
   digitalWalletSupported = false,
 
-  reportingCurrency =
-    REPORTING_CURRENCY,
+  reportingCurrency = REPORTING_CURRENCY,
 
   settlementCurrency,
 
@@ -350,64 +349,41 @@ function createCountry({
 
   status = RegistryStatus.BETA,
 }: CreateCountryInput): CountryDefinition {
-  const normalizedIsoCode = String(
-    isoCode || "",
-  )
+  const normalizedIsoCode = String(isoCode || "")
     .trim()
     .toUpperCase();
 
-  const normalizedCurrencyCode = String(
-    currencyCode || "",
-  )
+  const normalizedCurrencyCode = String(currencyCode || "")
     .trim()
     .toUpperCase();
 
   if (!normalizedIsoCode) {
-    throw new Error(
-      "Country ISO code is required.",
-    );
+    throw new Error("Country ISO code is required.");
   }
 
   if (!String(country || "").trim()) {
-    throw new Error(
-      `Country name is required for ${normalizedIsoCode}.`,
-    );
+    throw new Error(`Country name is required for ${normalizedIsoCode}.`);
   }
 
-  const currency =
-    requireRegistryCurrency(
-      normalizedCurrencyCode,
-    );
+  const currency = requireRegistryCurrency(normalizedCurrencyCode);
 
   return {
-    isoCode:
-      normalizedIsoCode,
+    isoCode: normalizedIsoCode,
 
-    country:
-      String(country).trim(),
+    country: String(country).trim(),
 
     region,
     africanRegion,
 
     currency,
 
-    languages:
-      [...new Set(languages)],
+    languages: [...new Set(languages)],
 
-    marketAvailableRails:
-      [...new Set(
-        marketAvailableRails,
-      )],
+    marketAvailableRails: [...new Set(marketAvailableRails)],
 
-    enabledPaymentRails:
-      [...new Set(
-        enabledPaymentRails,
-      )],
+    enabledPaymentRails: [...new Set(enabledPaymentRails)],
 
-    enabledPayoutRails:
-      [...new Set(
-        enabledPayoutRails,
-      )],
+    enabledPayoutRails: [...new Set(enabledPayoutRails)],
 
     papssSupported,
 
@@ -416,18 +392,11 @@ function createCountry({
     mobileMoneySupported,
     digitalWalletSupported,
 
-    reportingCurrency:
-      reportingCurrency
-        .trim()
-        .toUpperCase(),
+    reportingCurrency: reportingCurrency.trim().toUpperCase(),
 
-    settlementCurrency:
-      String(
-        settlementCurrency ||
-          normalizedCurrencyCode,
-      )
-        .trim()
-        .toUpperCase(),
+    settlementCurrency: String(settlementCurrency || normalizedCurrencyCode)
+      .trim()
+      .toUpperCase(),
 
     defaultSettlementRail,
     defaultPayoutRail,
@@ -442,26 +411,17 @@ function createCountry({
   };
 }
 
-export const COUNTRY_REGISTRY: Record<
-  string,
-  CountryDefinition
-> = {
-
-   DZ: createCountry({
+export const COUNTRY_REGISTRY: Record<string, CountryDefinition> = {
+  DZ: createCountry({
     isoCode: "DZ",
     country: "Algeria",
 
     region: Region.AFRICA,
-    africanRegion:
-      AfricanRegion.NORTH,
+    africanRegion: AfricanRegion.NORTH,
 
     currencyCode: "DZD",
 
-    languages: [
-      "Arabic",
-      "Tamazight",
-      "French",
-    ],
+    languages: ["Arabic", "Tamazight", "French"],
 
     marketAvailableRails: [
       PaymentRailId.VISA,
@@ -480,15 +440,11 @@ export const COUNTRY_REGISTRY: Record<
     country: "Egypt",
 
     region: Region.AFRICA,
-    africanRegion:
-      AfricanRegion.NORTH,
+    africanRegion: AfricanRegion.NORTH,
 
     currencyCode: "EGP",
 
-    languages: [
-      "Arabic",
-      "English",
-    ],
+    languages: ["Arabic", "English"],
 
     marketAvailableRails: [
       PaymentRailId.VISA,
@@ -507,14 +463,11 @@ export const COUNTRY_REGISTRY: Record<
     country: "Libya",
 
     region: Region.AFRICA,
-    africanRegion:
-      AfricanRegion.NORTH,
+    africanRegion: AfricanRegion.NORTH,
 
     currencyCode: "LYD",
 
-    languages: [
-      "Arabic",
-    ],
+    languages: ["Arabic"],
 
     marketAvailableRails: [
       PaymentRailId.VISA,
@@ -533,19 +486,13 @@ export const COUNTRY_REGISTRY: Record<
     country: "Sudan",
 
     region: Region.AFRICA,
-    africanRegion:
-      AfricanRegion.NORTH,
+    africanRegion: AfricanRegion.NORTH,
 
     currencyCode: "SDG",
 
-    languages: [
-      "Arabic",
-      "English",
-    ],
+    languages: ["Arabic", "English"],
 
-    marketAvailableRails: [
-      PaymentRailId.BANK_TRANSFER,
-    ],
+    marketAvailableRails: [PaymentRailId.BANK_TRANSFER],
 
     bankTransferSupported: true,
 
@@ -557,15 +504,11 @@ export const COUNTRY_REGISTRY: Record<
     country: "Tunisia",
 
     region: Region.AFRICA,
-    africanRegion:
-      AfricanRegion.NORTH,
+    africanRegion: AfricanRegion.NORTH,
 
     currencyCode: "TND",
 
-    languages: [
-      "Arabic",
-      "French",
-    ],
+    languages: ["Arabic", "French"],
 
     marketAvailableRails: [
       PaymentRailId.VISA,
@@ -579,30 +522,23 @@ export const COUNTRY_REGISTRY: Record<
     status: RegistryStatus.BETA,
   }),
 
-    
   MA: {
     isoCode: "MA",
     country: "Morocco",
 
     region: Region.AFRICA,
-    africanRegion:
-      AfricanRegion.NORTH,
+    africanRegion: AfricanRegion.NORTH,
 
-    currency:
-      requireRegistryCurrency("MAD"),
+    currency: requireRegistryCurrency("MAD"),
 
-    languages: [
-      "Arabic",
-      "Amazigh",
-      "French",
-    ],
+    languages: ["Arabic", "Amazigh", "French"],
 
     marketAvailableRails: [
-  PaymentRailId.VISA,
-  PaymentRailId.MASTERCARD,
-  PaymentRailId.ORANGE_MONEY,
-  PaymentRailId.BANK_TRANSFER,
-],
+      PaymentRailId.VISA,
+      PaymentRailId.MASTERCARD,
+      PaymentRailId.ORANGE_MONEY,
+      PaymentRailId.BANK_TRANSFER,
+    ],
 
     enabledPaymentRails: [],
     enabledPayoutRails: [],
@@ -614,8 +550,7 @@ export const COUNTRY_REGISTRY: Record<
     mobileMoneySupported: true,
     digitalWalletSupported: false,
 
-    reportingCurrency:
-      REPORTING_CURRENCY,
+    reportingCurrency: REPORTING_CURRENCY,
 
     settlementCurrency: "MAD",
 
@@ -642,9 +577,7 @@ export const COUNTRY_REGISTRY: Record<
 
     languages: ["French"],
 
-    marketAvailableRails: [
-      PaymentRailId.BANK_TRANSFER,
-    ],
+    marketAvailableRails: [PaymentRailId.BANK_TRANSFER],
 
     bankTransferSupported: true,
 
@@ -662,9 +595,7 @@ export const COUNTRY_REGISTRY: Record<
 
     languages: ["French"],
 
-    marketAvailableRails: [
-      PaymentRailId.BANK_TRANSFER,
-    ],
+    marketAvailableRails: [PaymentRailId.BANK_TRANSFER],
 
     bankTransferSupported: true,
 
@@ -680,10 +611,7 @@ export const COUNTRY_REGISTRY: Record<
 
     currencyCode: "CVE",
 
-    languages: [
-      "Portuguese",
-      "Cape Verdean Creole",
-    ],
+    languages: ["Portuguese", "Cape Verdean Creole"],
 
     marketAvailableRails: [
       PaymentRailId.VISA,
@@ -731,9 +659,7 @@ export const COUNTRY_REGISTRY: Record<
 
     languages: ["English"],
 
-    marketAvailableRails: [
-      PaymentRailId.BANK_TRANSFER,
-    ],
+    marketAvailableRails: [PaymentRailId.BANK_TRANSFER],
 
     bankTransferSupported: true,
 
@@ -773,9 +699,7 @@ export const COUNTRY_REGISTRY: Record<
 
     languages: ["Portuguese"],
 
-    marketAvailableRails: [
-      PaymentRailId.BANK_TRANSFER,
-    ],
+    marketAvailableRails: [PaymentRailId.BANK_TRANSFER],
 
     bankTransferSupported: true,
 
@@ -805,8 +729,7 @@ export const COUNTRY_REGISTRY: Record<
     status: RegistryStatus.BETA,
   }),
 
-
-    ML: createCountry({
+  ML: createCountry({
     isoCode: "ML",
     country: "Mali",
 
@@ -835,14 +758,9 @@ export const COUNTRY_REGISTRY: Record<
 
     currencyCode: "MRU",
 
-    languages: [
-      "Arabic",
-      "French",
-    ],
+    languages: ["Arabic", "French"],
 
-    marketAvailableRails: [
-      PaymentRailId.BANK_TRANSFER,
-    ],
+    marketAvailableRails: [PaymentRailId.BANK_TRANSFER],
 
     bankTransferSupported: true,
   }),
@@ -858,9 +776,7 @@ export const COUNTRY_REGISTRY: Record<
 
     languages: ["French"],
 
-    marketAvailableRails: [
-      PaymentRailId.BANK_TRANSFER,
-    ],
+    marketAvailableRails: [PaymentRailId.BANK_TRANSFER],
 
     bankTransferSupported: true,
   }),
@@ -897,9 +813,7 @@ export const COUNTRY_REGISTRY: Record<
 
     languages: ["English"],
 
-    marketAvailableRails: [
-      PaymentRailId.BANK_TRANSFER,
-    ],
+    marketAvailableRails: [PaymentRailId.BANK_TRANSFER],
 
     bankTransferSupported: true,
   }),
@@ -924,28 +838,23 @@ export const COUNTRY_REGISTRY: Record<
     mobileMoneySupported: true,
   }),
 
-
   GH: {
     isoCode: "GH",
     country: "Ghana",
 
     region: Region.AFRICA,
-    africanRegion:
-      AfricanRegion.WEST,
+    africanRegion: AfricanRegion.WEST,
 
-    currency:
-      requireRegistryCurrency("GHS"),
+    currency: requireRegistryCurrency("GHS"),
 
-    languages: [
-      "English",
-    ],
+    languages: ["English"],
 
     marketAvailableRails: [
-  PaymentRailId.VISA,
-  PaymentRailId.MASTERCARD,
-  PaymentRailId.MTN_MOMO,
-  PaymentRailId.BANK_TRANSFER,
-],
+      PaymentRailId.VISA,
+      PaymentRailId.MASTERCARD,
+      PaymentRailId.MTN_MOMO,
+      PaymentRailId.BANK_TRANSFER,
+    ],
 
     enabledPaymentRails: [],
     enabledPayoutRails: [],
@@ -957,8 +866,7 @@ export const COUNTRY_REGISTRY: Record<
     mobileMoneySupported: true,
     digitalWalletSupported: false,
 
-    reportingCurrency:
-      REPORTING_CURRENCY,
+    reportingCurrency: REPORTING_CURRENCY,
 
     settlementCurrency: "GHS",
 
@@ -974,7 +882,6 @@ export const COUNTRY_REGISTRY: Record<
     status: RegistryStatus.BETA,
   },
 
-
   AO: createCountry({
     isoCode: "AO",
     country: "Angola",
@@ -986,9 +893,7 @@ export const COUNTRY_REGISTRY: Record<
 
     languages: ["Portuguese"],
 
-    marketAvailableRails: [
-      PaymentRailId.BANK_TRANSFER,
-    ],
+    marketAvailableRails: [PaymentRailId.BANK_TRANSFER],
 
     bankTransferSupported: true,
 
@@ -1004,10 +909,7 @@ export const COUNTRY_REGISTRY: Record<
 
     currencyCode: "XAF",
 
-    languages: [
-      "French",
-      "English",
-    ],
+    languages: ["French", "English"],
 
     marketAvailableRails: [
       PaymentRailId.ORANGE_MONEY,
@@ -1031,9 +933,7 @@ export const COUNTRY_REGISTRY: Record<
 
     languages: ["French"],
 
-    marketAvailableRails: [
-      PaymentRailId.BANK_TRANSFER,
-    ],
+    marketAvailableRails: [PaymentRailId.BANK_TRANSFER],
 
     bankTransferSupported: true,
 
@@ -1049,14 +949,9 @@ export const COUNTRY_REGISTRY: Record<
 
     currencyCode: "XAF",
 
-    languages: [
-      "French",
-      "Arabic",
-    ],
+    languages: ["French", "Arabic"],
 
-    marketAvailableRails: [
-      PaymentRailId.BANK_TRANSFER,
-    ],
+    marketAvailableRails: [PaymentRailId.BANK_TRANSFER],
 
     bankTransferSupported: true,
 
@@ -1074,9 +969,7 @@ export const COUNTRY_REGISTRY: Record<
 
     languages: ["French"],
 
-    marketAvailableRails: [
-      PaymentRailId.BANK_TRANSFER,
-    ],
+    marketAvailableRails: [PaymentRailId.BANK_TRANSFER],
 
     bankTransferSupported: true,
 
@@ -1094,9 +987,7 @@ export const COUNTRY_REGISTRY: Record<
 
     languages: ["French"],
 
-    marketAvailableRails: [
-      PaymentRailId.BANK_TRANSFER,
-    ],
+    marketAvailableRails: [PaymentRailId.BANK_TRANSFER],
 
     bankTransferSupported: true,
 
@@ -1112,14 +1003,9 @@ export const COUNTRY_REGISTRY: Record<
 
     currencyCode: "XAF",
 
-    languages: [
-      "Spanish",
-      "French",
-    ],
+    languages: ["Spanish", "French"],
 
-    marketAvailableRails: [
-      PaymentRailId.BANK_TRANSFER,
-    ],
+    marketAvailableRails: [PaymentRailId.BANK_TRANSFER],
 
     bankTransferSupported: true,
 
@@ -1137,9 +1023,7 @@ export const COUNTRY_REGISTRY: Record<
 
     languages: ["French"],
 
-    marketAvailableRails: [
-      PaymentRailId.BANK_TRANSFER,
-    ],
+    marketAvailableRails: [PaymentRailId.BANK_TRANSFER],
 
     bankTransferSupported: true,
 
@@ -1157,16 +1041,14 @@ export const COUNTRY_REGISTRY: Record<
 
     languages: ["Portuguese"],
 
-    marketAvailableRails: [
-      PaymentRailId.BANK_TRANSFER,
-    ],
+    marketAvailableRails: [PaymentRailId.BANK_TRANSFER],
 
     bankTransferSupported: true,
 
     status: RegistryStatus.BETA,
   }),
 
-    BI: createCountry({
+  BI: createCountry({
     isoCode: "BI",
     country: "Burundi",
 
@@ -1177,9 +1059,7 @@ export const COUNTRY_REGISTRY: Record<
 
     languages: ["Kirundi", "French", "English"],
 
-    marketAvailableRails: [
-      PaymentRailId.BANK_TRANSFER,
-    ],
+    marketAvailableRails: [PaymentRailId.BANK_TRANSFER],
 
     bankTransferSupported: true,
 
@@ -1197,9 +1077,7 @@ export const COUNTRY_REGISTRY: Record<
 
     languages: ["French", "Arabic"],
 
-    marketAvailableRails: [
-      PaymentRailId.BANK_TRANSFER,
-    ],
+    marketAvailableRails: [PaymentRailId.BANK_TRANSFER],
 
     bankTransferSupported: true,
 
@@ -1217,9 +1095,7 @@ export const COUNTRY_REGISTRY: Record<
 
     languages: ["Tigrinya", "Arabic", "English"],
 
-    marketAvailableRails: [
-      PaymentRailId.BANK_TRANSFER,
-    ],
+    marketAvailableRails: [PaymentRailId.BANK_TRANSFER],
 
     bankTransferSupported: true,
 
@@ -1237,9 +1113,7 @@ export const COUNTRY_REGISTRY: Record<
 
     languages: ["Amharic"],
 
-    marketAvailableRails: [
-      PaymentRailId.BANK_TRANSFER,
-    ],
+    marketAvailableRails: [PaymentRailId.BANK_TRANSFER],
 
     bankTransferSupported: true,
 
@@ -1257,9 +1131,7 @@ export const COUNTRY_REGISTRY: Record<
 
     languages: ["Somali", "Arabic"],
 
-    marketAvailableRails: [
-      PaymentRailId.BANK_TRANSFER,
-    ],
+    marketAvailableRails: [PaymentRailId.BANK_TRANSFER],
 
     bankTransferSupported: true,
 
@@ -1277,9 +1149,7 @@ export const COUNTRY_REGISTRY: Record<
 
     languages: ["English"],
 
-    marketAvailableRails: [
-      PaymentRailId.BANK_TRANSFER,
-    ],
+    marketAvailableRails: [PaymentRailId.BANK_TRANSFER],
 
     bankTransferSupported: true,
 
@@ -1331,8 +1201,7 @@ export const COUNTRY_REGISTRY: Record<
     status: RegistryStatus.BETA,
   }),
 
-
-    KM: createCountry({
+  KM: createCountry({
     isoCode: "KM",
     country: "Comoros",
 
@@ -1341,22 +1210,14 @@ export const COUNTRY_REGISTRY: Record<
 
     currencyCode: "KMF",
 
-    languages: [
-      "Comorian",
-      "French",
-      "Arabic",
-    ],
+    languages: ["Comorian", "French", "Arabic"],
 
-    marketAvailableRails: [
-      PaymentRailId.BANK_TRANSFER,
-    ],
+    marketAvailableRails: [PaymentRailId.BANK_TRANSFER],
 
     bankTransferSupported: true,
 
     status: RegistryStatus.BETA,
   }),
-
-  
 
   MU: createCountry({
     isoCode: "MU",
@@ -1367,10 +1228,7 @@ export const COUNTRY_REGISTRY: Record<
 
     currencyCode: "MUR",
 
-    languages: [
-      "English",
-      "French",
-    ],
+    languages: ["English", "French"],
 
     marketAvailableRails: [
       PaymentRailId.VISA,
@@ -1393,11 +1251,7 @@ export const COUNTRY_REGISTRY: Record<
 
     currencyCode: "SCR",
 
-    languages: [
-      "English",
-      "French",
-      "Seychellois Creole",
-    ],
+    languages: ["English", "French", "Seychellois Creole"],
 
     marketAvailableRails: [
       PaymentRailId.VISA,
@@ -1411,22 +1265,16 @@ export const COUNTRY_REGISTRY: Record<
     status: RegistryStatus.BETA,
   }),
 
-    RW: createCountry({
+  RW: createCountry({
     isoCode: "RW",
     country: "Rwanda",
 
     region: Region.AFRICA,
-    africanRegion:
-      AfricanRegion.EAST,
+    africanRegion: AfricanRegion.EAST,
 
     currencyCode: "RWF",
 
-    languages: [
-      "Kinyarwanda",
-      "English",
-      "French",
-      "Swahili",
-    ],
+    languages: ["Kinyarwanda", "English", "French", "Swahili"],
 
     marketAvailableRails: [
       PaymentRailId.VISA,
@@ -1448,15 +1296,11 @@ export const COUNTRY_REGISTRY: Record<
     country: "Kenya",
 
     region: Region.AFRICA,
-    africanRegion:
-      AfricanRegion.EAST,
+    africanRegion: AfricanRegion.EAST,
 
     currencyCode: "KES",
 
-    languages: [
-      "English",
-      "Swahili",
-    ],
+    languages: ["English", "Swahili"],
 
     marketAvailableRails: [
       PaymentRailId.VISA,
@@ -1479,22 +1323,18 @@ export const COUNTRY_REGISTRY: Record<
     country: "Nigeria",
 
     region: Region.AFRICA,
-    africanRegion:
-      AfricanRegion.WEST,
+    africanRegion: AfricanRegion.WEST,
 
-    currency:
-      requireRegistryCurrency("NGN"),
+    currency: requireRegistryCurrency("NGN"),
 
-    languages: [
-      "English",
-    ],
+    languages: ["English"],
 
     marketAvailableRails: [
-  PaymentRailId.VISA,
-  PaymentRailId.MASTERCARD,
-  PaymentRailId.MTN_MOMO,
-  PaymentRailId.BANK_TRANSFER,
-],
+      PaymentRailId.VISA,
+      PaymentRailId.MASTERCARD,
+      PaymentRailId.MTN_MOMO,
+      PaymentRailId.BANK_TRANSFER,
+    ],
 
     enabledPaymentRails: [],
     enabledPayoutRails: [],
@@ -1506,8 +1346,7 @@ export const COUNTRY_REGISTRY: Record<
     mobileMoneySupported: true,
     digitalWalletSupported: false,
 
-    reportingCurrency:
-      REPORTING_CURRENCY,
+    reportingCurrency: REPORTING_CURRENCY,
 
     settlementCurrency: "NGN",
 
@@ -1533,9 +1372,7 @@ export const COUNTRY_REGISTRY: Record<
 
     languages: ["English", "Setswana"],
 
-    marketAvailableRails: [
-      PaymentRailId.BANK_TRANSFER,
-    ],
+    marketAvailableRails: [PaymentRailId.BANK_TRANSFER],
 
     bankTransferSupported: true,
 
@@ -1553,9 +1390,7 @@ export const COUNTRY_REGISTRY: Record<
 
     languages: ["Sesotho", "English"],
 
-    marketAvailableRails: [
-      PaymentRailId.BANK_TRANSFER,
-    ],
+    marketAvailableRails: [PaymentRailId.BANK_TRANSFER],
 
     bankTransferSupported: true,
 
@@ -1573,9 +1408,7 @@ export const COUNTRY_REGISTRY: Record<
 
     languages: ["Malagasy", "French"],
 
-    marketAvailableRails: [
-      PaymentRailId.BANK_TRANSFER,
-    ],
+    marketAvailableRails: [PaymentRailId.BANK_TRANSFER],
 
     bankTransferSupported: true,
 
@@ -1593,9 +1426,7 @@ export const COUNTRY_REGISTRY: Record<
 
     languages: ["English", "Chichewa"],
 
-    marketAvailableRails: [
-      PaymentRailId.BANK_TRANSFER,
-    ],
+    marketAvailableRails: [PaymentRailId.BANK_TRANSFER],
 
     bankTransferSupported: true,
 
@@ -1613,9 +1444,7 @@ export const COUNTRY_REGISTRY: Record<
 
     languages: ["Portuguese"],
 
-    marketAvailableRails: [
-      PaymentRailId.BANK_TRANSFER,
-    ],
+    marketAvailableRails: [PaymentRailId.BANK_TRANSFER],
 
     bankTransferSupported: true,
 
@@ -1654,12 +1483,7 @@ export const COUNTRY_REGISTRY: Record<
 
     currencyCode: "ZAR",
 
-    languages: [
-      "English",
-      "Zulu",
-      "Xhosa",
-      "Afrikaans",
-    ],
+    languages: ["English", "Zulu", "Xhosa", "Afrikaans"],
 
     marketAvailableRails: [
       PaymentRailId.VISA,
@@ -1684,9 +1508,7 @@ export const COUNTRY_REGISTRY: Record<
 
     languages: ["English", "Swati"],
 
-    marketAvailableRails: [
-      PaymentRailId.BANK_TRANSFER,
-    ],
+    marketAvailableRails: [PaymentRailId.BANK_TRANSFER],
 
     bankTransferSupported: true,
 
@@ -1704,9 +1526,7 @@ export const COUNTRY_REGISTRY: Record<
 
     languages: ["English"],
 
-    marketAvailableRails: [
-      PaymentRailId.BANK_TRANSFER,
-    ],
+    marketAvailableRails: [PaymentRailId.BANK_TRANSFER],
 
     bankTransferSupported: true,
 
@@ -1722,15 +1542,9 @@ export const COUNTRY_REGISTRY: Record<
 
     currencyCode: "ZWG",
 
-    languages: [
-      "English",
-      "Shona",
-      "Ndebele",
-    ],
+    languages: ["English", "Shona", "Ndebele"],
 
-    marketAvailableRails: [
-      PaymentRailId.BANK_TRANSFER,
-    ],
+    marketAvailableRails: [PaymentRailId.BANK_TRANSFER],
 
     bankTransferSupported: true,
 
@@ -1773,10 +1587,7 @@ export const COUNTRY_REGISTRY: Record<
     region: Region.NORTH_AMERICA,
     currencyCode: "CAD",
 
-    languages: [
-      "English",
-      "French",
-    ],
+    languages: ["English", "French"],
 
     marketAvailableRails: [
       PaymentRailId.VISA,
@@ -1845,11 +1656,7 @@ export const COUNTRY_REGISTRY: Record<
     region: Region.EUROPE,
     currencyCode: "EUR",
 
-    languages: [
-      "Dutch",
-      "French",
-      "German",
-    ],
+    languages: ["Dutch", "French", "German"],
 
     marketAvailableRails: [
       PaymentRailId.VISA,
@@ -1979,30 +1786,19 @@ export const COUNTRY_REGISTRY: Record<
 
     status: RegistryStatus.BETA,
   }),
-  
 };
 
-export function getCountry(
-  countryCode: string,
-): CountryDefinition | null {
-  const normalizedCode = String(
-    countryCode || "",
-  )
+export function getCountry(countryCode: string): CountryDefinition | null {
+  const normalizedCode = String(countryCode || "")
     .trim()
     .toUpperCase();
 
-  return (
-    COUNTRY_REGISTRY[
-      normalizedCode
-    ] ?? null
-  );
+  return COUNTRY_REGISTRY[normalizedCode] ?? null;
 }
 export function getCountryByName(
   countryName: string,
 ): CountryDefinition | null {
-  const normalizedName = String(
-    countryName || "",
-  )
+  const normalizedName = String(countryName || "")
     .trim()
     .toLowerCase();
 
@@ -2011,118 +1807,66 @@ export function getCountryByName(
   }
 
   return (
-    Object.values(
-      COUNTRY_REGISTRY,
-    ).find(
-      (country) =>
-        country.country
-          .trim()
-          .toLowerCase() ===
-        normalizedName,
+    Object.values(COUNTRY_REGISTRY).find(
+      (country) => country.country.trim().toLowerCase() === normalizedName,
     ) ?? null
   );
 }
 
-export function getPaymentRail(
-  railId: string,
-): PaymentRail | null {
-  const normalizedRailId = String(
-    railId || "",
-  )
+export function getPaymentRail(railId: string): PaymentRail | null {
+  const normalizedRailId = String(railId || "")
     .trim()
     .toUpperCase();
 
-  return (
-    PAYMENT_RAILS[
-      normalizedRailId
-    ] ?? null
-  );
+  return PAYMENT_RAILS[normalizedRailId] ?? null;
 }
 
-
-
-export function getPaymentRailsForCountry(
-  countryCode: string,
-): PaymentRail[] {
-  const country =
-    getCountry(countryCode);
+export function getPaymentRailsForCountry(countryCode: string): PaymentRail[] {
+  const country = getCountry(countryCode);
 
   if (!country) {
     return [];
   }
 
   return country.marketAvailableRails
-    .map((railId) =>
-      getPaymentRail(railId),
-    )
-    .filter(
-      (
-        rail,
-      ): rail is PaymentRail =>
-        rail !== null,
-    );
+    .map((railId) => getPaymentRail(railId))
+    .filter((rail): rail is PaymentRail => rail !== null);
 }
 
 export function getEnabledPaymentRailsForCountry(
   countryCode: string,
 ): PaymentRail[] {
-  const country =
-    getCountry(countryCode);
+  const country = getCountry(countryCode);
 
   if (!country) {
     return [];
   }
 
   return country.enabledPaymentRails
-    .map((railId) =>
-      getPaymentRail(railId),
-    )
-    .filter(
-      (
-        rail,
-      ): rail is PaymentRail =>
-        rail !== null,
-    );
+    .map((railId) => getPaymentRail(railId))
+    .filter((rail): rail is PaymentRail => rail !== null);
 }
 
 export function getEnabledPayoutRailsForCountry(
   countryCode: string,
 ): PaymentRail[] {
-  const country =
-    getCountry(countryCode);
+  const country = getCountry(countryCode);
 
   if (!country) {
     return [];
   }
 
   return country.enabledPayoutRails
-    .map((railId) =>
-      getPaymentRail(railId),
-    )
-    .filter(
-      (
-        rail,
-      ): rail is PaymentRail =>
-        rail !== null,
-    );
+    .map((railId) => getPaymentRail(railId))
+    .filter((rail): rail is PaymentRail => rail !== null);
 }
 
-export {
-  CURRENCY_REGISTRY,
-};
+export { CURRENCY_REGISTRY };
 
-export function getCurrency(
-  currencyCode: string,
-): CurrencyDefinition | null {
-  const normalizedCode = String(
-    currencyCode || "",
-  )
+export function getCurrency(currencyCode: string): CurrencyDefinition | null {
+  const normalizedCode = String(currencyCode || "")
     .trim()
     .toUpperCase();
 
-  return (
-    CURRENCY_REGISTRY[
-      normalizedCode
-    ] ?? null
-  );
+  return CURRENCY_REGISTRY[normalizedCode] ?? null;
 }

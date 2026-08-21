@@ -5,9 +5,7 @@ import {
   PaymentRailType,
 } from "@/lib/global-registry";
 
-import type {
-  CreatorPayoutMethod,
-} from "@/lib/creator-payout-preferences";
+import type { CreatorPayoutMethod } from "@/lib/creator-payout-preferences";
 
 function getRailTypeForPayoutMethod(
   method: CreatorPayoutMethod,
@@ -25,9 +23,7 @@ function getRailTypeForPayoutMethod(
     default: {
       const exhaustiveCheck: never = method;
 
-      throw new Error(
-        `Unsupported creator payout method: ${exhaustiveCheck}`,
-      );
+      throw new Error(`Unsupported creator payout method: ${exhaustiveCheck}`);
     }
   }
 }
@@ -53,34 +49,40 @@ export function resolvePayoutRailsForMethod(input: {
   countryCode: string;
   payoutMethod: CreatorPayoutMethod;
 }): PaymentRailId[] {
-  const countryCode =
-    String(input.countryCode || "")
-      .trim()
-      .toUpperCase();
+  const countryCode = String(input.countryCode || "")
+    .trim()
+    .toUpperCase();
 
-  const country =
-    getCountry(countryCode);
+  const country = getCountry(countryCode);
 
   if (!country) {
-    throw new Error(
-      `Payout country ${countryCode} is not registered.`,
-    );
+    throw new Error(`Payout country ${countryCode} is not registered.`);
   }
 
-  const requiredRailType =
-    getRailTypeForPayoutMethod(
-      input.payoutMethod,
-    );
+  const requiredRailType = getRailTypeForPayoutMethod(input.payoutMethod);
 
-  return country.marketAvailableRails.filter(
-    (railId) => {
-      const rail =
-        PAYMENT_RAILS[railId];
+  const matchingRails = country.marketAvailableRails.filter((railId) => {
+    const rail = PAYMENT_RAILS[railId];
 
-      return (
-        rail?.type ===
-        requiredRailType
-      );
-    },
-  );
+    return rail?.type === requiredRailType;
+  });
+
+  /*
+   * Some payout providers document generic
+   * Mobile Money / Wallet delivery without
+   * specifying the underlying operator.
+   *
+   * Preserve country-specific rails such as
+   * MTN_MOMO, MPESA, or AIRTEL_MONEY, while
+   * also exposing the generic MOBILE_MONEY
+   * capability for provider-level routing.
+   */
+  if (
+    input.payoutMethod === "MOBILE_MONEY" &&
+    !matchingRails.includes(PaymentRailId.MOBILE_MONEY)
+  ) {
+    matchingRails.push(PaymentRailId.MOBILE_MONEY);
+  }
+
+  return matchingRails;
 }
