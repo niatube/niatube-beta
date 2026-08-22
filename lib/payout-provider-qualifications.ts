@@ -1,4 +1,5 @@
 import type { PayoutProviderId } from "@/lib/payout-provider-router";
+import { isPayoutProviderActivationReady } from "@/lib/payout-provider-readiness";
 
 export type ProviderCommercialStatus =
   | "QUALIFIED"
@@ -257,6 +258,7 @@ export function isPayoutProviderProductionQualified(input: {
   return (
     qualification.commercialStatus === "QUALIFIED" &&
     qualification.technicalStatus === "READY" &&
-    qualification.productionEnabled === true
+    qualification.productionEnabled === true &&
+    isPayoutProviderActivationReady(input.provider)
   );
 }
