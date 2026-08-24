@@ -4,6 +4,7 @@ import { useEffect, useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
 import Navbar from "@/components/Navbar";
 import { supabase } from "@/lib/supabase-browser";
+import { getCountryByName } from "@/lib/country-registry";
 
 import {
   buildCreatorSettlementSummary,
@@ -2265,15 +2266,27 @@ async function copyPublicChannelLink() {
       const payoutCurrency =
         creatorSettlement?.settlementCurrency || creatorCurrency;
 
+      const countryRecord = getCountryByName(creatorCountry);
+
+      if (!countryRecord?.isoCode) {
+        alert(
+          `NiaTube could not determine the payout country code for ${creatorCountry}.`
+        );
+        return;
+      }
+
+      const payoutCountryCode = countryRecord.isoCode;
+
       const { error } = await supabase
         .from("creator_payout_profiles")
         .upsert(
           {
             creator_name: creatorName,
             creator_id: creatorUserId,
-            country: creatorCountry,
+            payout_country_code: payoutCountryCode,
             payout_currency: payoutCurrency,
             payout_method: payoutMethod,
+            payout_preference_enabled: true,
             payout_details: payoutDetails.trim(),
             account_holder_name: accountHolderName.trim(),
             updated_at: new Date().toISOString(),
@@ -2282,7 +2295,7 @@ async function copyPublicChannelLink() {
         );
 
       if (error) {
-        console.error(error);
+        console.error("Payment settings save error:", error);
         alert("Could not save payment settings.");
         return;
       }
