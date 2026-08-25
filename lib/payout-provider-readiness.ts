@@ -1,4 +1,5 @@
 import type { PayoutProviderId } from "@/lib/payout-provider-router";
+import type { PayoutProviderProduct } from "@/lib/payout-provider-products";
 
 export type ProviderReadinessRequirement =
   | "COMMERCIAL_QUALIFICATION"
@@ -19,9 +20,9 @@ export type ProviderReadinessCheck = {
 
 export type PayoutProviderReadiness = {
   provider: PayoutProviderId;
+  product?: PayoutProviderProduct | null;
 
   checks: ProviderReadinessCheck[];
-
   notes?: string | null;
 };
 
@@ -45,8 +46,9 @@ export type PayoutProviderReadiness = {
  */
 export const PAYOUT_PROVIDER_READINESS:
   PayoutProviderReadiness[] = [
-    {
+        {
       provider: "STRIPE",
+      product: "CONNECT",
 
       checks: [
         {
@@ -54,7 +56,7 @@ export const PAYOUT_PROVIDER_READINESS:
             "COMMERCIAL_QUALIFICATION",
           complete: true,
           notes:
-            "Stripe confirmed NiaTube can onboard at its current pre-launch stage and provided written market guidance on 2026-08-21.",
+            "Stripe confirmed NiaTube can onboard at its current pre-launch stage and recommended Connect Direct Charges for supported connected-account markets.",
         },
 
         {
@@ -62,7 +64,7 @@ export const PAYOUT_PROVIDER_READINESS:
             "PRODUCTION_CREDENTIALS",
           complete: false,
           notes:
-            "Production Stripe credentials have not yet been configured for the NiaTube integration.",
+            "Production Stripe credentials have not yet been configured for the NiaTube Connect integration.",
         },
 
         {
@@ -70,7 +72,7 @@ export const PAYOUT_PROVIDER_READINESS:
             "CREATOR_ONBOARDING",
           complete: false,
           notes:
-            "Stripe Connect creator onboarding has not yet been implemented. Embedded onboarding is the preferred NiaTube direction pending integration.",
+            "Stripe Connect creator onboarding has not yet been completed. Stripe-hosted onboarding is the current preferred NiaTube beta direction.",
         },
 
         {
@@ -78,7 +80,7 @@ export const PAYOUT_PROVIDER_READINESS:
             "PAYMENT_FLOW",
           complete: false,
           notes:
-            "Stripe Connect Direct Charges with the NiaTube 5% application fee have not yet been implemented or tested.",
+            "Stripe Connect Direct Charges with the NiaTube application fee have not yet been implemented or tested end-to-end.",
         },
 
         {
@@ -86,7 +88,7 @@ export const PAYOUT_PROVIDER_READINESS:
             "PAYOUT_FLOW",
           complete: false,
           notes:
-            "Stripe creator payout and/or Global Payouts execution has not yet been implemented or tested.",
+            "Connected-account payout behavior has not yet been validated for the NiaTube Connect rail.",
         },
 
         {
@@ -94,7 +96,7 @@ export const PAYOUT_PROVIDER_READINESS:
             "WEBHOOKS",
           complete: false,
           notes:
-            "Stripe webhook signature verification and settlement-event mapping have not yet been implemented.",
+            "Stripe Connect webhook signature verification and settlement-event mapping have not yet been implemented.",
         },
 
         {
@@ -102,7 +104,7 @@ export const PAYOUT_PROVIDER_READINESS:
             "RECONCILIATION",
           complete: false,
           notes:
-            "Stripe transaction, application-fee, payout, and NiaTube ledger reconciliation has not yet been validated.",
+            "Stripe Connect transaction, application-fee, connected-account balance, payout, and NiaTube ledger reconciliation has not yet been validated.",
         },
 
         {
@@ -110,7 +112,7 @@ export const PAYOUT_PROVIDER_READINESS:
             "SANDBOX_TEST",
           complete: false,
           notes:
-            "End-to-end Stripe sandbox testing has not yet been completed.",
+            "End-to-end Stripe Connect sandbox testing has not yet been completed.",
         },
 
         {
@@ -118,40 +120,134 @@ export const PAYOUT_PROVIDER_READINESS:
             "PRODUCTION_APPROVAL",
           complete: false,
           notes:
-            "NiaTube has not yet completed final production activation review for Stripe.",
+            "NiaTube has not yet completed final production activation review for Stripe Connect.",
         },
       ],
 
       notes:
-        "Stripe must remain fail-closed until every required readiness check is complete.",
+        "Stripe Connect must remain fail-closed until every required readiness check for the Connect product is complete.",
+    },
+
+    {
+      provider: "STRIPE",
+      product: "GLOBAL_PAYOUTS",
+
+      checks: [
+        {
+          requirement:
+            "COMMERCIAL_QUALIFICATION",
+          complete: true,
+          notes:
+            "Stripe provided written Global Payouts market guidance for NiaTube's US master account on 2026-08-21.",
+        },
+
+        {
+          requirement:
+            "PRODUCTION_CREDENTIALS",
+          complete: false,
+          notes:
+            "Production Stripe credentials for Global Payouts have not yet been configured.",
+        },
+
+        {
+          requirement:
+            "CREATOR_ONBOARDING",
+          complete: false,
+          notes:
+            "Stripe Global Payouts recipient creation and recipient onboarding have not yet been implemented.",
+        },
+
+        {
+          requirement:
+            "PAYMENT_FLOW",
+          complete: true,
+          notes:
+            "Global Payouts is a payout-only product; inbound viewer payment processing is intentionally outside this product's readiness scope.",
+        },
+
+        {
+          requirement:
+            "PAYOUT_FLOW",
+          complete: false,
+          notes:
+            "Global Payouts FinancialAccount, recipient PayoutMethod, and OutboundPayment execution have not yet been implemented or tested.",
+        },
+
+        {
+          requirement:
+            "WEBHOOKS",
+          complete: false,
+          notes:
+            "Global Payouts event handling and settlement-status mapping have not yet been implemented.",
+        },
+
+        {
+          requirement:
+            "RECONCILIATION",
+          complete: false,
+          notes:
+            "Global Payouts OutboundPayment, Stripe balance, funding, and NiaTube settlement-ledger reconciliation has not yet been validated.",
+        },
+
+        {
+          requirement:
+            "SANDBOX_TEST",
+          complete: false,
+          notes:
+            "End-to-end Stripe Global Payouts sandbox testing has not yet been completed.",
+        },
+
+        {
+          requirement:
+            "PRODUCTION_APPROVAL",
+          complete: false,
+          notes:
+            "NiaTube has not yet completed final production activation review for Stripe Global Payouts.",
+        },
+      ],
+
+      notes:
+        "Stripe Global Payouts must remain fail-closed until every required readiness check for the Global Payouts product is complete.",
     },
   ];
 
 /**
- * Return readiness information for a provider.
+ * Return readiness information for an exact
+ * provider + product combination.
+ *
+ * Product-aware lookup prevents one provider product
+ * from inheriting the readiness state of another.
  */
-export function getPayoutProviderReadiness(
-  provider: PayoutProviderId,
-): PayoutProviderReadiness | null {
+export function getPayoutProviderReadiness(input: {
+  provider: PayoutProviderId;
+  product?: PayoutProviderProduct | null;
+}): PayoutProviderReadiness | null {
+  const product = input.product ?? null;
+
   return (
     PAYOUT_PROVIDER_READINESS.find(
       (entry) =>
-        entry.provider === provider,
+        entry.provider === input.provider &&
+        (entry.product ?? null) === product,
     ) ?? null
   );
 }
 
 /**
- * A provider is activation-ready only when
+ * A provider product is activation-ready only when
  * every required readiness check is complete.
  *
  * Missing readiness configuration fails closed.
  */
-export function isPayoutProviderActivationReady(
-  provider: PayoutProviderId,
-): boolean {
+export function isPayoutProviderActivationReady(input: {
+  provider: PayoutProviderId;
+  product?: PayoutProviderProduct | null;
+}): boolean {
   const readiness =
-    getPayoutProviderReadiness(provider);
+    getPayoutProviderReadiness({
+      provider: input.provider,
+      product: input.product ?? null,
+    });
 
   if (!readiness) {
     return false;
@@ -166,16 +262,21 @@ export function isPayoutProviderActivationReady(
 }
 
 /**
- * Returns incomplete activation requirements.
+ * Returns incomplete activation requirements
+ * for an exact provider + product combination.
  *
  * Useful for future finance/admin readiness
  * dashboards and deployment reviews.
  */
-export function getIncompleteProviderReadinessChecks(
-  provider: PayoutProviderId,
-): ProviderReadinessCheck[] {
+export function getIncompleteProviderReadinessChecks(input: {
+  provider: PayoutProviderId;
+  product?: PayoutProviderProduct | null;
+}): ProviderReadinessCheck[] {
   const readiness =
-    getPayoutProviderReadiness(provider);
+    getPayoutProviderReadiness({
+      provider: input.provider,
+      product: input.product ?? null,
+    });
 
   if (!readiness) {
     return [];

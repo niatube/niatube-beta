@@ -58,12 +58,13 @@ export function buildPayoutRoutingPlan(input: {
       payoutRail,
     })
       .filter((providerCapability) =>
-        isPayoutProviderProductionQualified({
-          provider: providerCapability.provider,
-          countryCode,
-          currencyCode,
-        }),
-      )
+  isPayoutProviderProductionQualified({
+    provider: providerCapability.provider,
+    product: providerCapability.product,
+    countryCode,
+    currencyCode,
+  }),
+)
       .map((providerCapability) => ({
         payoutRail,
         providerCapability,

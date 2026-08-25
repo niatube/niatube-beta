@@ -1,8 +1,10 @@
 import type { PaymentRailId } from "@/lib/global-registry";
 import type { PayoutProviderId } from "@/lib/payout-provider-router";
+import type { PayoutProviderProduct } from "@/lib/payout-provider-products";
 
 export type PayoutProviderCapability = {
   provider: PayoutProviderId;
+  product?: PayoutProviderProduct | null;
 
   countryCode: string;
   currencyCode: string;
@@ -36,6 +38,7 @@ export type PayoutProviderCapability = {
 export const PAYOUT_PROVIDER_CAPABILITIES: PayoutProviderCapability[] = [
   {
     provider: "STRIPE",
+    product: "GLOBAL_PAYOUTS",
     countryCode: "RW",
     currencyCode: "RWF",
     payoutRail: "BANK_TRANSFER",
@@ -50,6 +53,7 @@ export const PAYOUT_PROVIDER_CAPABILITIES: PayoutProviderCapability[] = [
 
   {
     provider: "STRIPE",
+    product: "GLOBAL_PAYOUTS",
     countryCode: "KE",
     currencyCode: "KES",
     payoutRail: "BANK_TRANSFER",
@@ -64,6 +68,7 @@ export const PAYOUT_PROVIDER_CAPABILITIES: PayoutProviderCapability[] = [
 
   {
     provider: "STRIPE",
+    product: "GLOBAL_PAYOUTS",
     countryCode: "ZA",
     currencyCode: "ZAR",
     payoutRail: "BANK_TRANSFER",
@@ -78,6 +83,7 @@ export const PAYOUT_PROVIDER_CAPABILITIES: PayoutProviderCapability[] = [
 
   {
     provider: "STRIPE",
+    product: "GLOBAL_PAYOUTS",
     countryCode: "CI",
     currencyCode: "XOF",
     payoutRail: "BANK_TRANSFER",
@@ -92,6 +98,7 @@ export const PAYOUT_PROVIDER_CAPABILITIES: PayoutProviderCapability[] = [
 
   {
     provider: "STRIPE",
+    product: "GLOBAL_PAYOUTS",
     countryCode: "SN",
     currencyCode: "XOF",
     payoutRail: "BANK_TRANSFER",
@@ -106,6 +113,7 @@ export const PAYOUT_PROVIDER_CAPABILITIES: PayoutProviderCapability[] = [
 
   {
     provider: "STRIPE",
+    product: "GLOBAL_PAYOUTS",
     countryCode: "MA",
     currencyCode: "MAD",
     payoutRail: "BANK_TRANSFER",
@@ -120,6 +128,7 @@ export const PAYOUT_PROVIDER_CAPABILITIES: PayoutProviderCapability[] = [
 
   {
     provider: "STRIPE",
+    product: "GLOBAL_PAYOUTS",
     countryCode: "EG",
     currencyCode: "EGP",
     payoutRail: "BANK_TRANSFER",
@@ -134,6 +143,7 @@ export const PAYOUT_PROVIDER_CAPABILITIES: PayoutProviderCapability[] = [
 
   {
     provider: "STRIPE",
+    product: "GLOBAL_PAYOUTS",
     countryCode: "TZ",
     currencyCode: "TZS",
     payoutRail: "BANK_TRANSFER",
@@ -148,6 +158,7 @@ export const PAYOUT_PROVIDER_CAPABILITIES: PayoutProviderCapability[] = [
 
   {
     provider: "STRIPE",
+    product: "GLOBAL_PAYOUTS",
     countryCode: "DZ",
     currencyCode: "DZD",
     payoutRail: "BANK_TRANSFER",
@@ -162,6 +173,7 @@ export const PAYOUT_PROVIDER_CAPABILITIES: PayoutProviderCapability[] = [
 
   {
     provider: "STRIPE",
+    product: "GLOBAL_PAYOUTS",
     countryCode: "BJ",
     currencyCode: "XOF",
     payoutRail: "BANK_TRANSFER",
@@ -176,6 +188,7 @@ export const PAYOUT_PROVIDER_CAPABILITIES: PayoutProviderCapability[] = [
 
   {
     provider: "STRIPE",
+    product: "GLOBAL_PAYOUTS",
     countryCode: "BW",
     currencyCode: "BWP",
     payoutRail: "BANK_TRANSFER",
@@ -190,6 +203,7 @@ export const PAYOUT_PROVIDER_CAPABILITIES: PayoutProviderCapability[] = [
 
   {
     provider: "STRIPE",
+    product: "GLOBAL_PAYOUTS",
     countryCode: "ET",
     currencyCode: "ETB",
     payoutRail: "BANK_TRANSFER",
@@ -204,6 +218,7 @@ export const PAYOUT_PROVIDER_CAPABILITIES: PayoutProviderCapability[] = [
 
   {
     provider: "STRIPE",
+    product: "GLOBAL_PAYOUTS",
     countryCode: "GM",
     currencyCode: "GMD",
     payoutRail: "BANK_TRANSFER",
@@ -218,6 +233,7 @@ export const PAYOUT_PROVIDER_CAPABILITIES: PayoutProviderCapability[] = [
 
   {
     provider: "STRIPE",
+    product: "GLOBAL_PAYOUTS",
     countryCode: "MG",
     currencyCode: "MGA",
     payoutRail: "BANK_TRANSFER",
@@ -232,6 +248,7 @@ export const PAYOUT_PROVIDER_CAPABILITIES: PayoutProviderCapability[] = [
 
   {
     provider: "STRIPE",
+    product: "GLOBAL_PAYOUTS",
     countryCode: "MU",
     currencyCode: "MUR",
     payoutRail: "BANK_TRANSFER",
@@ -246,6 +263,7 @@ export const PAYOUT_PROVIDER_CAPABILITIES: PayoutProviderCapability[] = [
 
   {
     provider: "STRIPE",
+    product: "GLOBAL_PAYOUTS",
     countryCode: "MZ",
     currencyCode: "MZN",
     payoutRail: "BANK_TRANSFER",
@@ -260,6 +278,7 @@ export const PAYOUT_PROVIDER_CAPABILITIES: PayoutProviderCapability[] = [
 
   {
     provider: "STRIPE",
+    product: "GLOBAL_PAYOUTS",
     countryCode: "NA",
     currencyCode: "NAD",
     payoutRail: "BANK_TRANSFER",
@@ -274,6 +293,7 @@ export const PAYOUT_PROVIDER_CAPABILITIES: PayoutProviderCapability[] = [
 
   {
     provider: "STRIPE",
+    product: "GLOBAL_PAYOUTS",
     countryCode: "TN",
     currencyCode: "TND",
     payoutRail: "BANK_TRANSFER",
