@@ -6,6 +6,10 @@ import {
 import {
   requireCurrency,
 } from "@/lib/currency-registry";
+import {
+  normalizePayoutProviderProduct,
+  type PayoutProviderProduct,
+} from "@/lib/payout-provider-products";
 
 export type PayoutProviderId =
   | "BETA"
@@ -29,6 +33,7 @@ export type PayoutRequest = {
   payoutRail?: PaymentRailId | null;
 
   provider?: PayoutProviderId | null;
+  product?: PayoutProviderProduct | null;
 
   destinationReference?: string | null;
 
@@ -357,6 +362,11 @@ export async function routePayout(
 
   const provider =
     normalizeProvider(request.provider);
+  const product =
+    normalizePayoutProviderProduct(
+      provider,
+      request.product,
+    );
 
   const adapter =
     PROVIDER_ADAPTERS[provider];
@@ -370,5 +380,6 @@ export async function routePayout(
   return adapter.createPayout({
     ...request,
     provider,
+    product,
   });
 }
