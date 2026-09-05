@@ -1,5 +1,9 @@
-import { NextResponse } from "next/server";
+import { NextRequest, NextResponse } from "next/server";
 import { getSupabaseAdmin } from "@/lib/supabase-server";
+import { requireAdminRequestPermission } from "@/lib/admin-session";
+import { detectContentModeration } from "@/lib/content-moderation-detector";
+import { enforceModerationDecision } from "@/lib/content-moderation-enforcement";
+
 
 export const dynamic = "force-dynamic";
 
@@ -21,11 +25,25 @@ function calculateTrendingScore(upload: any) {
   return views * 1 + likes * 4 + freshnessBoost;
 }
 
-export async function GET(req: Request) {
+export async function GET(req: NextRequest) {
   try {
     const supabaseAdmin = getSupabaseAdmin();
     const { searchParams } = new URL(req.url);
     const showAll = searchParams.get("all") === "true";
+
+    if (showAll) {
+      const adminAccess = await requireAdminRequestPermission(
+        req,
+        "moderation.read"
+      );
+
+      if (!adminAccess.success) {
+        return NextResponse.json(
+          { error: adminAccess.error },
+          { status: adminAccess.status }
+        );
+      }
+    }
 
     let query = supabaseAdmin
       .from("uploads")
@@ -34,7 +52,12 @@ export async function GET(req: Request) {
       .limit(50);
 
     if (!showAll) {
-      query = query.eq("status", "published");
+      query = query
+        .eq("status", "published")
+        .in("moderation_status", [
+          "approved",
+          "legacy_unreviewed",
+        ]);
     }
 
     const { data, error } = await query;
@@ -120,7 +143,7 @@ processing_deadline_at,
          processing_deadline_at || null,
           category: category || "culture",
           duration_seconds: duration_seconds || 0,
-          status: status || "published",
+          status: "processing",
           trending_score: 100,
           is_live: false,
           live_status: null,
@@ -138,7 +161,40 @@ processing_deadline_at,
       );
     }
 
-    return NextResponse.json({ upload: data });
+    const moderationDetection = await detectContentModeration({
+      uploadId: data.id,
+      creatorName: data.creator || creator,
+      title: data.title || title || "",
+      description: data.description || description?.trim() || "",
+      category: data.category || category || "culture",
+      thumbnailUrl: data.thumbnail_url || null,
+      videoUrl: data.video_url || null,
+      bunnyVideoId: data.bunny_video_id || null,
+      isLive: Boolean(data.is_live),
+    });
+
+    await enforceModerationDecision({
+      supabaseAdmin,
+      uploadId: data.id,
+      creatorName: data.creator || creator,
+      decision: moderationDetection.decision,
+    });
+
+    return NextResponse.json({
+      upload: {
+        ...data,
+        moderation_status: moderationDetection.decision.moderationStatus,
+        moderation_reason: moderationDetection.decision.reason,
+        moderation_policy_category:
+          moderationDetection.decision.policyCategory,
+        moderation_confidence:
+          moderationDetection.decision.confidence,
+        moderation_detector:
+          moderationDetection.decision.detector,
+        moderation_detector_version:
+          moderationDetection.decision.detectorVersion,
+      },
+    });
   } catch (err: any) {
     console.error("Upload API unexpected error:", err);
 

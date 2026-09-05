@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { getSupabaseAdmin } from "@/lib/supabase-server";
+import { getPublicationDecision } from "@/lib/content-moderation-enforcement";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -81,7 +82,7 @@ export async function GET() {
       const bunnyVideo = JSON.parse(bunnyText);
       const ready = isBunnyVideoReady(bunnyVideo);
 
-      if (!ready) {
+            if (!ready) {
         results.push({
           uploadId: upload.id,
           title: upload.title,
@@ -99,15 +100,35 @@ export async function GET() {
         continue;
       }
 
-      const { data: updatedUpload, error: updateError } = await supabaseAdmin
+      const publicationDecision = getPublicationDecision(
+        upload.moderation_status
+      );
+
+      if (!publicationDecision.allowed) {
+        results.push({
+          uploadId: upload.id,
+          title: upload.title,
+          bunnyVideoId: upload.bunny_video_id,
+          action: "moderation_blocked",
+          published: false,
+          moderationStatus: publicationDecision.moderationStatus,
+          reason: publicationDecision.reason,
+        });
+
+        continue;
+      }
+
+      const { data: updatedUpload, error: updateError } = await
+        supabaseAdmin
         .from("uploads")
         .update({
           status: "published",
           published_at: new Date().toISOString(),
         })
         .eq("id", upload.id)
-        .select()
-        .single();
+.in("moderation_status", ["approved", "legacy_unreviewed"])
+.select()
+.maybeSingle();
 
       if (updateError) {
         results.push({
@@ -120,6 +141,20 @@ export async function GET() {
 
         continue;
       }
+
+      if (!updatedUpload) {
+  results.push({
+    uploadId: upload.id,
+    title: upload.title,
+    bunnyVideoId: upload.bunny_video_id,
+    action: "moderation_blocked",
+    published: false,
+    reason:
+      "Publication was prevented because the upload is no longer approved for publication.",
+  });
+
+  continue;
+}
 
       results.push({
         uploadId: upload.id,
