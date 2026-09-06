@@ -604,8 +604,9 @@ export default function UploadPage() {
                     </h3>
 
                     <p className="mt-1 text-sm text-green-700">
-                      Your video <strong>{uploadedTitle}</strong> is now live on
-                      NiaTube.
+                      Your video <strong>{uploadedTitle}</strong> has been received and
+                      will become publicly available after processing and any required
+                      moderation review are complete.
                     </p>
 
                     <div className="mt-5 flex flex-wrap gap-3">
