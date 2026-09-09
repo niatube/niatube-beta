@@ -636,6 +636,47 @@ export default function CommunityGuidelinesPage() {
     </li>
   </ul>
 
+       <h3 className="mt-8 text-lg font-black text-gray-900">
+    Prohibited Content and Monetization
+  </h3>
+
+  <p className="mt-5 leading-8 text-gray-700">
+    Content that violates these Community Guidelines or other applicable
+    NiaTube policies is not eligible for monetization. NiaTube may
+    demonetize, restrict, block, or remove such content and may suspend
+    related monetization features.
+  </p>
+
+  <ul className="mt-4 list-disc space-y-3 pl-6 leading-8 text-gray-700">
+    <li>
+  Adult content or services, including content containing nudity,
+  pornography, explicit sexual acts, or other sexually explicit material;
+  subscriber-only, paid, or restricted-access nude or sexually explicit
+  images, audio, or video; and adult-oriented live streaming, audio chat,
+  video chat, or similar interactive sexual services.
+</li>
+
+    <li>
+      Content that infringes intellectual property, proprietary,
+      trademark, or other rights belonging to another person or entity.
+    </li>
+
+    <li>
+      Copyright-infringing content, including unauthorized distribution
+      of copyrighted music, video, images, publications, or other
+      protected works.
+    </li>
+
+    <li>
+      Content that engages in, encourages, promotes, supports, or
+      celebrates violent extremism, unlawful violence, terrorism, or hate
+      speech directed at individuals or groups based on protected
+      characteristics such as race, religion, disability, gender, sexual
+      orientation, national origin, or other protected or immutable
+      characteristics.
+    </li>
+  </ul>
+
   <p className="mt-5 leading-8 text-gray-700">
     Additional requirements governing creator monetization, payouts,
     verification, advertising, and financial services are set out in the
