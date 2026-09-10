@@ -63,7 +63,7 @@ export default function Home() {
 
     async function fetchUploads() {
       try {
-        const res = await fetch(`/api/uploads?all=true&ts=${Date.now()}`, {
+        const res = await fetch(`/api/uploads?ts=${Date.now()}`, {
           cache: "no-store",
         });
 
