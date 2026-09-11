@@ -57,6 +57,8 @@ type ChatMessage = {
   username: string;
   message: string;
   type?: string;
+  amount?: number | null;
+  currency_code?: string | null;
   created_at?: string;
 };
 
@@ -1281,6 +1283,10 @@ const selectedCurrency =
         username: safeUsername,
         message: finalMessage,
         type: "super_chat",
+        amount: Number(result?.transaction?.amount ?? supportAmount),
+        currency_code: String(
+          result?.transaction?.currency_code ?? currencyCode
+        ).toUpperCase(),
       },
     ])
     .select()
@@ -1961,7 +1967,10 @@ if (loading) {
     >
     {isSuperChat && (
   <p className="mb-1 text-xs font-black uppercase text-yellow-700">
-    ⭐ Super Support
+    Super Support
+    {msg.amount != null && msg.currency_code
+      ? ` - ${msg.currency_code} ${Number(msg.amount).toLocaleString()}`
+      : ""}
   </p>
 )}
 
