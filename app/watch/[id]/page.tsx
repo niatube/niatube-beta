@@ -316,6 +316,7 @@ const [recommendedVideos, setRecommendedVideos] = useState<Video[]>([]);
  const [username, setUsername] = useState("Viewer");
 const [input, setInput] = useState("");
 const [messages, setMessages] = useState<ChatMessage[]>([]);
+const chatEmojis = ["👍", "❤️", "😂", "🔥", "👏", "🎉", "🙌", "😍", "😮", "⚽"];
 const [mutedUsers, setMutedUsers] = useState<string[]>([]);
 const [isCreatorOrModerator, setIsCreatorOrModerator] = useState(false);
 
@@ -389,12 +390,19 @@ const activeSupportProfile =
           }),
         ) ?? []
       );
- 
+
   const chatEndRef = useRef<HTMLDivElement | null>(null);
 
-  const visibleMessages = messages.filter(
-    (msg) => msg.type !== "system" && msg.username !== "NiaTube System"
-  );
+  const latestSuperSupport = [...messages]
+  .reverse()
+  .find((msg) => msg.type === "super_chat");
+
+const visibleMessages = messages.filter(
+  (msg) =>
+    msg.type !== "system" &&
+    msg.username !== "NiaTube System" &&
+    (msg.type !== "super_chat" || msg.id === latestSuperSupport?.id)
+);
 
   const chatRestricted = !isLive;
 
@@ -727,12 +735,20 @@ if (Boolean(data.is_live)) {
         "postgres_changes",
         { event: "INSERT", schema: "public", table: "live_chat" },
         (payload) => {
-          setMessages((prev) => [...prev, payload.new as ChatMessage]);
-        }
+  const incomingMessage = payload.new as ChatMessage;
+
+  setMessages((prev) => {
+    const alreadyPresent = prev.some(
+      (message) => message.id === incomingMessage.id
+    );
+
+    return alreadyPresent ? prev : [...prev, incomingMessage];
+  });
+}
       )
       .subscribe();
 
-      
+
 
     return () => {
       supabase.removeChannel(channel);
@@ -1077,8 +1093,16 @@ async function sendComment() {
   }
 
   if (data) {
-    setMessages((prev) => [...prev, data as ChatMessage]);
-  }
+  setMessages((prev) => {
+    const alreadyPresent = prev.some(
+      (message) => message.id === data.id
+    );
+
+    return alreadyPresent
+      ? prev
+      : [...prev, data as ChatMessage];
+  });
+}
 
   setInput("");
 }
@@ -1458,9 +1482,9 @@ if (loading) {
     <main className="min-h-screen bg-gray-50">
       <Navbar />
 
-      <div className="mx-auto max-w-[1300px] px-4 py-6">
-        
-        <div className="grid gap-6 lg:grid-cols-[minmax(0,1fr)_350px]">
+      <div className="mx-auto max-w-[1500px] px-4 py-6">
+
+        <div className="grid gap-6 lg:grid-cols-[minmax(0,1fr)_430px]">
           <section>
             <div className="overflow-hidden rounded-2xl bg-black shadow-sm">
   {isLive ? (
@@ -1883,7 +1907,7 @@ if (loading) {
   </div>
 )}
 
-            {creatorVideo && (
+            {creatorVideo && !isLive && (
               <div className="rounded-2xl bg-white p-5 shadow-sm">
                 <h2 className="text-xl font-black text-gray-900">
                   More from {video.creator}
@@ -1918,17 +1942,8 @@ if (loading) {
       Live Chat
     </h2>
 
-    <div className="mt-3 rounded-xl border bg-gray-50 p-3 text-xs font-bold text-gray-700">
-  Presets loaded: {monetizationPresets.length}
 
-  {monetizationPresets.map((preset) => (
-    <p key={`${preset.currency_code}-${preset.display_order}`}>
-      {preset.tier} — {preset.amount} {preset.currency_code}
-    </p>
-  ))}
-</div>
-    
-   <div className="mt-4 h-[320px] overflow-y-auto rounded-2xl border bg-gray-50 p-4">
+   <div className="mt-4 h-[700px] overflow-y-auto rounded-2xl border bg-gray-50 p-4">
       {visibleMessages.length === 0 ? (
         <p className="text-sm text-gray-500">No messages yet.</p>
       ) : (
@@ -2031,7 +2046,28 @@ if (loading) {
 ))}
 </select>
 
- 
+
+</div>
+
+<div className="flex flex-wrap gap-2">
+  {chatEmojis.map((emoji) => (
+    <button
+      key={emoji}
+      type="button"
+      onClick={() =>
+        setInput((current) => `${current}${current ? " " : ""}${emoji}`)
+      }
+      disabled={chatRestricted}
+      className={`rounded-lg border px-2 py-1 text-xl ${
+        chatRestricted
+          ? "cursor-not-allowed bg-gray-100 opacity-50"
+          : "bg-white hover:bg-gray-50"
+      }`}
+      aria-label={`Add ${emoji} emoji`}
+    >
+      {emoji}
+    </button>
+  ))}
 </div>
 
       <textarea
