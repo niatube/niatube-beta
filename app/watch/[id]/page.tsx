@@ -59,6 +59,7 @@ type ChatMessage = {
   type?: string;
   amount?: number | null;
   currency_code?: string | null;
+  live_video_id?: string | null;
   created_at?: string;
 };
 
@@ -395,19 +396,13 @@ const activeSupportProfile =
 
   const chatEndRef = useRef<HTMLDivElement | null>(null);
 
-  const latestSuperSupport = [...messages]
-  .reverse()
-  .find((msg) => msg.type === "super_chat");
-
-const visibleMessages = messages.filter(
+  const visibleMessages = messages.filter(
   (msg) =>
     msg.type !== "system" &&
-    msg.username !== "NiaTube System" &&
-    (msg.type !== "super_chat" || msg.id === latestSuperSupport?.id)
+    msg.username !== "NiaTube System"
 );
 
   const chatRestricted = !isLive;
-
   useEffect(() => {
     async function loadViewer() {
       const {
@@ -431,6 +426,57 @@ const visibleMessages = messages.filter(
 
     loadViewer();
   }, []);
+
+  useEffect(() => {
+  if (!id) {
+    setMessages([]);
+    return;
+  }
+
+  setMessages([]);
+
+  async function loadChat() {
+    const { data } = await supabase
+      .from("live_chat")
+      .select("*")
+      .eq("live_video_id", id)
+      .order("created_at", { ascending: true });
+
+    if (data) {
+      setMessages(data as ChatMessage[]);
+    }
+  }
+
+  loadChat();
+
+  const channel = supabase
+    .channel(`live-chat-room-${id}`)
+    .on(
+      "postgres_changes",
+      {
+        event: "INSERT",
+        schema: "public",
+        table: "live_chat",
+        filter: `live_video_id=eq.${id}`,
+      },
+      (payload) => {
+        const incomingMessage = payload.new as ChatMessage;
+
+        setMessages((prev) => {
+          const alreadyPresent = prev.some(
+            (message) => message.id === incomingMessage.id
+          );
+
+          return alreadyPresent ? prev : [...prev, incomingMessage];
+        });
+      }
+    )
+    .subscribe();
+
+  return () => {
+    supabase.removeChannel(channel);
+  };
+}, [id]);
 
 useEffect(() => {
   if (!viewerCurrency || viewerCurrency === "OTHER") return;
@@ -719,43 +765,7 @@ if (Boolean(data.is_live)) {
   recordWatchAdImpression();
 }, [watchAd, watchAdImpressionRecorded, id]);
 
-  useEffect(() => {
-    async function loadChat() {
-      const { data } = await supabase
-        .from("live_chat")
-        .select("*")
-        .order("created_at", { ascending: true });
 
-      if (data) setMessages(data as ChatMessage[]);
-    }
-
-    loadChat();
-
-    const channel = supabase
-      .channel("live-chat-room")
-      .on(
-        "postgres_changes",
-        { event: "INSERT", schema: "public", table: "live_chat" },
-        (payload) => {
-  const incomingMessage = payload.new as ChatMessage;
-
-  setMessages((prev) => {
-    const alreadyPresent = prev.some(
-      (message) => message.id === incomingMessage.id
-    );
-
-    return alreadyPresent ? prev : [...prev, incomingMessage];
-  });
-}
-      )
-      .subscribe();
-
-
-
-    return () => {
-      supabase.removeChannel(channel);
-    };
-  }, []);
 
   useEffect(() => {
     if (!id || !isLive || !liveViewerId) {
@@ -1081,10 +1091,11 @@ async function sendComment() {
     .from("live_chat")
     .insert([
       {
-        username,
-        message: finalMessage,
-        type: "user",
-      },
+  username,
+  message: finalMessage,
+  type: "user",
+  live_video_id: id,
+},
     ])
     .select()
     .single();
@@ -1280,14 +1291,15 @@ const selectedCurrency =
     .from("live_chat")
     .insert([
       {
-        username: safeUsername,
-        message: finalMessage,
-        type: "super_chat",
-        amount: Number(result?.transaction?.amount ?? supportAmount),
-        currency_code: String(
-          result?.transaction?.currency_code ?? currencyCode
-        ).toUpperCase(),
-      },
+  username: safeUsername,
+  message: finalMessage,
+  type: "super_chat",
+  amount: Number(result?.transaction?.amount ?? supportAmount),
+  currency_code: String(
+    result?.transaction?.currency_code ?? currencyCode
+  ).toUpperCase(),
+  live_video_id: id,
+},
     ])
     .select()
     .single();
