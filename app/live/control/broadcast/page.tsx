@@ -149,38 +149,60 @@ if (settings.is_live) {
     return true;
   }
 
-  async function updateLiveEvent(
-    updates: {
-      is_live?: boolean;
-      live_status?: string;
-    }
-  ) {
-    if (!eventId) {
-      setStatusMessage(
-        "No live event ID is available."
-      );
+async function updateLiveEvent(
+  updates: {
+    is_live?: boolean;
+    live_status?: string;
+  }
+) {
+  if (!eventId) {
+    setStatusMessage(
+      "No live event ID is available."
+    );
 
-      return false;
-    }
-
-    const { error } = await supabase
-      .from("uploads")
-      .update(updates)
-      .eq("id", eventId);
-
-    if (error) {
-      console.error("Live event update error:", error);
-
-      setStatusMessage(
-        "Could not update the live event record."
-      );
-
-      return false;
-    }
-
-    return true;
+    return false;
   }
 
+  const {
+    data: { session },
+  } = await supabase.auth.getSession();
+
+  if (!session?.access_token) {
+    setStatusMessage(
+      "Your session has expired. Please sign in again."
+    );
+
+    return false;
+  }
+
+  const response = await fetch("/api/uploads/live", {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+      Authorization: `Bearer ${session.access_token}`,
+    },
+    body: JSON.stringify({
+      videoId: eventId,
+      isLive: updates.is_live,
+      liveStatus: updates.live_status,
+    }),
+  });
+
+  const result = await response.json();
+
+  if (!response.ok) {
+    console.error("Live event update error:", result);
+
+    setStatusMessage(
+      result?.error ||
+        "Could not update the live event record."
+    );
+
+    return false;
+  }
+
+  return true;
+}
   function formatDuration(seconds: number) {
     const hours = Math.floor(seconds / 3600);
     const minutes = Math.floor((seconds % 3600) / 60);
@@ -227,16 +249,29 @@ if (settings.is_live) {
     );
 
     try {
-      const roomName = `niatube-live-${eventId}`;
+  const {
+    data: { session },
+  } = await supabase.auth.getSession();
+
+  if (!session?.access_token) {
+    setStatusMessage(
+      "Your session has expired. Please sign in again."
+    );
+    setIsConnecting(false);
+    return;
+  }
+
+  const roomName = `niatube-live-${eventId}`;
 
       const participantName =
         `NiaTube Creator ${eventId.slice(0, 8)}`;
 
-      const room = await connectToLiveKit({
-        roomName,
-        participantName,
-        role: "creator",
-      });
+     const room = await connectToLiveKit({
+  roomName,
+  participantName,
+  role: "creator",
+  accessToken: session.access_token,
+});
 
       liveKitRoomRef.current = room;
       setLiveKitConnected(true);
