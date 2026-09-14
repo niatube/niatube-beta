@@ -8,20 +8,25 @@ export type ConnectToLiveKitOptions = {
   roomName: string;
   participantName: string;
   role: "creator" | "viewer";
+  accessToken?: string;
 };
 
 export async function connectToLiveKit({
   roomName,
   participantName,
   role,
+  accessToken,
 }: ConnectToLiveKitOptions) {
   const response = await fetch("/api/livekit/token", {
     method: "POST",
-    headers: {
-      "Content-Type": "application/json",
-    },
-    body: JSON.stringify({
-      roomName,
+  headers: {
+  "Content-Type": "application/json",
+  ...(accessToken
+    ? { Authorization: `Bearer ${accessToken}` }
+    : {}),
+},
+body: JSON.stringify({
+    roomName,
       participantName,
       role,
     }),
