@@ -627,12 +627,13 @@ const recordHomepageAdClick = async () => {
         <div className="mx-auto flex max-w-[1100px] flex-col items-center justify-between gap-4 px-4 md:flex-row">
           <p className="font-bold">Become a Creator on NiaTube</p>
 
-          <div className="flex gap-6 text-sm text-gray-600">
+          <div className="flex flex-wrap justify-center gap-6 text-sm text-gray-600">
             <Link href="/about">About</Link>
             <Link href="/creator/apply">Creator</Link>
             <Link href="/press">Press</Link>
             <Link href="/privacy">Privacy</Link>
-          </div>
+            <Link href="/community-guidelines">Community Guidelines</Link>
+         </div>
         </div>
       </footer>
     </main>
