@@ -24,29 +24,42 @@ export default function LiveSetupPage() {
       return;
     }
 
-    const { data, error } = await supabase
-      .from("uploads")
-      .insert([
-        {
-          title: title.trim(),
-          creator: creator.trim(),
-          description: description.trim(),
-          category: "Live",
-          is_live: goLiveNow,
-          live_status: goLiveNow ? "live" : "scheduled",
-          status: "published",
-          scheduled_at: goLiveNow ? null : scheduledAt || null,
-        },
-      ])
-      .select()
-      .single();
+    const {
+  data: { session },
+} = await supabase.auth.getSession();
 
-    if (error) {
-      console.error("Create live event error:", error);
-      setMessage("Could not create live event.");
-      return;
-    }
+if (!session?.access_token) {
+  setMessage("Your session has expired. Please sign in again.");
+  return;
+}
 
+const response = await fetch("/api/uploads", {
+  method: "POST",
+  headers: {
+    "Content-Type": "application/json",
+    Authorization: `Bearer ${session.access_token}`,
+  },
+  body: JSON.stringify({
+    title: title.trim(),
+    creator: creator.trim(),
+    description: description.trim(),
+    category: "Live",
+live_status: goLiveNow ? "live" : "scheduled",
+scheduled_at: goLiveNow ? null : scheduledAt || null,
+  }),
+});
+
+const result = await response.json();
+
+if (!response.ok) {
+  console.error("Create live event error:", result);
+  setMessage(
+    result?.error || "Could not create live event."
+  );
+  return;
+}
+
+const data = result?.upload ?? result;
     setMessage("Live event created.");
 
     if (data?.id) {

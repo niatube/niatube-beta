@@ -1,6 +1,8 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getSupabaseAdmin } from "@/lib/supabase-server";
+import { requireAuthenticatedCreator } from "@/lib/creator-auth";
 import { requireAdminRequestPermission } from "@/lib/admin-session";
+
 import { detectContentModeration } from "@/lib/content-moderation-detector";
 import { enforceModerationDecision } from "@/lib/content-moderation-enforcement";
 
@@ -29,36 +31,36 @@ export async function GET(req: NextRequest) {
   try {
     const supabaseAdmin = getSupabaseAdmin();
     const { searchParams } = new URL(req.url);
-    const showAll = searchParams.get("all") === "true";
+const showAll = searchParams.get("all") === "true";
 
-    if (showAll) {
-      const adminAccess = await requireAdminRequestPermission(
-        req,
-        "moderation.read"
-      );
+if (showAll) {
+  const adminAccess = await requireAdminRequestPermission(
+    req,
+    "moderation.read"
+  );
 
-      if (!adminAccess.success) {
-        return NextResponse.json(
-          { error: adminAccess.error },
-          { status: adminAccess.status }
-        );
-      }
-    }
+  if (!adminAccess.success) {
+  return NextResponse.json(
+    { error: adminAccess.error },
+    { status: adminAccess.status }
+  );
+}
+}
 
-    let query = supabaseAdmin
+let query = supabaseAdmin
       .from("uploads")
       .select("*")
       .order("created_at", { ascending: false })
       .limit(50);
 
     if (!showAll) {
-      query = query
-        .eq("status", "published")
-        .in("moderation_status", [
-          "approved",
-          "legacy_unreviewed",
-        ]);
-    }
+  query = query
+    .eq("status", "published")
+    .in("moderation_status", [
+      "approved",
+      "legacy_unreviewed",
+    ]);
+}
 
     const { data, error } = await query;
 
@@ -108,12 +110,26 @@ export async function GET(req: NextRequest) {
   }
 }
 
-export async function POST(req: Request) {
+export async function POST(req: NextRequest) {
+    let authenticatedCreator;
+
+  try {
+    authenticatedCreator = await requireAuthenticatedCreator(req);
+  } catch (error: any) {
+    return NextResponse.json(
+      {
+        error:
+          error?.message ||
+          "Authentication is required to create an upload.",
+      },
+      { status: 401 }
+    );
+  }
   try {
     const supabaseAdmin = getSupabaseAdmin();
     const body = await req.json();
 
-  const {
+ const {
   title,
   creator,
   description,
@@ -121,11 +137,23 @@ export async function POST(req: Request) {
   video_url,
   category,
   duration_seconds,
-  status,
   bunny_video_id,
   processing_started_at,
 processing_deadline_at,
+live_status,
+scheduled_at,
 } = body;
+
+const isLiveEvent = category === "Live";
+
+const normalizedLiveStatus =
+  isLiveEvent &&
+  (live_status === "live" || live_status === "scheduled")
+    ? live_status
+    : null;
+
+const normalizedIsLive =
+  isLiveEvent && normalizedLiveStatus === "live";
 
     const { data, error } = await supabaseAdmin
       .from("uploads")
@@ -133,6 +161,7 @@ processing_deadline_at,
         {
           title,
           creator,
+          creator_user_id: authenticatedCreator.userId,
           description: description?.trim() || "",
           thumbnail_url: thumbnail_url || null,
           video_url: video_url || null,
@@ -142,11 +171,15 @@ processing_deadline_at,
          processing_deadline_at:
          processing_deadline_at || null,
           category: category || "culture",
-          duration_seconds: duration_seconds || 0,
-          status: "processing",
-          trending_score: 100,
-          is_live: false,
-          live_status: null,
+         duration_seconds: duration_seconds || 0,
+         status: "processing",
+         trending_score: 100,
+         is_live: normalizedIsLive,
+         live_status: normalizedLiveStatus,
+         scheduled_at:
+          isLiveEvent && normalizedLiveStatus === "scheduled"
+          ? scheduled_at || null
+          : null,
         },
       ])
       .select()
@@ -160,41 +193,40 @@ processing_deadline_at,
         { status: 500 }
       );
     }
-
     const moderationDetection = await detectContentModeration({
-      uploadId: data.id,
-      creatorName: data.creator || creator,
-      title: data.title || title || "",
-      description: data.description || description?.trim() || "",
-      category: data.category || category || "culture",
-      thumbnailUrl: data.thumbnail_url || null,
-      videoUrl: data.video_url || null,
-      bunnyVideoId: data.bunny_video_id || null,
-      isLive: Boolean(data.is_live),
-    });
+  uploadId: data.id,
+  creatorName: data.creator || creator,
+  title: data.title || title || "",
+  description: data.description || description?.trim() || "",
+  category: data.category || category || "culture",
+  thumbnailUrl: data.thumbnail_url || null,
+  videoUrl: data.video_url || null,
+  bunnyVideoId: data.bunny_video_id || null,
+  isLive: Boolean(data.is_live),
+});
 
-    await enforceModerationDecision({
-      supabaseAdmin,
-      uploadId: data.id,
-      creatorName: data.creator || creator,
-      decision: moderationDetection.decision,
-    });
+await enforceModerationDecision({
+  supabaseAdmin,
+  uploadId: data.id,
+  creatorName: data.creator || creator,
+  decision: moderationDetection.decision,
+});
 
     return NextResponse.json({
-      upload: {
-        ...data,
-        moderation_status: moderationDetection.decision.moderationStatus,
-        moderation_reason: moderationDetection.decision.reason,
-        moderation_policy_category:
-          moderationDetection.decision.policyCategory,
-        moderation_confidence:
-          moderationDetection.decision.confidence,
-        moderation_detector:
-          moderationDetection.decision.detector,
-        moderation_detector_version:
-          moderationDetection.decision.detectorVersion,
-      },
-    });
+  upload: {
+    ...data,
+    moderation_status: moderationDetection.decision.moderationStatus,
+    moderation_reason: moderationDetection.decision.reason,
+    moderation_policy_category:
+      moderationDetection.decision.policyCategory,
+    moderation_confidence:
+      moderationDetection.decision.confidence,
+    moderation_detector:
+      moderationDetection.decision.detector,
+    moderation_detector_version:
+      moderationDetection.decision.detectorVersion,
+  },
+});
   } catch (err: any) {
     console.error("Upload API unexpected error:", err);
 
