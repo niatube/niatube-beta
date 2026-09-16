@@ -633,6 +633,7 @@ const recordHomepageAdClick = async () => {
             <Link href="/press">Press</Link>
             <Link href="/privacy">Privacy</Link>
             <Link href="/community-guidelines">Community Guidelines</Link>
+            <Link href="/acceptable-use-policy">Acceptable Use Policy</Link>
          </div>
         </div>
       </footer>
