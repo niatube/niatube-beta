@@ -359,6 +359,30 @@ const { error: profileError } = await supabase
       >
         NiaTube Terms of Service
       </Link>
+      ,{" "}
+      <Link
+        href="/community-guidelines"
+        target="_blank"
+        className="font-bold text-yellow-700 hover:underline"
+      >
+        Community Guidelines
+      </Link>
+      , and{" "}
+      <Link
+        href="/acceptable-use-policy"
+        target="_blank"
+        className="font-bold text-yellow-700 hover:underline"
+      >
+        Acceptable Use Policy
+      </Link>
+      , and I acknowledge that I have read the{" "}
+      <Link
+        href="/privacy"
+        target="_blank"
+        className="font-bold text-yellow-700 hover:underline"
+      >
+        Privacy Policy
+      </Link>
       .
     </span>
   </label>
@@ -391,6 +415,14 @@ const { error: profileError } = await supabase
       className="font-bold text-yellow-700 hover:underline"
     >
       Community Guidelines
+    </Link>
+
+    <Link
+      href="/acceptable-use-policy"
+      target="_blank"
+      className="font-bold text-yellow-700 hover:underline"
+    >
+      Acceptable Use Policy
     </Link>
 
     <Link

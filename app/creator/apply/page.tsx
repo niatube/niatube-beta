@@ -174,11 +174,39 @@ export default function CreatorApplyPage() {
 
           <span>
             I have read and agree to the{" "}
-            <a href="/terms" target="_blank" rel="noopener noreferrer" className="text-blue-600 underline">
+            <a
+              href="/terms"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="text-blue-600 underline"
+            >
               Terms of Service
-            </a>{" "}
-            and{" "}
-            <a href="/privacy" target="_blank" rel="noopener noreferrer" className="text-blue-600 underline">
+            </a>
+            ,{" "}
+            <a
+              href="/community-guidelines"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="text-blue-600 underline"
+            >
+              Community Guidelines
+            </a>
+            , and{" "}
+            <a
+              href="/acceptable-use-policy"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="text-blue-600 underline"
+            >
+              Acceptable Use Policy
+            </a>
+            , and I acknowledge that I have read the{" "}
+            <a
+              href="/privacy"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="text-blue-600 underline"
+            >
               Privacy Policy
             </a>
             .
