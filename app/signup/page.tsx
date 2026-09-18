@@ -340,56 +340,10 @@ const { error: profileError } = await supabase
               className="w-full rounded-xl border px-4 py-3 text-sm"
             />
 
-   <div className="rounded-2xl border border-yellow-200 bg-yellow-50 p-5">
-  <label className="flex gap-3 text-sm text-gray-700">
-    <input
-      type="checkbox"
-      required
-      checked={acceptedTerms}
-      onChange={(e) => setAcceptedTerms(e.target.checked)}
-      className="mt-1"
-    />
-
-    <span>
-      I have read and agree to the{" "}
-      <Link
-        href="/terms"
-        target="_blank"
-        className="font-bold text-yellow-700 hover:underline"
-      >
-        NiaTube Terms of Service
-      </Link>
-      ,{" "}
-      <Link
-        href="/community-guidelines"
-        target="_blank"
-        className="font-bold text-yellow-700 hover:underline"
-      >
-        Community Guidelines
-      </Link>
-      , and{" "}
-      <Link
-        href="/acceptable-use-policy"
-        target="_blank"
-        className="font-bold text-yellow-700 hover:underline"
-      >
-        Acceptable Use Policy
-      </Link>
-      , and I acknowledge that I have read the{" "}
-      <Link
-        href="/privacy"
-        target="_blank"
-        className="font-bold text-yellow-700 hover:underline"
-      >
-        Privacy Policy
-      </Link>
-      .
-    </span>
-  </label>
-
-  <p className="mt-4 text-sm leading-6 text-gray-700">
-    Before creating your account, we encourage you to review our governance
-    documents:
+      <div className="rounded-2xl border border-yellow-200 bg-yellow-50 p-5">
+  <p className="text-sm leading-6 text-gray-700">
+    Before creating your account, please review the NiaTube governance
+    documents that apply to your use of the Platform:
   </p>
 
   <div className="mt-3 flex flex-wrap gap-3">
@@ -441,6 +395,52 @@ const { error: profileError } = await supabase
       Copyright Policy
     </Link>
   </div>
+
+  <label className="mt-5 flex gap-3 text-sm text-gray-700">
+    <input
+      type="checkbox"
+      required
+      checked={acceptedTerms}
+      onChange={(e) => setAcceptedTerms(e.target.checked)}
+      className="mt-1"
+    />
+
+    <span>
+      I have read and agree to the{" "}
+      <Link
+        href="/terms"
+        target="_blank"
+        className="font-bold text-yellow-700 hover:underline"
+      >
+        NiaTube Terms of Service
+      </Link>
+      ,{" "}
+      <Link
+        href="/community-guidelines"
+        target="_blank"
+        className="font-bold text-yellow-700 hover:underline"
+      >
+        Community Guidelines
+      </Link>
+      , and{" "}
+      <Link
+        href="/acceptable-use-policy"
+        target="_blank"
+        className="font-bold text-yellow-700 hover:underline"
+      >
+        Acceptable Use Policy
+      </Link>
+      , and I acknowledge that I have read the{" "}
+      <Link
+        href="/privacy"
+        target="_blank"
+        className="font-bold text-yellow-700 hover:underline"
+      >
+        Privacy Policy
+      </Link>
+      .
+    </span>
+    </label>
 </div>
 
             <button
