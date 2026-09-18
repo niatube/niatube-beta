@@ -137,7 +137,7 @@ export default function SignupPage() {
   const [creatorName, setCreatorName] = useState("");
   const [country, setCountry] = useState("");
   const [email, setEmail] = useState("");
-  const [interest, setInterest] = useState("Culture");
+  const [interest, setInterest] = useState("");
   const [password, setPassword] = useState("");
 
 const [message, setMessage] = useState("");
@@ -257,7 +257,7 @@ const { error: profileError } = await supabase
     setCountry("");
     setEmail("");
     setPassword("");
-    setInterest("Culture");
+    setInterest("");
 
     setMessageType("success");
     setMessage(
@@ -309,6 +309,7 @@ const { error: profileError } = await supabase
             <input
               type="email"
               required
+              autoComplete="email"
               placeholder="Email address"
               value={email}
               onChange={(e) => setEmail(e.target.value)}
@@ -316,24 +317,27 @@ const { error: profileError } = await supabase
             />
 
             <select
+              required
               value={interest}
               onChange={(e) => setInterest(e.target.value)}
               className="w-full rounded-xl border px-4 py-3 text-sm"
             >
-              <option>Culture</option>
-              <option>News</option>
-              <option>Afrobeats</option>
-              <option>Podcast</option>
-              <option>Education</option>
-              <option>Business</option>
-              <option>Sports</option>
-              <option>Film</option>
-              <option>Travel</option>
+              <option value="">Select creator category</option>
+              <option value="Culture">Culture</option>
+              <option value="News">News</option>
+              <option value="Afrobeats">Afrobeats</option>
+              <option value="Podcast">Podcast</option>
+              <option value="Education">Education</option>
+              <option value="Business">Business</option>
+              <option value="Sports">Sports</option>
+              <option value="Film">Film</option>
+              <option value="Travel">Travel</option>
             </select>
 
             <input
               type="password"
               required
+              autoComplete="new-password"
               placeholder="Create password"
               value={password}
               onChange={(e) => setPassword(e.target.value)}
