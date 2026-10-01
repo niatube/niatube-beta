@@ -6,6 +6,7 @@ import {
   completeScan,
 } from "./scan-jobs.js";
 import { createSignedOriginalUrl } from "./bunny-token.js";
+import { getBunnyVideoStatus } from "./bunny-video.js";
 import { scanBunnyVideo } from "./scan-pipeline.js";
 
 async function main() {
@@ -26,6 +27,34 @@ async function main() {
     title: pendingScan.title,
     bunnyVideoId: pendingScan.bunny_video_id,
     malwareScanStatus: pendingScan.malware_scan_status,
+  });
+
+  if (!pendingScan.bunny_video_id) {
+    console.log(
+      "Pending malware scan has no Bunny video ID; leaving it pending."
+    );
+    return;
+  }
+
+  const bunnyStatus = await getBunnyVideoStatus(
+    config,
+    pendingScan.bunny_video_id
+  );
+
+  if (!bunnyStatus.ready) {
+    console.log("Bunny video is not ready for malware scanning:", {
+      id: pendingScan.id,
+      bunnyVideoId: pendingScan.bunny_video_id,
+      bunnyStatus: bunnyStatus.status,
+      availableResolutions: bunnyStatus.availableResolutions,
+    });
+    return;
+  }
+
+  console.log("Bunny video is ready for malware scanning:", {
+    id: pendingScan.id,
+    bunnyVideoId: pendingScan.bunny_video_id,
+    bunnyStatus: bunnyStatus.status,
   });
 
   const claimedScan = await claimPendingScan(
