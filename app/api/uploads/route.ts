@@ -174,6 +174,9 @@ const normalizedIsLive =
          duration_seconds: duration_seconds || 0,
          status: "processing",
          trending_score: 100,
+         malware_scan_status: isLiveEvent
+           ? "not_applicable"
+           : "pending",
          is_live: normalizedIsLive,
          live_status: normalizedLiveStatus,
          scheduled_at:

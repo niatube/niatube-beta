@@ -41,3 +41,10 @@ supabase/.temp/
 *.tsbuildinfo
 next-env.d.ts
 devlog.txt
+# malware scanner worker runtime files
+/scanner-worker/tmp/
+/scanner-worker/quarantine/
+/scanner-worker/clamav-db/
+/scanner-worker/logs/
+
+/scanner-worker/node_modules/

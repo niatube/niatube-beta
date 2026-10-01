@@ -1,0 +1,16 @@
+{
+  "name": "niatube-malware-scanner-worker",
+  "version": "1.0.0",
+  "private": true,
+  "type": "module",
+  "description": "NiaTube asynchronous malware scanning worker for prerecorded VOD uploads.",
+  "scripts": {
+    "start": "node src/worker.js"
+  },
+  "engines": {
+    "node": ">=20"
+  },
+  "dependencies": {
+    "@supabase/supabase-js": "^2.117.2"
+  }
+}
