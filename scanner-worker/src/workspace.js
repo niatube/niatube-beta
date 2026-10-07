@@ -1,7 +1,9 @@
 import fs from "node:fs/promises";
 import path from "node:path";
+import { fileURLToPath } from "node:url";
 
-const WORKSPACE_ROOT = path.resolve("scanner-worker", "tmp");
+const MODULE_DIR = path.dirname(fileURLToPath(import.meta.url));
+const WORKSPACE_ROOT = path.resolve(MODULE_DIR, "..", "tmp");
 
 export async function createScanWorkspace(uploadId) {
   if (!uploadId?.trim()) {
