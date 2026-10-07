@@ -4,6 +4,7 @@ import {
   findPendingScan,
   claimPendingScan,
   completeScan,
+  recoverStaleScans,
 } from "./scan-jobs.js";
 import { createSignedOriginalUrl } from "./bunny-token.js";
 import { getBunnyVideoStatus } from "./bunny-video.js";
@@ -14,6 +15,15 @@ async function main() {
   const supabase = createSupabaseClient(config);
 
   console.log("NiaTube malware scanner worker initialized.");
+
+  const recoveredScans = await recoverStaleScans(supabase);
+
+  if (recoveredScans.length > 0) {
+    console.log("Recovered stale malware scans:", {
+      count: recoveredScans.length,
+      ids: recoveredScans.map((scan) => scan.id),
+    });
+  }
 
   const pendingScan = await findPendingScan(supabase);
 

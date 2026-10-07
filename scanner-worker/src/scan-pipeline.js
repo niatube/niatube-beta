@@ -57,7 +57,16 @@ export async function scanBunnyVideo({
     });
   } finally {
     if (workspacePath) {
-      await removeScanWorkspace(workspacePath);
+      try {
+        await removeScanWorkspace(workspacePath);
+      } catch (cleanupError) {
+        console.error(
+          "Scanner workspace cleanup failed:",
+          cleanupError instanceof Error
+            ? cleanupError.message
+            : String(cleanupError)
+        );
+      }
     }
   }
 }
