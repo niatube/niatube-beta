@@ -48,3 +48,5 @@ devlog.txt
 /scanner-worker/logs/
 
 /scanner-worker/node_modules/
+/scanner-worker/.env
+/scanner-worker/test-signed-original.js

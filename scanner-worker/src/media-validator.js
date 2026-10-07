@@ -80,6 +80,24 @@ export function probeMediaFile(filePath, timeoutMs = 60000) {
       try {
         const metadata = JSON.parse(stdout);
 
+        const formatNames = String(
+          metadata?.format?.format_name || ""
+        )
+          .split(",")
+          .map((name) => name.trim().toLowerCase())
+          .filter(Boolean);
+
+        if (!formatNames.includes("mp4")) {
+          reject(
+            new Error(
+              `Media validation failed: unsupported container format "${
+                metadata?.format?.format_name || "unknown"
+              }". Expected an MP4 container.`
+            )
+          );
+          return;
+        }
+
         const hasVideoStream = Array.isArray(metadata.streams)
           && metadata.streams.some(
             (stream) => stream.codec_type === "video"
