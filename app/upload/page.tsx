@@ -257,15 +257,25 @@ export default function UploadPage() {
     }
 
     try {
-      setUploading(true);
-      setUploadProgress(5);
-      setUploadStage("Creating Bunny video...");
+  const {
+    data: { session },
+  } = await supabase.auth.getSession();
+
+  if (!session?.access_token) {
+    setError("Your session has expired. Please sign in again.");
+    return;
+  }
+
+  setUploading(true);
+  setUploadProgress(5);
+  setUploadStage("Creating Bunny video...");
 
       const bunnyCreateRes = await fetch("/api/bunny/create-video", {
         method: "POST",
         headers: {
-          "Content-Type": "application/json",
-        },
+  "Content-Type": "application/json",
+  Authorization: `Bearer ${session.access_token}`,
+},
         body: JSON.stringify({
           title: cleanTitle,
         }),
@@ -330,11 +340,14 @@ export default function UploadPage() {
       const thumbnailUrl =
         thumbnailPublicData?.publicUrl || "/default-thumbnail.jpg";
 
+
       const metadataRes = await fetch("/api/uploads", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
+       method: "POST",
+
+       headers: {
+  "Content-Type": "application/json",
+  Authorization: `Bearer ${session.access_token}`,
+},
        body: JSON.stringify({
   title: cleanTitle,
   creator: cleanCreator,
@@ -408,7 +421,7 @@ export default function UploadPage() {
 
           <div className="mb-6 rounded-xl border border-yellow-200 bg-yellow-50 p-4">
             <p className="font-semibold text-gray-900">Recommended Format</p>
-           
+
            <p className="mt-1 text-sm text-gray-700">
   .mp4 · H.264 · AAC · 720p/1080p · 24–30fps · Max 10GB
 </p>
@@ -640,3 +653,4 @@ export default function UploadPage() {
     </>
   );
 }
+
