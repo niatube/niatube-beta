@@ -1,6 +1,11 @@
 import { NextResponse } from "next/server";
 
 import {
+  authorizeCronRequest,
+  unauthorizedCronResponse,
+} from "@/lib/cron-auth";
+
+import {
   SettlementStatus,
   settlementEngine,
 } from "@/lib/settlement-engine";
@@ -11,9 +16,18 @@ export async function POST(
   request: Request,
 ) {
   try {
+    const authorization =
+      authorizeCronRequest(request);
+
+    if (!authorization.success) {
+      return unauthorizedCronResponse(
+        authorization.error ||
+          "Unauthorized settlement transition request.",
+      );
+    }
+
     const supabaseAdmin =
       getSupabaseAdmin();
-
     const body =
       await request.json();
 
