@@ -75,7 +75,7 @@ export default function CreatorApplyPage() {
       },
     });
 
-    if (error) {
+        if (error) {
       setMessage(error.message);
       return;
     }
@@ -111,11 +111,34 @@ export default function CreatorApplyPage() {
       password,
     });
 
-    if (error) {
+        if (error) {
       setMessage(error.message);
     } else {
       router.push("/creator-dashboard");
     }
+  }
+
+  async function handleForgotPassword() {
+    if (!email.trim()) {
+      setMessage("Please enter your email address first.");
+      return;
+    }
+
+    const { error } = await supabase.auth.resetPasswordForEmail(
+      email.trim(),
+      {
+        redirectTo: `${window.location.origin}/creator/reset-password`,
+      }
+    );
+
+    if (error) {
+      setMessage(error.message);
+      return;
+    }
+
+    setMessage(
+      "If an account exists for this email address, you will receive a password reset link. Please check your inbox."
+    );
   }
 
   return (
@@ -225,7 +248,17 @@ export default function CreatorApplyPage() {
             onClick={handleSignup}
             className="flex-1 rounded bg-yellow-400 py-2 font-semibold text-black"
           >
-            Sign Up
+                       Sign Up
+          </button>
+        </div>
+
+        <div className="mt-3 text-center">
+          <button
+            type="button"
+            onClick={handleForgotPassword}
+            className="text-sm font-medium text-blue-600 underline hover:text-blue-800"
+          >
+            Forgot Password?
           </button>
         </div>
 
