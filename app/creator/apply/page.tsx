@@ -71,7 +71,7 @@ export default function CreatorApplyPage() {
           accepted_terms: true,
           accepted_terms_at: new Date().toISOString(),
         },
-        emailRedirectTo: "http://localhost:3000/creator/apply",
+        emailRedirectTo: `${window.location.origin}/creator/apply`,
       },
     });
 
