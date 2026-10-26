@@ -33,8 +33,37 @@ async function handleLogin(e: React.FormEvent) {
     return;
   }
 
-  window.location.href = "/my-space";
+      window.location.href = "/my-space";
 }
+
+async function handleForgotPassword() {
+  if (!email.trim()) {
+    setMessage("Please enter your email address first.");
+    return;
+  }
+
+  setLoading(true);
+  setMessage("");
+
+  const { error } = await supabase.auth.resetPasswordForEmail(
+    email.trim(),
+    {
+      redirectTo: `${window.location.origin}/creator/reset-password`,
+    }
+  );
+
+  setLoading(false);
+
+  if (error) {
+    setMessage(error.message);
+    return;
+  }
+
+  setMessage(
+    "If an account exists for this email address, you will receive a password reset link. Please check your inbox."
+  );
+}
+
   return (
     <main className="min-h-screen bg-gray-50">
       <Navbar />
@@ -79,7 +108,16 @@ async function handleLogin(e: React.FormEvent) {
               disabled={loading}
               className="w-full rounded-xl bg-black px-6 py-3 text-sm font-black text-white hover:bg-gray-800 disabled:bg-gray-400"
             >
-              {loading ? "Logging in..." : "Log In"}
+                                         {loading ? "Logging in..." : "Log In"}
+            </button>
+
+            <button
+              type="button"
+              onClick={handleForgotPassword}
+              disabled={loading}
+              className="w-full text-center text-sm font-semibold text-blue-600 underline hover:text-blue-800 disabled:opacity-50"
+            >
+              Forgot Password?
             </button>
           </form>
 

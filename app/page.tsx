@@ -251,7 +251,7 @@ const recordHomepageAdClick = async () => {
 
                 <div className="mt-8 flex flex-wrap gap-4">
                   <Link
-                    href="/login"
+                    href="/creator/apply"
                     className="inline-flex items-center justify-center rounded-full bg-yellow-400 px-7 py-3 text-sm font-extrabold text-black shadow-lg hover:bg-yellow-300"
                   >
                     Join as Creator
