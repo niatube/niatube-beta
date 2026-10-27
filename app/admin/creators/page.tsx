@@ -28,13 +28,18 @@ export default function AdminCreatorsPage() {
   async function loadCreators() {
     setLoading(true);
 
+    const rawAccess = sessionStorage.getItem("niatube_admin_access");
+    const access = rawAccess ? JSON.parse(rawAccess) : null;
+
     const response = await fetch("/api/admin/creators", {
       method: "GET",
       cache: "no-store",
+      headers: {
+        Authorization: `Bearer ${access?.sessionToken || ""}`,
+      },
     });
 
     const result = await response.json();
-
     if (!response.ok || !result.success) {
       setMessage(result.error || "Could not load creators.");
       setLoading(false);
@@ -137,9 +142,13 @@ export default function AdminCreatorsPage() {
                   {creator.creator_name}
                 </p>
 
-<p className="text-gray-700">
-  {creator.country || "Not set"}
-</p>
+                <p className="break-all text-gray-700">
+                  {creator.email || "Not available"}
+                </p>
+
+                <p className="text-gray-700">
+                  {creator.country || "Not set"}
+                </p>
 
                 <p className="text-gray-700">
                   {creator.verified ? "Verified" : "Not verified"}

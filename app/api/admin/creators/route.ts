@@ -1,11 +1,27 @@
 import { NextResponse } from "next/server";
 import { getSupabaseAdmin } from "@/lib/supabase-server";
+import { requireAdminRequestPermission } from "@/lib/admin-session";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
 
-export async function GET() {
+export async function GET(request: Request) {
   try {
+    const authorization = await requireAdminRequestPermission(
+      request,
+      "governance.read"
+    );
+
+    if (!authorization.success) {
+      return NextResponse.json(
+        {
+          success: false,
+          error: authorization.error,
+        },
+        { status: authorization.status }
+      );
+    }
+
     const supabaseAdmin = getSupabaseAdmin();
 
     const { data: creators, error: creatorsError } =
