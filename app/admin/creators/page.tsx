@@ -57,20 +57,50 @@ export default function AdminCreatorsPage() {
 
   return (
     <main className="min-h-screen bg-gray-50">
-      <Navbar />
+            <div className="print:hidden">
+        <Navbar />
+      </div>
 
-      <section className="mx-auto max-w-7xl px-6 py-10">
-        <p className="text-sm font-black uppercase tracking-wide text-yellow-600">
-          Admin Creators
-        </p>
+            <section className="mx-auto max-w-7xl px-6 py-10">
+        <div className="hidden print:block print:mb-6">
+          <h2 className="text-2xl font-black text-gray-900">
+            NiaTube Creator Directory
+          </h2>
+          <p className="mt-1 text-sm text-gray-600">
+            Nia Media Group, Inc.
+          </p>
+          <p className="mt-1 text-xs text-gray-500">
+            Confidential — Internal Creator Relations and Marketing Use
+          </p>
+          <p className="mt-2 text-xs text-gray-500">
+            Printed: {new Date().toLocaleDateString()}
+          </p>
+        </div>
 
-        <h1 className="mt-2 text-4xl font-black text-gray-900">
-          Creator Management
-        </h1>
+                <div className="print:hidden">
+          <p className="text-sm font-black uppercase tracking-wide text-yellow-600">
+            Admin Creators
+          </p>
 
-        <p className="mt-3 max-w-4xl text-gray-600">
-          Monitor creator growth, creator profiles, uploads, and publishing activity.
-        </p>
+          <h1 className="mt-2 text-4xl font-black text-gray-900">
+            Creator Management
+          </h1>
+
+          <p className="mt-3 max-w-4xl text-gray-600">
+            Monitor creator growth, creator profiles, uploads, and publishing activity.
+          </p>
+        </div>
+
+                <div className="mt-6 print:hidden">
+          <button
+            type="button"
+            onClick={() => window.print()}
+            disabled={loading || creators.length === 0}
+            className="rounded-xl bg-green-800 px-6 py-3 font-bold text-white hover:bg-green-900 disabled:cursor-not-allowed disabled:opacity-50"
+          >
+            Print Creator List
+          </button>
+        </div>
 
         {message && (
           <p className="mt-6 rounded-xl bg-yellow-50 p-4 text-sm font-bold text-yellow-800">
@@ -78,7 +108,7 @@ export default function AdminCreatorsPage() {
           </p>
         )}
 
-        <div className="mt-8 grid gap-4 md:grid-cols-5">
+                <div className="mt-8 grid gap-4 md:grid-cols-5 print:hidden">
           <div className="rounded-2xl bg-white p-5 shadow-sm">
             <p className="text-sm font-bold text-gray-500">Total Creators</p>
             <p className="mt-2 text-3xl font-black text-gray-900">
@@ -125,24 +155,24 @@ export default function AdminCreatorsPage() {
           </div>
         ) : (
           <div className="mt-8 overflow-hidden rounded-3xl bg-white shadow-sm">
-            <div className="grid grid-cols-6 gap-4 border-b bg-gray-100 px-5 py-4 text-sm font-black text-gray-700">
+           <div className="grid grid-cols-6 print:grid-cols-5 gap-4 border-b bg-gray-100 px-5 py-4 text-sm font-black text-gray-700">
   <p>Creator</p>
   <p>Email</p>
   <p>Country</p>
   <p>Verified</p>
   <p>Joined</p>
-  <p>Channel</p>
+  <p className="print:hidden">Channel</p>
 </div>
             {creators.map((creator) => (
               <div
                 key={creator.id}
-              className="grid grid-cols-6 gap-4 border-b px-5 py-4 text-sm last:border-b-0"
+              className="grid grid-cols-6 print:grid-cols-5 gap-4 border-b px-5 py-4 text-sm last:border-b-0"
               >
                 <p className="font-bold text-gray-900">
                   {creator.creator_name}
                 </p>
 
-                <p className="break-all text-gray-700">
+               <p className="break-all text-gray-700 print:text-xs">
                   {creator.email || "Not available"}
                 </p>
 
@@ -160,9 +190,9 @@ export default function AdminCreatorsPage() {
                     : "Not available"}
                 </p>
 
-                <a
+                                <a
                   href={`/channel/${creator.creator_name}`}
-                  className="font-bold text-blue-700 underline"
+                  className="font-bold text-blue-700 underline print:hidden"
                 >
                   Open Channel
                 </a>
