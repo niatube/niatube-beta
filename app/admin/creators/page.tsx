@@ -22,9 +22,14 @@ type CreatorStats = {
 export default function AdminCreatorsPage() {
   const [creators, setCreators] = useState<CreatorProfile[]>([]);
   const [stats, setStats] = useState<CreatorStats | null>(null);
-  const [loading, setLoading] = useState(true);
+    const [loading, setLoading] = useState(true);
   const [message, setMessage] = useState("");
 
+  const [selectedCountry, setSelectedCountry] = useState("ALL");
+
+  const [printColumns, setPrintColumns] = useState<
+    "CONTACT" | "COUNTRY" | "FULL"
+  >("CONTACT");
   async function loadCreators() {
     setLoading(true);
 
@@ -55,6 +60,22 @@ export default function AdminCreatorsPage() {
     loadCreators();
   }, []);
 
+  const availableCountries = Array.from(
+    new Set(
+      creators
+        .map((creator) => creator.country?.trim())
+        .filter((country): country is string => Boolean(country))
+    )
+   ).sort((a, b) => a.localeCompare(b));
+
+  const filteredCreators = creators.filter((creator) => {
+    if (selectedCountry === "ALL") {
+      return true;
+    }
+
+    return creator.country?.trim() === selectedCountry;
+  });
+
   return (
     <main className="min-h-screen bg-gray-50">
             <div className="print:hidden">
@@ -72,7 +93,20 @@ export default function AdminCreatorsPage() {
           <p className="mt-1 text-xs text-gray-500">
             Confidential — Internal Creator Relations and Marketing Use
           </p>
-          <p className="mt-2 text-xs text-gray-500">
+                    <p className="mt-2 text-xs text-gray-500">
+            Country: {selectedCountry === "ALL" ? "All Countries" : selectedCountry}
+          </p>
+
+          <p className="mt-1 text-xs text-gray-500">
+            Directory Type:{" "}
+            {printColumns === "CONTACT"
+              ? "Creator Names and Email Addresses"
+              : printColumns === "COUNTRY"
+              ? "Creator Names, Email Addresses and Countries"
+              : "Full Creator Directory"}
+          </p>
+
+          <p className="mt-1 text-xs text-gray-500">
             Printed: {new Date().toLocaleDateString()}
           </p>
         </div>
@@ -91,7 +125,54 @@ export default function AdminCreatorsPage() {
           </p>
         </div>
 
-                <div className="mt-6 print:hidden">
+                  <div className="mt-6 flex flex-wrap items-end gap-4 print:hidden">
+          <div>
+            <label
+              htmlFor="creator-country-filter"
+              className="mb-2 block text-sm font-bold text-gray-700"
+            >
+              Filter by Country
+            </label>
+
+            <select
+              id="creator-country-filter"
+              value={selectedCountry}
+              onChange={(event) => setSelectedCountry(event.target.value)}
+              className="rounded-xl border border-gray-300 bg-white px-4 py-3 text-gray-900"
+            >
+              <option value="ALL">All Countries</option>
+              {availableCountries.map((country) => (
+                <option key={country} value={country}>
+                  {country}
+                </option>
+              ))}
+            </select>
+          </div>
+
+                    <div>
+            <label
+              htmlFor="creator-print-columns"
+              className="mb-2 block text-sm font-bold text-gray-700"
+            >
+              Information to Print
+            </label>
+
+            <select
+              id="creator-print-columns"
+              value={printColumns}
+              onChange={(event) =>
+                setPrintColumns(
+                  event.target.value as "CONTACT" | "COUNTRY" | "FULL"
+                )
+              }
+              className="rounded-xl border border-gray-300 bg-white px-4 py-3 text-gray-900"
+            >
+              <option value="CONTACT">Name and Email Only</option>
+              <option value="COUNTRY">Name, Email and Country</option>
+              <option value="FULL">Full Creator Directory</option>
+            </select>
+          </div>
+
           <button
             type="button"
             onClick={() => window.print()}
@@ -155,18 +236,38 @@ export default function AdminCreatorsPage() {
           </div>
         ) : (
           <div className="mt-8 overflow-hidden rounded-3xl bg-white shadow-sm">
-           <div className="grid grid-cols-6 print:grid-cols-5 gap-4 border-b bg-gray-100 px-5 py-4 text-sm font-black text-gray-700">
+           <div
+  className={`grid grid-cols-6 gap-4 border-b bg-gray-100 px-5 py-4 text-sm font-black text-gray-700 ${
+    printColumns === "CONTACT"
+      ? "print:grid-cols-2"
+      : printColumns === "COUNTRY"
+      ? "print:grid-cols-3"
+      : "print:grid-cols-5"
+  }`}
+>
   <p>Creator</p>
   <p>Email</p>
-  <p>Country</p>
-  <p>Verified</p>
-  <p>Joined</p>
+    <p className={printColumns === "CONTACT" ? "print:hidden" : ""}>
+    Country
+  </p>
+    <p className={printColumns !== "FULL" ? "print:hidden" : ""}>
+    Verified
+  </p>
+    <p className={printColumns !== "FULL" ? "print:hidden" : ""}>
+    Joined
+  </p>
   <p className="print:hidden">Channel</p>
 </div>
-            {creators.map((creator) => (
+              {filteredCreators.map((creator) => (
               <div
                 key={creator.id}
-              className="grid grid-cols-6 print:grid-cols-5 gap-4 border-b px-5 py-4 text-sm last:border-b-0"
+              className={`grid grid-cols-6 gap-4 border-b px-5 py-4 text-sm last:border-b-0 ${
+  printColumns === "CONTACT"
+    ? "print:grid-cols-2"
+    : printColumns === "COUNTRY"
+    ? "print:grid-cols-3"
+    : "print:grid-cols-5"
+}`}
               >
                 <p className="font-bold text-gray-900">
                   {creator.creator_name}
@@ -176,15 +277,27 @@ export default function AdminCreatorsPage() {
                   {creator.email || "Not available"}
                 </p>
 
-                <p className="text-gray-700">
+                                <p
+                  className={`text-gray-700 ${
+                    printColumns === "CONTACT" ? "print:hidden" : ""
+                  }`}
+                >
                   {creator.country || "Not set"}
                 </p>
 
-                <p className="text-gray-700">
+                                <p
+                  className={`text-gray-700 ${
+                    printColumns !== "FULL" ? "print:hidden" : ""
+                  }`}
+                >
                   {creator.verified ? "Verified" : "Not verified"}
                 </p>
 
-                <p className="text-gray-700">
+                                <p
+                  className={`text-gray-700 ${
+                    printColumns !== "FULL" ? "print:hidden" : ""
+                  }`}
+                >
                   {creator.created_at
                     ? new Date(creator.created_at).toLocaleDateString()
                     : "Not available"}
