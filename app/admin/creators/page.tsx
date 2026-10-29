@@ -22,8 +22,9 @@ type CreatorStats = {
 export default function AdminCreatorsPage() {
   const [creators, setCreators] = useState<CreatorProfile[]>([]);
   const [stats, setStats] = useState<CreatorStats | null>(null);
-    const [loading, setLoading] = useState(true);
+        const [loading, setLoading] = useState(true);
   const [message, setMessage] = useState("");
+  const [isSuperAdmin, setIsSuperAdmin] = useState(false);
 
   const [selectedCountry, setSelectedCountry] = useState("ALL");
 
@@ -33,8 +34,10 @@ export default function AdminCreatorsPage() {
   async function loadCreators() {
     setLoading(true);
 
-    const rawAccess = sessionStorage.getItem("niatube_admin_access");
+          const rawAccess = sessionStorage.getItem("niatube_admin_access");
     const access = rawAccess ? JSON.parse(rawAccess) : null;
+
+    setIsSuperAdmin(access?.adminRole === "super_admin");
 
     const response = await fetch("/api/admin/creators", {
       method: "GET",
@@ -303,12 +306,23 @@ export default function AdminCreatorsPage() {
                     : "Not available"}
                 </p>
 
-                                <a
-                  href={`/channel/${creator.creator_name}`}
-                  className="font-bold text-blue-700 underline print:hidden"
-                >
-                  Open Channel
-                </a>
+                  <div className="flex flex-wrap gap-3 print:hidden">
+                  <a
+                    href={`/channel/${creator.creator_name}`}
+                    className="font-bold text-blue-700 underline"
+                  >
+                    Open Channel
+                  </a>
+
+                  {isSuperAdmin && (
+                    <a
+                      href={`/admin/creators/${creator.id}/dashboard`}
+                      className="font-bold text-green-800 underline"
+                    >
+                      View Dashboard
+                    </a>
+                  )}
+                </div>
               </div>
             ))}
           </div>
